@@ -22,7 +22,7 @@ SLIDE_SPEED = 6 # pixels per animation step
 ANIM_INTERVAL = 40
 
 BAR_BTN_W = 72
-BAR_BTN_H = 26
+BAR_BTN_H = 56 # room for the war2 icon on top and the label below it
 BAR_INFO_H = 18
 
 ColorActive = {'r' : 255, 'g' : 230, 'b' : 60, 'a' : 255}
@@ -56,9 +56,9 @@ def GetOrderWindow ():
 	for i in range (MAX_CARDS):
 		Button = Window.CreateButton (i, 0, 0, CARD_W, CARD_H)
 		Button.SetFlags (IE_GUI_BUTTON_PICTURE | IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_CENTER_PICTURES, OP_OR)
-		Button.SetFont ("NUMBER")
+		Button.SetFont ("NORMAL")
 		Button.SetVisible (False)
-	Label = Window.CreateLabel (MAX_CARDS, 0, CARD_H + 2, width, 16, "NUMBER", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_CENTER)
+	Label = Window.CreateLabel (MAX_CARDS, 0, CARD_H + 2, width, 16, "TRMTFONT", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_CENTER)
 	return Window
 
 def CardTargetX (index, count):
@@ -230,15 +230,18 @@ def GetBarWindow ():
 	Window.AddAlias ("COMBATBAR")
 	Window.SetFlags (WF_DESTROY_ON_CLOSE, OP_NAND)
 	Window.SetBackground (ColorBarBack)
+	# war2 control panel icons, padded pngs in override/pst
+	Icons = ("bar_atk", "bar_cst", "bar_itm", "bar_qck", "bar_mve", "bar_run", "bar_inv", "bar_end")
 	for i, (text, tip, handler, mode) in enumerate (BarButtons):
 		Button = Window.CreateButton (i, 4 + i * (BAR_BTN_W + 2), 4, BAR_BTN_W, BAR_BTN_H)
-		Button.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_OR)
-		Button.SetFont ("NUMBER")
+		Button.SetFlags (IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_PICTURE | IE_GUI_BUTTON_ALIGN_BOTTOM, OP_OR)
+		Button.SetFont ("NORMAL")
+		Button.SetPicture (Icons[i])
 		Button.SetText (text)
 		Button.SetTooltip (tip)
 		Button.SetBackground (ColorButton)
 		Button.OnPress (globals ()[handler])
-	Window.CreateLabel (len (BarButtons), 4, BAR_BTN_H + 6, width - 8, BAR_INFO_H, "NUMBER", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_CENTER)
+	Window.CreateLabel (len (BarButtons), 4, BAR_BTN_H + 6, width - 8, BAR_INFO_H, "TRMTFONT", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_CENTER)
 
 	# sit just above pst's portrait strip
 	portraits = GemRB.GetView ("PORTWIN")
@@ -257,8 +260,7 @@ def UpdateCombatBar ():
 		return
 
 	Window = GetBarWindow ()
-	if not Window.IsVisible ():
-		Window.Focus ()
+	Window.Focus ()
 
 	busy = budget['Busy']
 	available = {
@@ -347,8 +349,7 @@ def UpdateTurnOrder ():
 		return
 
 	Window = GetOrderWindow ()
-	if not Window.IsVisible ():
-		Window.Focus ()
+	Window.Focus ()
 	MergeCards (order['Combatants'])
 	LayoutCards ()
 	DrawCards (order)
