@@ -117,8 +117,14 @@ def DrawCards (order):
 			ShowDeathFade (Button, card)
 			continue
 
-		# pst party portraits are the animated "large" bams
-		if c['IsPC'] and c['LargePortrait']:
+		# beasts use the bestiary art from the journal, party members animated portraits
+		image = None
+		if c['Bestiary'] >= 0:
+			image = GemRB.GetINIBeastsKey (str (c['Bestiary']), 'imageKnown', '')
+		if image:
+			Button.SetPicture (image)
+			Button.SetText ("")
+		elif c['IsPC'] and c['LargePortrait']:
 			Button.SetPicture (GemRB.GetSprite (c['LargePortrait'], -1, 0, 0))
 			Button.SetText ("")
 		else:

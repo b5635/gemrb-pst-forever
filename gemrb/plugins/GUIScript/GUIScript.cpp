@@ -12138,7 +12138,7 @@ PyDoc_STRVAR(GemRB_GetTurnOrder__doc,
   * Active - global ID of the combatant whose turn it is\n\
   * Suspended - true while a dialog or cutscene interrupts the fight\n\
   * Combatants - list of dicts in initiative order, each with 'ID', 'Name', \n\
-'Portrait', 'LargePortrait', 'HP', 'MaxHP', 'IsPC', 'Hostile', 'Initiative', 'Roll', 'Done', 'Dead'\n\
+'Portrait', 'LargePortrait', 'HP', 'MaxHP', 'IsPC', 'Hostile', 'Initiative', 'Roll', 'Done', 'Dead', 'Bestiary'\n\
 \n\
 **See also:** [GetTurnBudget](GetTurnBudget.md), [EndTurn](EndTurn.md)");
 
@@ -12175,6 +12175,17 @@ static PyObject* GemRB_GetTurnOrder(PyObject* /*self*/, PyObject* /*args*/)
 			PyDict_SetItemString(entry, "HP", DecRef(PyLong_FromLong, actor->GetStat(IE_HITPOINTS)));
 			PyDict_SetItemString(entry, "MaxHP", DecRef(PyLong_FromLong, actor->GetStat(IE_MAXHITPOINTS)));
 			PyDict_SetItemString(entry, "Hostile", DecRef(PyBool_FromLong, actor->GetStat(IE_EA) >= EA_EVILCUTOFF));
+			int bestiary = -1;
+			if (core->HasFeature(GFFlags::HAS_BEASTS_INI)) {
+				size_t animID = actor->BaseStats[IE_ANIMATION_ID];
+				if (core->HasFeature(GFFlags::ONE_BYTE_ANIMID)) {
+					animID &= 0xff;
+				}
+				if (animID < CharAnimations::GetAvatarsCount()) {
+					bestiary = CharAnimations::GetAvatarStruct(animID).Bestiary;
+				}
+			}
+			PyDict_SetItemString(entry, "Bestiary", DecRef(PyLong_FromLong, bestiary));
 		} else {
 			PyDict_SetItemString(entry, "Name", DecRef(PyString_FromString, ""));
 			PyDict_SetItemString(entry, "Portrait", DecRef(PyString_FromString, ""));
@@ -12182,6 +12193,7 @@ static PyObject* GemRB_GetTurnOrder(PyObject* /*self*/, PyObject* /*args*/)
 			PyDict_SetItemString(entry, "HP", DecRef(PyLong_FromLong, 0));
 			PyDict_SetItemString(entry, "MaxHP", DecRef(PyLong_FromLong, 1));
 			PyDict_SetItemString(entry, "Hostile", DecRef(PyBool_FromLong, 0));
+			PyDict_SetItemString(entry, "Bestiary", DecRef(PyLong_FromLong, -1));
 		}
 		PyList_Append(list, entry);
 		Py_DecRef(entry);
