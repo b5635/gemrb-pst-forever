@@ -19,6 +19,7 @@
 #include "Callback.h"
 
 #include "Scriptable/Scriptable.h"
+#include "TurnBasedCombat/TurnManager.h"
 
 #include <array>
 #include <atomic>
@@ -277,6 +278,7 @@ public:
 	FixedSizeString<20> RandomEncounterEntry;
 
 	std::unique_ptr<Particles> weather;
+	TurnManager turnManager;
 	int eventTimer = 0;
 	EventHandler eventHandler = nullptr;
 	bool hasInfra = false;
@@ -451,6 +453,8 @@ public:
 	void TimeStop(Actor* actor, ieDword end);
 	/** check if the passed actor is a victim of timestop */
 	bool TimeStoppedFor(const Actor* target = nullptr) const;
+	/** check if the actor may not act now, due to timestop or waiting for its combat turn */
+	bool IsActorFrozen(const Actor* target) const;
 	/** updates the infravision info */
 	void Infravision();
 	/** applies the global tint if it is needed */

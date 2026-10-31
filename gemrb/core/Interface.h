@@ -165,6 +165,7 @@ public:
 #define EF_RESETTARGET 2048 //reset the mouse cursor
 #define EF_TARGETMODE  4096 //update the mouse cursor
 #define EF_TEXTSCREEN  8192 //start a textscreen
+#define EF_TURNORDER   16384 //turn based combat order or budget changed
 
 //autopause
 enum class AUTOPAUSE : ieDword {

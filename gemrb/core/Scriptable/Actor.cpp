@@ -6671,6 +6671,7 @@ int Actor::Immobile() const
 		return 1;
 	}
 	const Game* game = core->GetGame();
+	// only timestop, actors waiting for their combat turn must not get autohit
 	if (game && game->TimeStoppedFor(this)) {
 		return 1;
 	}
@@ -6683,7 +6684,24 @@ void Actor::DoStep(unsigned int newWalkScale, ieDword time)
 	if (Immobile()) {
 		return;
 	}
+
+	TurnManager& turns = core->GetGame()->turnManager;
+	if (!turns.HaltsTime() || !turns.IsCombatant(this)) {
+		Movable::DoStep(newWalkScale, time);
+		return;
+	}
+
+	// in turn based combat walking spends the movement allowance
+	if (HasMovementInProgress() && turns.GetRemainingMovement(this) <= 0) {
+		ClearPath(true);
+		SetStance(IE_ANI_READY);
+		return;
+	}
+	Point before = Pos;
 	Movable::DoStep(newWalkScale, time);
+	if (Pos != before) {
+		turns.SpendMovement(this, PathFinder::MovementCost(before, Pos));
+	}
 }
 
 ieDword Actor::GetNumberOfAttacks()
@@ -7350,7 +7368,8 @@ static void ApplyCriticalEffect(Actor* actor, Actor* target, const WeaponInfo& w
 	core->ApplySpell(fx->Resource, target, actor, actor->GetXPLevel(false));
 }
 
-void Actor::PerformAttack(ieDword gameTime)
+// turnBased: the turn manager already started the round and paces the swings itself
+void Actor::PerformAttack(ieDword gameTime, bool turnBased)
 {
 	static int attackRollDiceSides = gamedata->GetMiscRule("ATTACK_ROLL_DICE_SIDES");
 	static EffectRef fx_puppetmarker_ref = { "PuppetMarker", -1 };
@@ -7364,7 +7383,7 @@ void Actor::PerformAttack(ieDword gameTime)
 		game->PartyAttack = true;
 	}
 
-	if (!Timers.roundStart || (gameTime - Timers.roundStart > core->Time.attack_round_size)) { // the original didn't use a normal round
+	if (!turnBased && (!Timers.roundStart || (gameTime - Timers.roundStart > core->Time.attack_round_size))) { // the original didn't use a normal round
 		// TODO: do we need cleverness for secondround here?
 		InitRound(gameTime);
 	}
@@ -7385,7 +7404,7 @@ void Actor::PerformAttack(ieDword gameTime)
 
 	//don't continue if we can't make the attack yet
 	//we check lastattack because we will get the same gameTime a few times
-	if (Timers.nextAttack > gameTime || gameTime == Timers.lastAttack) {
+	if (!turnBased && (Timers.nextAttack > gameTime || gameTime == Timers.lastAttack)) {
 		// fuzzie added the following line as part of the UpdateActorState hack below
 		Timers.lastAttack = gameTime;
 		return;
@@ -7453,7 +7472,7 @@ void Actor::PerformAttack(ieDword gameTime)
 	}
 
 	//if this is the first call of the round, we need to update next attack
-	if (Timers.nextAttack == 0) {
+	if (Timers.nextAttack == 0 && !turnBased) {
 		// initiative calculation (lucky 1d6-1 + item speed + speed stat + constant):
 		// speed contains the bonus from the physical speed stat and the proficiency level
 		int spdfactor = hittingheader->Speed + speed;

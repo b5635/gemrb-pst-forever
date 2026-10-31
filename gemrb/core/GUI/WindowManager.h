@@ -110,6 +110,8 @@ public:
 
 	Window* LoadWindow(ScriptingId WindowID, const ScriptingGroup_t& ref, Window::WindowPosition = Window::PosCentered);
 	Window* CreateWindow(ScriptingId WindowID, const Region&);
+	/** Like CreateWindow, but registered under the given window pack, reusing the window if it exists */
+	Window* CreateWindow(ScriptingId WindowID, const ScriptingGroup_t& pack, const Region&);
 	Window* MakeWindow(const Region& rgn);
 
 	void CloseWindow(Window* win);

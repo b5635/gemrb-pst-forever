@@ -108,6 +108,16 @@ Window* WindowManager::CreateWindow(ScriptingId WindowID, const Region& frame)
 	return guifact->CreateWindow(WindowID, frame);
 }
 
+Window* WindowManager::CreateWindow(ScriptingId WindowID, const ScriptingGroup_t& pack, const Region& frame)
+{
+	guifact->LoadWindowPack(pack);
+	Window* win = GetWindow(WindowID, pack);
+	if (!win) {
+		win = guifact->CreateWindow(WindowID, frame);
+	}
+	return win;
+}
+
 void WindowManager::DestroyClosedWindows()
 {
 	WindowList::iterator it = closedWindows.begin();

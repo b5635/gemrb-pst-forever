@@ -851,7 +851,7 @@ public:
 	bool GetCombatDetails(int& tohit, bool leftorright,
 			      int& DamageBonus, int& speed, int& CriticalBonus, int& style, const Actor* target);
 	/* performs attack against target */
-	void PerformAttack(ieDword gameTime);
+	void PerformAttack(ieDword gameTime, bool turnBased = false);
 	/* returns the adjusted weapon range, since items have odd values stored */
 	unsigned int GetWeaponRange(bool leftOrRight) const;
 	/* filter out any damage reduction that is cancelled by high weapon enchantment and return the resulting resistance */

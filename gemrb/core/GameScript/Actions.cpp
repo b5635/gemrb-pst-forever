@@ -6917,7 +6917,13 @@ void GameScript::UseItem(Scriptable* Sender, Holder<Action> parameters)
 	}
 
 	Sender->ReleaseCurrentAction();
-	act->UseItem(Slot, header, tar, flags);
+	TurnManager& turns = core->GetGame()->turnManager;
+	if (!turns.CanAfford(act, TBAction::UseItem)) {
+		return;
+	}
+	if (act->UseItem(Slot, header, tar, flags)) {
+		turns.Spend(act, TBAction::UseItem);
+	}
 }
 
 void GameScript::UseItemPoint(Scriptable* Sender, Holder<Action> parameters)
@@ -6969,7 +6975,13 @@ void GameScript::UseItemPoint(Scriptable* Sender, Holder<Action> parameters)
 	Point targetPos = parameters->pointParameter;
 
 	Sender->ReleaseCurrentAction();
-	act->UseItemPoint(Slot, header, targetPos, flags);
+	TurnManager& turns = core->GetGame()->turnManager;
+	if (!turns.CanAfford(act, TBAction::UseItem)) {
+		return;
+	}
+	if (act->UseItemPoint(Slot, header, targetPos, flags)) {
+		turns.Spend(act, TBAction::UseItem);
+	}
 }
 
 //addfeat will be able to remove feats too

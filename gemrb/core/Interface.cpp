@@ -720,6 +720,12 @@ void Interface::HandleEvents()
 		guiscript->RunFunction("GUICommonWindows", "SelectionChanged", false);
 	}
 
+	if (EventFlag & EF_TURNORDER) {
+		EventFlag &= ~EF_TURNORDER;
+		// only games with a turn based combat gui have this module
+		guiscript->RunFunction("TurnOrder", "UpdateTurnOrder", false);
+	}
+
 	if (EventFlag & EF_UPDATEANIM) {
 		EventFlag &= ~EF_UPDATEANIM;
 		guiscript->RunFunction("GUICommonWindows", "UpdateAnimation", false);
@@ -4078,6 +4084,11 @@ bool Interface::SetPause(PauseState pause, int flags) const
 bool Interface::Autopause(AUTOPAUSE flag, Scriptable* target) const
 {
 	AUTOPAUSE autopause_flags = vars.GetAs<AUTOPAUSE>("Auto Pause State", AUTOPAUSE::UNUSABLE);
+
+	// turn based combat waits for the player anyway
+	if (game && game->turnManager.IsActive()) {
+		return false;
+	}
 
 	if (!(autopause_flags & AUTOPAUSE(1 << ieDword(flag)))) {
 		return false;

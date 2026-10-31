@@ -258,6 +258,7 @@ void GameControl::ClearMouseState()
 // only PST supports RunToPoint
 void GameControl::CreateMovement(Actor* actor, const Point& p, bool append, bool tryToRun) const
 {
+	if (TurnBasedForbids(actor)) return;
 	Holder<Action> action;
 	tryToRun = tryToRun || AlwaysRun;
 
@@ -426,6 +427,22 @@ void GameControl::WillDraw(const Region& /*drawFrame*/, const Region& /*clip*/)
 		}
 	}
 
+	// in turn based combat the camera follows whoever is walking on their turn
+	const Game* game = core->GetGame();
+	if (game && game->turnManager.HaltsTime() && update_scripts && !core->timer.ViewportIsMoving()) {
+		const Actor* active = game->turnManager.GetActiveActor();
+		if (active && active->InMove() && active->GetCurrentArea() == CurrentArea() && CurrentArea()->IsVisible(active->Pos)) {
+			Point center = viewport.origin + Point(viewport.w / 2, viewport.h / 2);
+			// only once it strays from the middle, so short steps don't make it swim
+			if (Distance(center, active->Pos) > viewport.h / 4) {
+				Point step = active->Pos - center;
+				step.x /= 8;
+				step.y /= 8;
+				MoveViewportTo(viewport.origin + step, false);
+			}
+		}
+	}
+
 	// Prevent key scrolling from continuing when another window opens
 	if (scrollKeysActive && !IsReceivingEvents()) {
 		scrollKeysDown = scrollKeysActive = 0;
@@ -590,6 +607,8 @@ void GameControl::DrawSelf(const Region& screen, const Region& /*clip*/)
 	if (EventMgr::ModState(GEM_MOD_ALT)) {
 		tmpflags |= DEBUG_SHOW_CONTAINERS | DEBUG_SHOW_DOORS;
 	}
+	UpdateTurnPreview();
+
 	//drawmap should be here so it updates fog of war
 	area->DrawMap(viewport, core->GetFogRenderer(), tmpflags);
 
@@ -634,6 +653,8 @@ void GameControl::DrawTargetReticles() const
 		return;
 	}
 
+	DrawTurnPreview();
+
 	for (const auto& selectee : game->selected) {
 		assert(selectee);
 		if (!selectee->ShouldDrawReticle()) continue;
@@ -647,6 +668,205 @@ void GameControl::DrawTargetReticles() const
 			DrawTargetReticle(selectee, wp);
 		}
 		DrawTargetReticle(selectee, selectee->Destination - viewport.origin); // always draw last step
+	}
+}
+
+Actor* GameControl::GetTurnBasedActor() const
+{
+	const Game* game = core->GetGame();
+	if (!game || !game->turnManager.HaltsTime()) return nullptr;
+	Actor* actor = game->turnManager.GetActiveActor();
+	if (!actor || !actor->InParty || actor->GetCurrentArea() != CurrentArea()) return nullptr;
+	return actor;
+}
+
+bool GameControl::TurnBasedForbids(const Actor* source) const
+{
+	const Game* game = core->GetGame();
+	if (!game || !source || !game->turnManager.HaltsTime()) return false;
+	return source != game->turnManager.GetActiveActor();
+}
+
+static bool IsTurnBasedBusy(const Actor* actor)
+{
+	return actor->InMove() || actor->GetCurrentAction() || actor->GetNextAction();
+}
+
+void GameControl::UpdateTurnPreview()
+{
+	TurnPreview& preview = turnPreview;
+	Actor* actor = GetTurnBasedActor();
+	if (!actor) {
+		preview = TurnPreview();
+		return;
+	}
+	if (preview.actorID != actor->GetGlobalID()) {
+		preview = TurnPreview();
+		preview.actorID = actor->GetGlobalID();
+	}
+	if (IsTurnBasedBusy(actor)) {
+		// the move or attack is playing out, recompute once it's done
+		preview.budget = -1;
+		return;
+	}
+
+	const Game* game = core->GetGame();
+	Map* area = actor->GetCurrentArea();
+	int budget = game->turnManager.GetRemainingMovement(actor);
+	if (preview.actorPos != actor->Pos || preview.budget != budget) {
+		preview.reach = PathFinder::ReachableBoundary(area->tileProps, actor->Pos, actor->circleSize, budget);
+		preview.actorPos = actor->Pos;
+		preview.budget = budget;
+		preview.targetCell = SearchmapPoint(-1, -1);
+	}
+
+	Point target = preview.pending ? preview.pendingDest : GameMousePos();
+	const Actor* hovered = preview.pending ? nullptr : GetLastActor();
+	bool attack = hovered && hovered != actor && hovered->ValidTarget(GA_NO_DEAD) &&
+		(hovered->GetStat(IE_EA) >= EA_EVILCUTOFF || targetMode == TargetMode::Attack);
+	ieDword targetID = attack ? hovered->GetGlobalID() : 0;
+	SearchmapPoint cell(target);
+	if (cell == preview.targetCell && targetID == preview.targetActorID) return;
+
+	preview.targetCell = cell;
+	preview.targetActorID = targetID;
+	preview.attackPreview = attack;
+	preview.attackReachable = false;
+	preview.path = Path();
+	preview.pathCost = 0;
+
+	unsigned int minDistance = 0;
+	if (attack) {
+		target = hovered->Pos;
+		bool leftOrRight = false;
+		actor->GetWeapon(leftOrRight);
+		unsigned int range = actor->GetWeaponRange(leftOrRight);
+		bool canAttack = game->turnManager.CanAfford(actor, TBAction::Attack);
+		if (WithinPersonalRange(actor, hovered, range)) {
+			preview.attackReachable = canAttack;
+			return;
+		}
+		// the same distance AttackCore approaches to
+		minDistance = static_cast<unsigned int>(Feet2Pixels(range, AngleFromPoints(actor->Pos, target)));
+	}
+
+	const ActorPathContext context { static_cast<unsigned int>(actor->circleSize), actor->GetScriptName(), actor->ValidTarget(GA_ONLY_BUMPABLE) };
+	preview.path = PathFinder::FindPath(area->GetTraversabilityCacheData(), area->tileProps, actor->Pos, target, context, minDistance, PF_SIGHT | PF_ACTORS_ARE_BLOCKING);
+	preview.pathCost = PathFinder::PathCost(actor->Pos, preview.path);
+	if (attack) {
+		preview.attackReachable = preview.path && preview.pathCost <= budget && game->turnManager.CanAfford(actor, TBAction::Attack);
+	}
+}
+
+void GameControl::DrawTurnPreview() const
+{
+	const TurnPreview& preview = turnPreview;
+	const Actor* actor = GetTurnBasedActor();
+	if (!actor || IsTurnBasedBusy(actor) || preview.budget < 0) return;
+
+	static const Color reachColor(255, 255, 255, 110);
+	static const Color inReach(90, 230, 90, 230);
+	static const Color outOfReach(230, 60, 60, 230);
+	static const Color pendingColor(250, 220, 80, 255);
+	constexpr int DOT_SPACING = 16; // a foot's worth of movement cost each
+	const Point& origin = viewport.origin;
+
+	// the edge of how far this turn's movement goes
+	for (const auto& cell : preview.reach) {
+		const Point p = cell.ToNavmapCenter() - origin;
+		VideoDriver->DrawRect(Region(p - Point(1, 1), Size(2, 2)), reachColor, true, BlitFlags::BLENDED);
+	}
+
+	const int budget = preview.budget;
+	if (preview.path) {
+		// the dotted path: green where we can afford it, red beyond
+		Point prev = actor->Pos;
+		int walked = 0;
+		int nextDot = DOT_SPACING;
+		for (size_t i = 0; i < preview.path.Size(); ++i) {
+			const Point& next = preview.path.GetStep(i).point;
+			const int leg = PathFinder::MovementCost(prev, next);
+			while (leg > 0 && nextDot <= walked + leg) {
+				const float_t t = float_t(nextDot - walked) / float_t(leg);
+				const Point dot(prev.x + int((next.x - prev.x) * t), prev.y + int((next.y - prev.y) * t));
+				const Color& color = nextDot <= budget ? inReach : outOfReach;
+				VideoDriver->DrawRect(Region(dot - origin - Point(2, 2), Size(4, 4)), color, true, BlitFlags::BLENDED);
+				nextDot += DOT_SPACING;
+			}
+			walked += leg;
+			prev = next;
+		}
+
+		// exactly where the actor would stop
+		const Point stop = PathFinder::PointAlongPath(actor->Pos, preview.path, budget);
+		const Color& stopColor = preview.pending ? pendingColor : (preview.pathCost <= budget ? inReach : outOfReach);
+		DrawTargetReticle(actor->CircleSize2Radius(), stopColor, stop - origin);
+	}
+
+	String label;
+	Point labelPos = (preview.pending ? preview.pendingDest : GameMousePos()) - origin + Point(12, -24);
+	constexpr int UNITS_PER_FOOT = SEARCHMAP_TILE_WIDTH;
+	if (preview.attackPreview) {
+		const Actor* target = GetLastActor();
+		if (target) {
+			DrawTargetReticle(target->CircleSize2Radius(), preview.attackReachable ? inReach : outOfReach, target->Pos - origin);
+		}
+		label = preview.attackReachable ? u"Attack" : u"Out of reach";
+	} else if (preview.path) {
+		int cost = std::min(preview.pathCost, budget) / UNITS_PER_FOOT;
+		label = fmt::format(u"{} ft / {} ft left", preview.pathCost / UNITS_PER_FOOT, budget / UNITS_PER_FOOT);
+		if (preview.pathCost > budget) {
+			label = fmt::format(u"Too far: stops after {} ft", cost);
+		}
+	} else {
+		label = fmt::format(u"{} ft left", budget / UNITS_PER_FOOT);
+	}
+	if (preview.pending) {
+		label += u" - click again to move";
+	}
+	Font::PrintColors colors = { preview.attackReachable || (preview.path && preview.pathCost <= budget) ? inReach : ColorWhite, ColorBlack };
+	core->GetTextFont()->Print(Region(labelPos, Size(260, 20)), label, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP, colors);
+}
+
+void GameControl::HandleTurnBasedMove(const Point& p, bool commit)
+{
+	Actor* actor = GetTurnBasedActor();
+	if (!actor || IsTurnBasedBusy(actor)) return;
+
+	TurnPreview& preview = turnPreview;
+	bool confirm = core->GetDictionary().Get("Turn Based Move Confirm", 1);
+	// clicking near the placed destination again confirms it
+	bool samePlace = preview.pending && SearchmapPoint(p) == SearchmapPoint(preview.pendingDest);
+	if (confirm && !commit && !samePlace) {
+		preview.pending = true;
+		preview.pendingDest = p;
+		preview.targetCell = SearchmapPoint(-1, -1);
+		UpdateTurnPreview();
+		return;
+	}
+
+	if (!preview.pending || !samePlace) {
+		// the path under the cursor, if we commit without placing first
+		preview.pending = true;
+		preview.pendingDest = p;
+		preview.targetCell = SearchmapPoint(-1, -1);
+		UpdateTurnPreview();
+	}
+	preview.pending = false;
+	if (!preview.path || preview.budget <= 0) return;
+
+	// incremental: go as far as the budget allows, the rest of the turn can move again
+	Point stop = PathFinder::PointAlongPath(actor->Pos, preview.path, preview.budget);
+	if (stop == actor->Pos) return;
+	actor->ClearPath(true);
+	CreateMovement(actor, stop, false, false);
+	preview.targetCell = SearchmapPoint(-1, -1);
+}
+
+void GameControl::ConfirmTurnBasedMove()
+{
+	if (turnPreview.pending) {
+		HandleTurnBasedMove(turnPreview.pendingDest, true);
 	}
 }
 
@@ -778,8 +998,22 @@ bool GameControl::OnKeyPress(const KeyboardEvent& Key, unsigned short mod)
 				SelectActor(i, false);
 			}
 			break;
-		case ' ': //soft pause
-			core->TogglePause();
+		case GEM_RETURN: // confirm a placed turn based move
+			if (turnPreview.pending) {
+				ConfirmTurnBasedMove();
+			} else {
+				return View::OnKeyPress(Key, mod);
+			}
+			break;
+		case ' ': //soft pause, or end turn in turn based combat
+			if (game->turnManager.HaltsTime()) {
+				const Actor* active = game->turnManager.GetActiveActor();
+				if (active && active->InParty) {
+					game->turnManager.EndTurn();
+				}
+			} else {
+				core->TogglePause();
+			}
 			break;
 		case '=':
 			SelectActor(-1);
@@ -1804,6 +2038,7 @@ Region GameControl::Viewport() const
 //generate action code for source actor to try to attack a target
 void GameControl::TryToAttack(Actor* source, const Actor* tgt) const
 {
+	if (TurnBasedForbids(source)) return;
 	if (source->GetStat(IE_SEX) == SEX_ILLUSION) return;
 	source->CommandActor(GenerateActionDirect("NIDSpecial3()", tgt));
 }
@@ -1811,6 +2046,7 @@ void GameControl::TryToAttack(Actor* source, const Actor* tgt) const
 //generate action code for source actor to try to defend a target
 void GameControl::TryToDefend(Actor* source, const Actor* tgt) const
 {
+	if (TurnBasedForbids(source)) return;
 	source->SetModal(Modal::None);
 	source->CommandActor(GenerateActionDirect("NIDSpecial4()", tgt));
 }
@@ -1820,6 +2056,7 @@ void GameControl::TryToDefend(Actor* source, const Actor* tgt) const
 // The -1 flag is a placeholder for dynamic target IDs
 void GameControl::TryToPick(Actor* source, const Scriptable* tgt) const
 {
+	if (TurnBasedForbids(source)) return;
 	source->SetModal(Modal::None);
 	std::string cmdString;
 	cmdString.reserve(20);
@@ -1845,6 +2082,7 @@ void GameControl::TryToPick(Actor* source, const Scriptable* tgt) const
 //generate action code for source actor to try to disable trap (only trap type active regions)
 void GameControl::TryToDisarm(Actor* source, const InfoPoint* tgt) const
 {
+	if (TurnBasedForbids(source)) return;
 	if (tgt->Type != ST_PROXIMITY) return;
 
 	source->SetModal(Modal::None);
@@ -1854,6 +2092,7 @@ void GameControl::TryToDisarm(Actor* source, const InfoPoint* tgt) const
 //generate action code for source actor to use item/cast spell on a point
 void GameControl::TryToCast(Actor* source, const Point& tgt)
 {
+	if (TurnBasedForbids(source)) return;
 	if ((targetTypes & GA_POINT) == false) {
 		return; // not allowed to target point
 	}
@@ -1910,6 +2149,7 @@ void GameControl::TryToCast(Actor* source, const Point& tgt)
 //generate action code for source actor to use item/cast spell on another actor
 void GameControl::TryToCast(Actor* source, const Actor* tgt)
 {
+	if (TurnBasedForbids(source)) return;
 	// pst has no aura pollution
 	bool aural = true;
 	if (spellCount >= 1000) {
@@ -1979,6 +2219,7 @@ void GameControl::TryToCast(Actor* source, const Actor* tgt)
 //generate action code for source actor to use talk to target actor
 void GameControl::TryToTalk(Actor* source, const Actor* tgt) const
 {
+	if (TurnBasedForbids(source)) return;
 	if (source->GetStat(IE_SEX) == SEX_ILLUSION || source->fxqueue.HasEffectWithParam(puppet_ref, 3)) {
 		return;
 	}
@@ -2252,6 +2493,11 @@ bool GameControl::OnMouseUp(const MouseEvent& me, unsigned short Mod)
 
 	// right click
 	if (me.button == GEM_MB_MENU) {
+		if (turnPreview.pending) {
+			CancelTurnBasedMove();
+			ClearMouseState();
+			return true;
+		}
 		ieDword actionLevel = core->GetDictionary().Get("ActionLevel", 0);
 
 		if (targetMode != TargetMode::None || actionLevel) {
@@ -2342,10 +2588,17 @@ bool GameControl::OnMouseUp(const MouseEvent& me, unsigned short Mod)
 	// or if it doesn't make sense due to the location
 	bool saneCursor = lastCursor != IE_CURSOR_BLOCKED && lastCursor != IE_CURSOR_NORMAL && lastCursor != IE_CURSOR_TALK;
 	if ((!core->HasFeature(GFFlags::HAS_FLOAT_MENU) || me.button != GEM_MB_MENU) && saneCursor) {
-		// pst has different mod keys
-		int modKey = GEM_MOD_SHIFT;
-		if (core->HasFeature(GFFlags::HAS_FLOAT_MENU)) modKey = GEM_MOD_CTRL;
-		CommandSelectedMovement(p, lastCursor != IE_CURSOR_TRAVEL, Mod & modKey, tryToRun);
+		if (core->GetGame()->turnManager.HaltsTime()) {
+			// only the active party member moves, and only as far as its turn allows
+			if (me.button != GEM_MB_MENU) {
+				HandleTurnBasedMove(p, false);
+			}
+		} else {
+			// pst has different mod keys
+			int modKey = GEM_MOD_SHIFT;
+			if (core->HasFeature(GFFlags::HAS_FLOAT_MENU)) modKey = GEM_MOD_CTRL;
+			CommandSelectedMovement(p, lastCursor != IE_CURSOR_TRAVEL, Mod & modKey, tryToRun);
+		}
 	}
 	ClearMouseState();
 	return true;

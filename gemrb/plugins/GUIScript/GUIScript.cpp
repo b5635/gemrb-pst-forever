@@ -530,6 +530,41 @@ static PyObject* GemRB_LoadWindow(PyObject* /*self*/, PyObject* args)
 	return gs->ConstructObjectForScriptable(win->GetScriptingRef());
 }
 
+PyDoc_STRVAR(GemRB_CreateWindow__doc,
+	     "===== CreateWindow =====\n\
+\n\
+**Prototype:** GemRB.CreateWindow (WindowID, WindowPack, FrameRect[, Position])\n\
+\n\
+**Description:** Creates an empty window, for interfaces that have no CHU \n\
+counterpart. If the window already exists it is returned instead.\n\
+\n\
+**Parameters:**\n\
+  * WindowID - an ID that no window of the pack uses\n\
+  * WindowPack - the window pack (CHU) to group it with\n\
+  * FrameRect - a dict with the window's frame (origin and size)\n\
+  * Position - optional window position flags, see LoadWindow\n\
+\n\
+**Return value:** GWindow\n\
+\n\
+**See also:** [LoadWindow](LoadWindow.md)");
+
+static PyObject* GemRB_CreateWindow(PyObject* /*self*/, PyObject* args)
+{
+	int WindowID = -1;
+	char* ref = nullptr;
+	PyObject* pyRect = nullptr;
+	int pos = -1;
+	PARSE_ARGS(args, "isO|i", &WindowID, &ref, &pyRect, &pos);
+
+	Window* win = core->GetWindowManager()->CreateWindow(WindowID, ScriptingGroup_t(ref), RectFromPy(pyRect));
+	ABORT_IF_NULL(win);
+	win->SetFlags(Window::AlphaChannel | Window::Borderless, BitOp::OR);
+	if (pos != -1) {
+		win->SetPosition(Window::WindowPosition(pos));
+	}
+	return gs->ConstructObjectForScriptable(win->GetScriptingRef());
+}
+
 PyDoc_STRVAR(GemRB_EnableCheatKeys__doc,
 	     "===== EnableCheatKeys =====\n\
 \n\
@@ -9510,6 +9545,14 @@ static PyObject* GemRB_DropDraggedItem(PyObject* /*self*/, PyObject* args)
 		return PyLong_FromLong(ASI_FAILED);
 	}
 
+	// in turn based combat changing gear takes the main action
+	TurnManager& turns = game->turnManager;
+	bool equipping = Slottype != -1 && !(Slottype & SLOT_INVENTORY);
+	if (equipping && !turns.CanAfford(actor, TBAction::Equip)) {
+		displaymsg->DisplayString(u"No action left to change equipment this turn", GUIColors::WHITE, nullptr);
+		return PyLong_FromLong(ASI_FAILED);
+	}
+
 	CREItem* slotitem = core->GetDraggedItem()->item;
 	const Item* item = gamedata->GetItem(slotitem->ItemResRef);
 	if (!item) {
@@ -9604,6 +9647,10 @@ static PyObject* GemRB_DropDraggedItem(PyObject* /*self*/, PyObject* args)
 		}
 	} else {
 		displaymsg->DisplayConstantString(HCStrings::InventoryFull, GUIColors::WHITE);
+	}
+
+	if (equipping && res != ASI_FAILED) {
+		turns.Spend(actor, TBAction::Equip);
 	}
 
 	if (Sound && Sound[0]) {
@@ -10953,6 +11000,14 @@ static PyObject* GemRB_SetEquippedQuickSlot(PyObject* /*self*/, PyObject* args)
 		Py_RETURN_NONE;
 	}
 
+	// in turn based combat the first quick weapon swap each turn is free, others take the action
+	TurnManager& turns = game->turnManager;
+	int equippedBefore = actor->inventory.GetEquipped();
+	if (!turns.CanSwapWeapon(actor)) {
+		displaymsg->DisplayString(u"No action left to switch weapons this turn", GUIColors::WHITE, nullptr);
+		Py_RETURN_NONE;
+	}
+
 	// for iwd2 we also need to take care of the paired slot
 	// otherwise we'll happily draw a bow and a shield in the same hand
 	bool reequip = false;
@@ -10974,6 +11029,9 @@ static PyObject* GemRB_SetEquippedQuickSlot(PyObject* /*self*/, PyObject* args)
 		if (reequip) {
 			int shieldSlot = actor->inventory.GetShieldSlot();
 			if (shieldSlot != -1) actor->inventory.EquipItem(shieldSlot);
+		}
+		if (actor->inventory.GetEquipped() != equippedBefore) {
+			turns.SpendWeaponSwap(actor);
 		}
 	} else {
 		// error occurred
@@ -12066,6 +12124,170 @@ static PyObject* GemRB_DisplayString(PyObject* /*self*/, PyObject* args)
 	Py_RETURN_NONE;
 }
 
+PyDoc_STRVAR(GemRB_GetTurnOrder__doc,
+	     "===== GetTurnOrder =====\n\
+\n\
+**Prototype:** GemRB.GetTurnOrder ()\n\
+\n\
+**Description:** Returns the state of turn based combat.\n\
+\n\
+**Parameters:** N/A\n\
+\n\
+**Return value:** None outside of turn based combat, otherwise a dict:\n\
+  * Round - the round number, starting with 1\n\
+  * Active - global ID of the combatant whose turn it is\n\
+  * Suspended - true while a dialog or cutscene interrupts the fight\n\
+  * Combatants - list of dicts in initiative order, each with 'ID', 'Name', \n\
+'Portrait', 'LargePortrait', 'HP', 'MaxHP', 'IsPC', 'Hostile', 'Initiative', 'Roll', 'Done', 'Dead'\n\
+\n\
+**See also:** [GetTurnBudget](GetTurnBudget.md), [EndTurn](EndTurn.md)");
+
+static PyObject* GemRB_GetTurnOrder(PyObject* /*self*/, PyObject* /*args*/)
+{
+	GET_GAME();
+	const TurnManager& turns = game->turnManager;
+	if (!turns.IsActive()) {
+		Py_RETURN_NONE;
+	}
+
+	PyObject* dict = PyDict_New();
+	PyDict_SetItemString(dict, "Round", DecRef(PyLong_FromLong, turns.GetRound()));
+	PyDict_SetItemString(dict, "Active", DecRef(PyLong_FromLong, turns.GetActiveID()));
+	PyDict_SetItemString(dict, "Suspended", DecRef(PyBool_FromLong, !turns.HaltsTime()));
+
+	const Map* area = game->GetCurrentArea();
+	PyObject* list = PyList_New(0);
+	for (const Combatant& combatant : turns.GetOrder()) {
+		const Actor* actor = area ? area->GetActorByGlobalID(combatant.globalID) : nullptr;
+		PyObject* entry = PyDict_New();
+		PyDict_SetItemString(entry, "ID", DecRef(PyLong_FromLong, combatant.globalID));
+		PyDict_SetItemString(entry, "Initiative", DecRef(PyLong_FromLong, combatant.initiative));
+		PyDict_SetItemString(entry, "Roll", DecRef(PyLong_FromLong, combatant.roll));
+		PyDict_SetItemString(entry, "IsPC", DecRef(PyBool_FromLong, combatant.isPC));
+		PyDict_SetItemString(entry, "Done", DecRef(PyBool_FromLong, combatant.done));
+		PyDict_SetItemString(entry, "Dead", DecRef(PyBool_FromLong, combatant.dead || !actor));
+		if (actor) {
+			PyObject* name = PyString_FromStringObj(actor->GetShortName());
+			PyDict_SetItemString(entry, "Name", name);
+			Py_DecRef(name);
+			PyDict_SetItemString(entry, "Portrait", DecRef(PyString_FromResRef, actor->SmallPortrait));
+			PyDict_SetItemString(entry, "LargePortrait", DecRef(PyString_FromResRef, actor->LargePortrait));
+			PyDict_SetItemString(entry, "HP", DecRef(PyLong_FromLong, actor->GetStat(IE_HITPOINTS)));
+			PyDict_SetItemString(entry, "MaxHP", DecRef(PyLong_FromLong, actor->GetStat(IE_MAXHITPOINTS)));
+			PyDict_SetItemString(entry, "Hostile", DecRef(PyBool_FromLong, actor->GetStat(IE_EA) >= EA_EVILCUTOFF));
+		} else {
+			PyDict_SetItemString(entry, "Name", DecRef(PyString_FromString, ""));
+			PyDict_SetItemString(entry, "Portrait", DecRef(PyString_FromString, ""));
+			PyDict_SetItemString(entry, "LargePortrait", DecRef(PyString_FromString, ""));
+			PyDict_SetItemString(entry, "HP", DecRef(PyLong_FromLong, 0));
+			PyDict_SetItemString(entry, "MaxHP", DecRef(PyLong_FromLong, 1));
+			PyDict_SetItemString(entry, "Hostile", DecRef(PyBool_FromLong, 0));
+		}
+		PyList_Append(list, entry);
+		Py_DecRef(entry);
+	}
+	PyDict_SetItemString(dict, "Combatants", list);
+	Py_DecRef(list);
+	return dict;
+}
+
+PyDoc_STRVAR(GemRB_GetTurnBudget__doc,
+	     "===== GetTurnBudget =====\n\
+\n\
+**Prototype:** GemRB.GetTurnBudget ()\n\
+\n\
+**Description:** Returns what the active combatant can still do this turn.\n\
+\n\
+**Parameters:** N/A\n\
+\n\
+**Return value:** None if no party member is acting, otherwise a dict: 'ID', \n\
+'Move' and 'MaxMove' (in feet), 'MainActionUsed', 'Ran', 'CanAttack', 'CanCast', \n\
+'CanUseItem', 'CanEquip', 'CanRun', 'Busy'\n\
+\n\
+**See also:** [GetTurnOrder](GetTurnOrder.md)");
+
+static PyObject* GemRB_GetTurnBudget(PyObject* /*self*/, PyObject* /*args*/)
+{
+	GET_GAME();
+	const TurnManager& turns = game->turnManager;
+	const Actor* actor = turns.GetActiveActor();
+	if (!turns.HaltsTime() || !actor || !actor->InParty) {
+		Py_RETURN_NONE;
+	}
+	const Combatant* combatant = turns.FindCombatant(actor->GetGlobalID());
+	if (!combatant) {
+		Py_RETURN_NONE;
+	}
+
+	constexpr int UNITS_PER_FOOT = SEARCHMAP_TILE_WIDTH;
+	bool busy = actor->InMove() || actor->GetCurrentAction() || actor->GetNextAction() || combatant->attacking;
+	PyObject* dict = PyDict_New();
+	PyDict_SetItemString(dict, "ID", DecRef(PyLong_FromLong, actor->GetGlobalID()));
+	PyDict_SetItemString(dict, "Move", DecRef(PyLong_FromLong, combatant->movePx / UNITS_PER_FOOT));
+	PyDict_SetItemString(dict, "MaxMove", DecRef(PyLong_FromLong, combatant->maxMovePx / UNITS_PER_FOOT));
+	PyDict_SetItemString(dict, "MainActionUsed", DecRef(PyBool_FromLong, combatant->mainActionUsed));
+	PyDict_SetItemString(dict, "Ran", DecRef(PyBool_FromLong, combatant->ran));
+	PyDict_SetItemString(dict, "CanAttack", DecRef(PyBool_FromLong, turns.CanAfford(actor, TBAction::Attack)));
+	PyDict_SetItemString(dict, "CanCast", DecRef(PyBool_FromLong, turns.CanAfford(actor, TBAction::CastSpell)));
+	PyDict_SetItemString(dict, "CanUseItem", DecRef(PyBool_FromLong, turns.CanAfford(actor, TBAction::UseItem)));
+	PyDict_SetItemString(dict, "CanEquip", DecRef(PyBool_FromLong, turns.CanAfford(actor, TBAction::Equip)));
+	PyDict_SetItemString(dict, "CanRun", DecRef(PyBool_FromLong, turns.CanAfford(actor, TBAction::Run)));
+	PyDict_SetItemString(dict, "Busy", DecRef(PyBool_FromLong, busy));
+	return dict;
+}
+
+PyDoc_STRVAR(GemRB_EndTurn__doc,
+	     "===== EndTurn =====\n\
+\n\
+**Prototype:** GemRB.EndTurn ()\n\
+\n\
+**Description:** Ends the active party member's combat turn.\n\
+\n\
+**Parameters:** N/A\n\
+\n\
+**Return value:** N/A\n\
+\n\
+**See also:** [GetTurnOrder](GetTurnOrder.md)");
+
+static PyObject* GemRB_EndTurn(PyObject* /*self*/, PyObject* /*args*/)
+{
+	GET_GAME();
+	TurnManager& turns = game->turnManager;
+	const Actor* actor = turns.GetActiveActor();
+	if (turns.HaltsTime() && actor && actor->InParty) {
+		GET_GAMECONTROL();
+		gc->CancelTurnBasedMove();
+		turns.EndTurn();
+	}
+	Py_RETURN_NONE;
+}
+
+PyDoc_STRVAR(GemRB_TurnBasedRun__doc,
+	     "===== TurnBasedRun =====\n\
+\n\
+**Prototype:** GemRB.TurnBasedRun ()\n\
+\n\
+**Description:** The active party member gives up its main action this turn \n\
+for twice the movement.\n\
+\n\
+**Parameters:** N/A\n\
+\n\
+**Return value:** bool, true if it could run\n\
+\n\
+**See also:** [GetTurnBudget](GetTurnBudget.md)");
+
+static PyObject* GemRB_TurnBasedRun(PyObject* /*self*/, PyObject* /*args*/)
+{
+	GET_GAME();
+	TurnManager& turns = game->turnManager;
+	const Actor* actor = turns.GetActiveActor();
+	if (!turns.HaltsTime() || !actor || !actor->InParty || !turns.CanAfford(actor, TBAction::Run)) {
+		Py_RETURN_FALSE;
+	}
+	turns.Spend(actor, TBAction::Run);
+	Py_RETURN_TRUE;
+}
+
 PyDoc_STRVAR(GemRB_GetCombatDetails__doc,
 	     "===== GetCombatDetails =====\n\
 \n\
@@ -12878,6 +13100,11 @@ static PyMethodDef GemRBMethods[] = {
 	METHOD(GetAreaInfo, METH_NOARGS),
 	METHOD(GetAvatarsValue, METH_VARARGS),
 	METHOD(GetCombatDetails, METH_VARARGS),
+	METHOD(CreateWindow, METH_VARARGS),
+	METHOD(GetTurnBudget, METH_NOARGS),
+	METHOD(GetTurnOrder, METH_NOARGS),
+	METHOD(EndTurn, METH_NOARGS),
+	METHOD(TurnBasedRun, METH_NOARGS),
 	METHOD(GetContainer, METH_VARARGS),
 	METHOD(GetContainerItem, METH_VARARGS),
 	METHOD(GetCurrentArea, METH_NOARGS),

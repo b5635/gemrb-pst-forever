@@ -16,6 +16,7 @@
 #include "strrefs.h"
 
 #include "EnumIndex.h"
+#include "PathFinder.h"
 #include "Sprite2D.h"
 #include "View.h"
 
@@ -84,6 +85,24 @@ private:
 
 	EventMgr::TapMonitorId eventMonitors[2];
 
+	// turn based movement preview, recomputed only when its inputs change
+	struct TurnPreview {
+		ieDword actorID = 0;
+		Point actorPos;
+		int budget = -1;
+		std::vector<SearchmapPoint> reach;
+
+		SearchmapPoint targetCell { -1, -1 };
+		ieDword targetActorID = 0;
+		Path path;
+		int pathCost = 0;
+		bool attackPreview = false;
+		bool attackReachable = false;
+
+		bool pending = false; // a destination waiting for confirmation
+		Point pendingDest;
+	} turnPreview;
+
 public:
 	static uint32_t DebugFlags;
 	static uint8_t DebugPropVal;
@@ -139,6 +158,15 @@ private:
 	void FlagsChanged(unsigned int /*oldflags*/) override;
 
 	void DebugPaint(const Point& p, bool sample) const noexcept;
+
+	/** The party member whose combat turn it is, if the player is to act now. */
+	Actor* GetTurnBasedActor() const;
+	/** In turn based combat only the active combatant takes orders. */
+	bool TurnBasedForbids(const Actor* source) const;
+	void UpdateTurnPreview();
+	void DrawTurnPreview() const;
+	/** Left click on the ground during a party member's turn: place or commit a move. */
+	void HandleTurnBasedMove(const Point& p, bool commit);
 
 	enum class ActorDump { Anims,
 			       Stats };
@@ -224,6 +252,10 @@ public:
 	void TryDefaultTalk() const;
 	void SetScalePercent(unsigned int zoomLevel, bool force = false);
 	unsigned int GetScalePercent() const;
+	/** Drops a turn based move waiting for confirmation */
+	void CancelTurnBasedMove() { turnPreview.pending = false; }
+	/** Confirms the turn based move waiting for confirmation, if any */
+	void ConfirmTurnBasedMove();
 
 protected:
 	//Events

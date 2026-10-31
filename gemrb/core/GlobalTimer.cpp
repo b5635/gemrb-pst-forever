@@ -170,7 +170,8 @@ bool GlobalTimer::Update()
 		map->UpdateEffects();
 		map->UpdateProjectiles();
 
-		if (thisTime) {
+		// in turn based combat the world clock only moves by whole rounds
+		if (thisTime && !game->turnManager.HaltsTime()) {
 			//this measures in-world time (affected by effects, actions, etc)
 			game->AdvanceTime(1);
 			// drop an area comment, party oneliner or initiate party banter (with Interact)

@@ -35,6 +35,7 @@
 #include <cassert>
 #include <cmath>
 #include <limits>
+#include <queue>
 #include <set>
 
 namespace GemRB {
@@ -1030,5 +1031,123 @@ void PathFinder::AdjustPosition(const TileProps& tileProps, SearchmapPoint& goal
 			radius.h++;
 		}
 	}
+}
+
+int PathFinder::MovementCost(const Point& a, const Point& b)
+{
+	const float_t dx = float_t(b.x - a.x);
+	const float_t dy = float_t(b.y - a.y) * SEARCHMAP_TILE_WIDTH / SEARCHMAP_TILE_HEIGHT;
+	return int(std::lround(std::sqrt(dx * dx + dy * dy)));
+}
+
+int PathFinder::PathCost(const Point& start, const Path& path)
+{
+	int cost = 0;
+	Point prev = start;
+	for (size_t i = 0; i < path.Size(); ++i) {
+		const Point& next = path.GetStep(i).point;
+		cost += MovementCost(prev, next);
+		prev = next;
+	}
+	return cost;
+}
+
+Point PathFinder::PointAlongPath(const Point& start, const Path& path, int cost)
+{
+	Point prev = start;
+	for (size_t i = 0; i < path.Size(); ++i) {
+		const Point& next = path.GetStep(i).point;
+		const int leg = MovementCost(prev, next);
+		if (leg > 0 && cost < leg) {
+			const float_t t = float_t(cost) / float_t(leg);
+			return Point(prev.x + int(std::lround((next.x - prev.x) * t)), prev.y + int(std::lround((next.y - prev.y) * t)));
+		}
+		cost -= leg;
+		prev = next;
+	}
+	return prev;
+}
+
+std::vector<SearchmapPoint> PathFinder::ReachableBoundary(const TileProps& tileProps, const Point& source, unsigned int circleSize, int maxCost)
+{
+	std::vector<SearchmapPoint> boundary;
+	if (maxCost <= 0) return boundary;
+
+	// a Dijkstra flood over the cells in reach; it moves on the cell lattice, so it is a bit
+	// more pessimistic than the any-angle paths actors really walk
+	const Size& mapSize = tileProps.GetSize();
+	const SearchmapPoint origin(source);
+	const int rx = maxCost / SEARCHMAP_TILE_WIDTH + 1;
+	const int ry = maxCost / SEARCHMAP_TILE_WIDTH + 1; // cost units are horizontal pixels
+	const int w = 2 * rx + 1;
+	const int h = 2 * ry + 1;
+	constexpr int UNREACHED = std::numeric_limits<int>::max();
+	std::vector<int> cost(size_t(w * h), UNREACHED);
+	std::vector<int8_t> walkable(size_t(w * h), -1); // -1: not checked yet
+
+	auto localIdx = [&](const SearchmapPoint& p) {
+		int lx = p.x - origin.x + rx;
+		int ly = p.y - origin.y + ry;
+		if (lx < 0 || ly < 0 || lx >= w || ly >= h) return -1;
+		return ly * w + lx;
+	};
+	auto isWalkable = [&](const SearchmapPoint& p, int idx) {
+		if (!mapSize.PointInside(p)) return false;
+		if (walkable[idx] == -1) {
+			// other actors don't count, the exact path preview goes around them
+			PathMapFlags flags = GetBlockedInRadiusTile(tileProps, p, uint16_t(circleSize));
+			walkable[idx] = bool(flags & (PathMapFlags::PASSABLE | PathMapFlags::ACTOR)) ? 1 : 0;
+		}
+		return walkable[idx] == 1;
+	};
+
+	constexpr int ORTHO = SEARCHMAP_TILE_WIDTH; // 12px down costs the same as 16px across
+	const int DIAG = int(std::lround(ORTHO * std::sqrt(2.0)));
+	static const int dxs[] = { 1, -1, 0, 0, 1, 1, -1, -1 };
+	static const int dys[] = { 0, 0, 1, -1, 1, -1, 1, -1 };
+
+	using Entry = std::pair<int, int>; // cost, local index
+	std::priority_queue<Entry, std::vector<Entry>, std::greater<>> open;
+	const int startIdx = localIdx(origin);
+	cost[startIdx] = 0;
+	open.emplace(0, startIdx);
+	while (!open.empty()) {
+		const int currentCost = open.top().first;
+		const int idx = open.top().second;
+		open.pop();
+		if (currentCost > cost[idx]) continue;
+		const SearchmapPoint current(idx % w + origin.x - rx, idx / w + origin.y - ry);
+		for (int i = 0; i < 8; ++i) {
+			const SearchmapPoint next(current.x + dxs[i], current.y + dys[i]);
+			const int nextIdx = localIdx(next);
+			if (nextIdx < 0 || !isWalkable(next, nextIdx)) continue;
+			const bool diagonal = i >= 4;
+			if (diagonal) {
+				// don't cut corners
+				const SearchmapPoint sideA(current.x + dxs[i], current.y);
+				const SearchmapPoint sideB(current.x, current.y + dys[i]);
+				int idxA = localIdx(sideA);
+				int idxB = localIdx(sideB);
+				if (idxA < 0 || idxB < 0 || !isWalkable(sideA, idxA) || !isWalkable(sideB, idxB)) continue;
+			}
+			const int nextCost = currentCost + (diagonal ? DIAG : ORTHO);
+			if (nextCost > maxCost || nextCost >= cost[nextIdx]) continue;
+			cost[nextIdx] = nextCost;
+			open.emplace(nextCost, nextIdx);
+		}
+	}
+
+	for (int idx = 0; idx < w * h; ++idx) {
+		if (cost[idx] == UNREACHED) continue;
+		const SearchmapPoint cell(idx % w + origin.x - rx, idx / w + origin.y - ry);
+		for (int i = 0; i < 4; ++i) {
+			const int nextIdx = localIdx(SearchmapPoint(cell.x + dxs[i], cell.y + dys[i]));
+			if (nextIdx < 0 || cost[nextIdx] == UNREACHED) {
+				boundary.push_back(cell);
+				break;
+			}
+		}
+	}
+	return boundary;
 }
 }

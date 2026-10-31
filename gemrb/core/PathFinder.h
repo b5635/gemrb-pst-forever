@@ -304,6 +304,17 @@ public:
 
 	static PathMapFlags GetBlockedInRadiusTile(const TileProps& tileProps, const SearchmapPoint&, uint16_t size, bool stopOnImpassable = true);
 
+	// Turn based movement measures ground covered, not pixels: the navmap is squashed vertically
+	// (a foot is 16px across, but 12px down), so y is scaled back up. One unit is 1/16 of a foot,
+	// and it matches what walking at a given speed covers per tick in any direction.
+	static int MovementCost(const Point& a, const Point& b);
+	/** Cost of walking from start along all the nodes of path. */
+	static int PathCost(const Point& start, const Path& path);
+	/** Where an actor walking path from start ends up after spending cost; the end if it can afford it all. */
+	static Point PointAlongPath(const Point& start, const Path& path, int cost);
+	/** Searchmap cells on the edge of the area reachable from source with the given movement cost. */
+	static std::vector<SearchmapPoint> ReachableBoundary(const TileProps& tileProps, const Point& source, unsigned int circleSize, int maxCost);
+
 	/**
 	 * The exact per-frame movement delta: the direction from the actor to its next waypoint,
 	 * renormalized to one engine step and scaled by the actor's move rate, with the y axis

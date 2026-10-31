@@ -1613,6 +1613,9 @@ void Game::UpdateScripts()
 		Maps[idx]->UpdateScripts();
 	}
 
+	// needs PartyAttack from this tick to notice a fight starting
+	turnManager.Update();
+
 	bool combatEnded = false;
 	if (PartyAttack) {
 		//ChangeSong will set the battlesong only if CombatCounter is nonzero
@@ -2150,6 +2153,11 @@ bool Game::TimeStoppedFor(const Actor* target) const
 		return false;
 	}
 	return true;
+}
+
+bool Game::IsActorFrozen(const Actor* target) const
+{
+	return TimeStoppedFor(target) || turnManager.IsFrozen(target);
 }
 
 //recalculate the party's infravision state

@@ -489,7 +489,7 @@ void Map::UpdateScripts()
 			continue;
 		}
 
-		if (game->TimeStoppedFor(actor)) {
+		if (game->IsActorFrozen(actor)) {
 			continue;
 		}
 

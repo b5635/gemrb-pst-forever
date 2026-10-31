@@ -1266,6 +1266,10 @@ int Scriptable::CastSpellPoint(const Point& target, bool deplete, bool instant, 
 	objects.LastSpellTarget = 0;
 	objects.LastTargetPos.Invalidate();
 	Actor* actor = Scriptable::As<Actor>(this);
+	TurnManager& turns = core->GetGame()->turnManager;
+	if (actor && !instant && !turns.CanAfford(actor, TBAction::CastSpell)) {
+		return -1;
+	}
 	if (actor && actor->HandleCastingStance(SpellResRef, deplete, instant)) {
 		Log(ERROR, "Scriptable", "Spell {} not known or memorized, aborting cast!", SpellResRef);
 		return -1;
@@ -1292,6 +1296,9 @@ int Scriptable::CastSpellPoint(const Point& target, bool deplete, bool instant, 
 		SpellcraftCheck(actor, SpellResRef);
 		if (actor) actor->CureInvisibility();
 	}
+	if (actor && !instant) {
+		turns.Spend(actor, TBAction::CastSpell);
+	}
 	return duration;
 }
 
@@ -1303,6 +1310,10 @@ int Scriptable::CastSpell(Scriptable* target, bool deplete, bool instant, bool n
 	objects.LastSpellTarget = 0;
 	objects.LastTargetPos.Invalidate();
 	Actor* actor = Scriptable::As<Actor>(this);
+	TurnManager& turns = core->GetGame()->turnManager;
+	if (actor && !instant && !turns.CanAfford(actor, TBAction::CastSpell)) {
+		return -1;
+	}
 	if (actor && actor->HandleCastingStance(SpellResRef, deplete, instant)) {
 		Log(ERROR, "Scriptable", "Spell {} not known or memorized, aborting cast!", SpellResRef);
 		return -1;
@@ -1335,6 +1346,9 @@ int Scriptable::CastSpell(Scriptable* target, bool deplete, bool instant, bool n
 		SpellcraftCheck(actor, SpellResRef);
 		// self-targeted spells that are not hostile maintain invisibility
 		if (actor && target != this) actor->CureInvisibility();
+	}
+	if (actor && !instant) {
+		turns.Spend(actor, TBAction::CastSpell);
 	}
 	return duration;
 }
@@ -1379,6 +1393,9 @@ int Scriptable::SpellCast(bool instant, Scriptable* target, int level)
 	int duration = (casting_time * core->Time.round_size) / 10;
 	if (instant) {
 		duration = 0;
+	} else if (actor && core->GetGame()->turnManager.IsCombatant(actor)) {
+		// the spell resolves within the turn, so just play out the casting
+		duration = std::min<int>(duration, core->Time.round_size / 6);
 	}
 	if (actor) {
 		//cfb
