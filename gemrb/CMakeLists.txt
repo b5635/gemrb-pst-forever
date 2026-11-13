@@ -114,7 +114,7 @@ ELSE(APPLE)
 	SET(PLATFORM_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../platforms")
 
 	IF(WIN32)
-		ADD_EXECUTABLE(gemrb ${PLATFORM_DIR}/windows/GemRB.cpp ${PLATFORM_DIR}/windows/window.rc)
+		ADD_EXECUTABLE(gemrb ${PLATFORM_DIR}/windows/GemRB.cpp ${PLATFORM_DIR}/windows/CrashHandler.cpp ${PLATFORM_DIR}/windows/window.rc)
 	ELSEIF(VITA)
 		ADD_EXECUTABLE(gemrb ${PLATFORM_DIR}/vita/GemRB.cpp ${PLATFORM_DIR}/vita/VitaLogger.cpp)
 	ELSEIF(ANDROID)

@@ -6,6 +6,7 @@
 
 #include "win32def.h"
 
+#include "CrashHandler.h"
 #include "Interface.h"
 #include "PluginMgr.h"
 
@@ -13,6 +14,7 @@
 #include "Logging/Logging.h"
 
 #include <clocale> //language encoding
+#include <share.h>
 
 using namespace GemRB;
 
@@ -22,16 +24,25 @@ void SetupLogging(const CoreSettings& cfg)
 		ToggleLogging(cfg.Logging);
 	}
 
-	if (cfg.LogColor >= 0 && cfg.LogColor < int(ANSIColor::count)) {
-		AddLogWriter(createStdioLogWriter(ANSIColor(cfg.LogColor)));
-	} else {
-		AddLogWriter(createStdioLogWriter());
+	auto console = (cfg.LogColor >= 0 && cfg.LogColor < int(ANSIColor::count)) ? createStdioLogWriter(ANSIColor(cfg.LogColor)) : createStdioLogWriter();
+	if (console) {
+		AddLogWriter(std::move(console));
+	}
+
+	// dev: every run also logs to gemrb.log in the working dir (previous run kept as gemrb.prev.log),
+	// so a crash leaves its log behind even when the console window closes
+	MoveFileExA("gemrb.log", "gemrb.prev.log", MOVEFILE_REPLACE_EXISTING);
+	// shared so it can be read (tools\dev.ps1 log) while the game runs
+	FILE* logFile = _fsopen("gemrb.log", "w", _SH_DENYNO);
+	if (logFile) {
+		AddLogWriter(createStreamLogWriter(logFile));
 	}
 }
 
 int main(int argc, char* argv[])
 {
 	setlocale(LC_ALL, "");
+	InstallCrashHandler();
 
 	auto hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD dwMode = 0;

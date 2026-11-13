@@ -54,12 +54,31 @@ void Logger::AddLogWriter(WriterPtr writer)
 	}
 }
 
+// a writer must never take the game down: fmt throws on invalid UTF-8 when printing to a Windows
+// console (game data has plenty of non-UTF-8 names), and this runs on the logging thread
+void Logger::WriteSafely(LogWriter& writer, const LogMessage& msg)
+{
+	try {
+		writer.WriteLogMessage(msg);
+	} catch (const std::exception&) {
+		std::string clean = msg.message;
+		for (char& c : clean) {
+			if (static_cast<unsigned char>(c) >= 0x80) c = '?';
+		}
+		LogMessage copy(msg.level, msg.owner, clean, msg.format);
+		try {
+			writer.WriteLogMessage(copy);
+		} catch (const std::exception&) {
+		}
+	}
+}
+
 void Logger::ProcessMessages(QueueType queue)
 {
 	std::lock_guard<std::mutex> l(writerLock);
 	while (!queue.empty()) {
 		for (const auto& writer : writers) {
-			writer->WriteLogMessage(queue.front());
+			WriteSafely(*writer, queue.front());
 		}
 		queue.pop_front();
 	}
@@ -79,7 +98,7 @@ void Logger::LogMsg(LogMessage&& msg)
 		// fatal errors must happen now!
 		std::lock_guard<std::mutex> l(writerLock);
 		for (const auto& writer : writers) {
-			writer->WriteLogMessage(msg);
+			WriteSafely(*writer, msg);
 			writer->Flush();
 		}
 	} else {

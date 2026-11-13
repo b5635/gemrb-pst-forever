@@ -42,6 +42,13 @@ if(CMAKE_BUILD_TYPE MATCHES "Rel.*")
 	ENABLE_LINK_TIME_OPTIMIZATIONS()
 endif()
 
+# MSVC release builds also emit PDBs, so the crash handler (platforms/windows/CrashHandler.cpp)
+# can print function names and source lines
+if(MSVC)
+	add_compile_options($<$<CONFIG:Release>:/Zi>)
+	add_link_options($<$<CONFIG:Release>:/DEBUG> $<$<CONFIG:Release>:/OPT:REF> $<$<CONFIG:Release>:/OPT:ICF>)
+endif()
+
 # use relative rpaths for build relocation / reproducibility
 SET(CMAKE_BUILD_RPATH_USE_ORIGIN ON)
 

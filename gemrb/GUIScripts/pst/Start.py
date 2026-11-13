@@ -27,6 +27,8 @@ def AutoLoad():
 	return True
 
 def OnLoad():
+	import DevConsole
+	DevConsole.Start ()
 	if AutoLoad():
 		return
 	skip_videos = GemRB.GetVar ("SkipIntroVideos")

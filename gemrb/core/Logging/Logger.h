@@ -87,6 +87,7 @@ private:
 
 	void threadLoop();
 	void ProcessMessages(QueueType queue);
+	static void WriteSafely(LogWriter& writer, const LogMessage& msg);
 	void StartProcessingThread();
 
 public:
