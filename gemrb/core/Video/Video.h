@@ -54,6 +54,24 @@ using VideoBufferPtr = std::shared_ptr<VideoBuffer>;
  * Base class for video output plugins.
  */
 
+// Enhanced scene rendering (only drivers that report SupportsSceneTransform()).
+// While a scene is active, everything drawn into the scene buffer is given in
+// map units relative to the integer viewport origin; the driver maps it to the
+// buffer as  logical = rect.origin + offset + p * zoom,  so the camera can sit
+// between pixels and zoom freely without the core knowing about either.
+struct SceneTransform {
+	bool active = false;
+	bool suspended = false;
+	float zoom = 1.0f;
+	float offsetX = 0.0f; // logical pixels, usually minus the camera's sub-pixel part * zoom
+	float offsetY = 0.0f;
+	Region rect; // the scene's area in the buffer, logical pixels
+	const void* buffer = nullptr;
+	// extra map-unit offset for the object being drawn (sub-tick interpolation)
+	float objectX = 0.0f;
+	float objectY = 0.0f;
+};
+
 class GEM_EXPORT Video : public Plugin {
 public:
 	static const TypeID ID;
@@ -64,7 +82,8 @@ public:
 		RGBPAL8, // 8 bit palettized
 		RGB555, // 16 bit RGB (truecolor)
 		RGBA8888, // Standard 8 bits per channel with alpha
-		YV12 // YUV format for BIK videos
+		YV12, // YUV format for BIK videos
+		MASK // DISPLAY_ALPHA used as a stencil in map units; drivers with scene transforms keep it unscaled
 	};
 
 protected:
@@ -89,6 +108,9 @@ protected:
 	// the current top of drawingBuffers that draw operations occur on
 	VideoBuffer* drawingBuffer = nullptr;
 	VideoBufferPtr stencilBuffer = nullptr;
+	SceneTransform scene;
+
+	bool SceneAppliesToTarget() const { return scene.active && !scene.suspended && scene.buffer == drawingBuffer; }
 
 	Region ClippedDrawingRect(const Region& target, const Region* clip = NULL) const;
 	virtual void Wait(uint32_t) = 0;
@@ -143,6 +165,19 @@ public:
 
 	virtual bool TouchInputEnabled() = 0;
 	virtual bool CanDrawRawGeometry() const { return false; }
+
+	// see SceneTransform; drivers without support ignore all of this
+	virtual bool SupportsSceneTransform() const { return false; }
+	void BeginScene(float zoom, float offsetX, float offsetY, const Region& rect);
+	void EndScene();
+	// temporarily draw in plain buffer coordinates (UI text over the map...)
+	void SuspendScene(bool suspend) { scene.suspended = suspend; }
+	void SetObjectOffset(float x, float y)
+	{
+		scene.objectX = x;
+		scene.objectY = y;
+	}
+	const SceneTransform& GetScene() const { return scene; }
 	virtual void ConfigurePointer(int pointerSpeed, int pointerAccel, int deadZoneL, int deadZoneR) = 0;
 
 	virtual Holder<Sprite2D> CreateSprite(const Region&, void* pixels, const PixelFormat&) = 0;
@@ -194,6 +229,8 @@ public:
 	void SetScreenClip(const Region* clip, bool toScreen = true);
 	/** Gets Clip Rectangle */
 	const Region& GetScreenClip() const { return screenClip; }
+	// the screen clip in the units of the current drawing target (map units inside a scene)
+	Region DrawingClip() const;
 
 	virtual void SetGamma(int brightness, int contrast) = 0;
 

@@ -44,6 +44,7 @@ public:
 	bool Update();
 	bool IsFading() const;
 	bool ViewportIsMoving() const;
+	bool IsShaking() const { return shakeCounter > 0; }
 	void DoStep(int count);
 	void SetMoveViewPort(Point p, int spd, bool center);
 	void SetFadeToColor(tick_t Count, unsigned short factor = 1);

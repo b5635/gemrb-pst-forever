@@ -407,7 +407,7 @@ void GameControl::DrawTargetReticle(const Movable* target, const Point& p, int o
 void GameControl::WillDraw(const Region& /*drawFrame*/, const Region& /*clip*/)
 {
 	auto scale = GetScalePercent();
-	if (scale != 100) {
+	if (scale != 100 && !SceneCamera()) {
 		auto screenSize = VideoDriver->GetScreenSize();
 		screenSize.w = (screenSize.w * scale) / 100;
 		screenSize.h = (screenSize.h * scale) / 100;
@@ -460,6 +460,8 @@ void GameControl::WillDraw(const Region& /*drawFrame*/, const Region& /*clip*/)
 	} else if (!window->IsDisabled()) {
 		window->SetCursor(nullptr);
 	}
+
+	UpdateCamera();
 
 	const Map* area = CurrentArea();
 	if (!area) return;
@@ -609,6 +611,22 @@ void GameControl::DrawSelf(const Region& screen, const Region& /*clip*/)
 	}
 	UpdateTurnPreview();
 
+	// with a scene transform the map is drawn in map units at 1:1 from an integer
+	// origin; the driver applies zoom and the sub-pixel rest of the camera.
+	// Everything in here sees the drawn viewport, not the logical one
+	const Region logicalViewport = viewport;
+	const bool scene = SceneCamera() && camera.scale > 0.0f;
+	if (scene) {
+		float s = camera.scale;
+		int ox = int(std::floor(camera.x));
+		int oy = int(std::floor(camera.y));
+		float fx = camera.x - float(ox);
+		float fy = camera.y - float(oy);
+		viewport = Region(ox, oy, int(std::ceil(frame.w * s + fx)) + 1, int(std::ceil(frame.h * s + fy)) + 1);
+		float zoom = 1.0f / s;
+		VideoDriver->BeginScene(zoom, -fx * zoom, -fy * zoom, Region(Point(), frame.size));
+	}
+
 	//drawmap should be here so it updates fog of war
 	area->DrawMap(viewport, core->GetFogRenderer(), tmpflags);
 
@@ -627,6 +645,11 @@ void GameControl::DrawSelf(const Region& screen, const Region& /*clip*/)
 		r.x -= viewport.origin.x;
 		r.y -= viewport.origin.y;
 		VideoDriver->DrawRect(r, ColorGreen, false);
+	}
+
+	if (scene) {
+		VideoDriver->EndScene();
+		viewport = logicalViewport;
 	}
 
 	if (core->HasFeature(GFFlags::ONSCREEN_TEXT) && !DisplayText.empty()) {
@@ -1897,7 +1920,70 @@ bool GameControl::OnTouchGesture(const GestureEvent& gesture)
 
 Point GameControl::GameMousePos() const
 {
+	if (SceneCamera() && camera.scale > 0.0f) {
+		return ScreenToMap(screenMousePos);
+	}
 	return viewport.origin + ConvertPointFromScreen(screenMousePos);
+}
+
+bool GameControl::SceneCamera() const
+{
+	return VideoDriver && VideoDriver->SupportsSceneTransform();
+}
+
+Point GameControl::ScreenToMap(const Point& screenPos) const
+{
+	Point local = View::ConvertPointFromScreen(screenPos);
+	return Point(int(std::floor(camera.x + local.x * camera.scale)), int(std::floor(camera.y + local.y * camera.scale)));
+}
+
+void GameControl::UpdateCamera()
+{
+	if (!SceneCamera()) {
+		camera.scale = 0.0f;
+		return;
+	}
+
+	tick_t now = GetMilliseconds();
+	float dt = camera.lastTick ? float(std::min<tick_t>(now - camera.lastTick, 100)) : 0.0f;
+	camera.lastTick = now;
+
+	float tx = float(viewport.x);
+	float ty = float(viewport.y);
+	float ts = float(GetScalePercent()) / 100.0f;
+	const Map* area = CurrentArea();
+	bool smooth = core->GetDictionary().Get("SmoothCamera", 1) != 0;
+	// jumps (new area, centring on someone far away) and screen shakes are not eased
+	bool snap = !smooth || camera.scale <= 0.0f || area != camera.area || core->timer.IsShaking() ||
+		std::abs(tx - camera.x) > frame.w * ts * 1.5f || std::abs(ty - camera.y) > frame.h * ts * 1.5f;
+	camera.area = area;
+	if (snap) {
+		camera.x = tx;
+		camera.y = ty;
+		camera.scale = ts;
+		camera.pivot = false;
+		return;
+	}
+
+	float kPan = 1.0f - std::exp(-dt / 60.0f);
+	float kZoom = 1.0f - std::exp(-dt / 80.0f);
+	// zoom eases in log space, so in and out feel the same
+	float ls = std::log(camera.scale);
+	camera.scale = std::exp(ls + (std::log(ts) - ls) * kZoom);
+	if (std::abs(camera.scale - ts) < 0.0005f) camera.scale = ts;
+
+	if (camera.pivot && viewport.origin == camera.pivotTarget) {
+		// keep the map point under the cursor in place while the zoom animates
+		camera.x = camera.pivotMapX - camera.pivotScreen.x * camera.scale;
+		camera.y = camera.pivotMapY - camera.pivotScreen.y * camera.scale;
+		if (camera.scale == ts) camera.pivot = false;
+		return;
+	}
+	camera.pivot = false;
+	camera.x += (tx - camera.x) * kPan;
+	camera.y += (ty - camera.y) * kPan;
+	if (std::abs(tx - camera.x) < 0.05f) camera.x = tx;
+	if (std::abs(ty - camera.y) < 0.05f) camera.y = ty;
 }
 
 bool GameControl::OnGlobalMouseMove(const Event& e)
@@ -2725,6 +2811,22 @@ bool GameControl::OnMouseWheelScroll(const Point& delta)
 
 	ScaleViewport(lastScale);
 
+	if (SceneCamera() && camera.scale > 0.0f && lastScale != GetScalePercent()) {
+		// zoom toward the cursor instead of the screen centre
+		Point local = View::ConvertPointFromScreen(screenMousePos);
+		float mx = camera.x + local.x * camera.scale;
+		float my = camera.y + local.y * camera.scale;
+		float ns = float(GetScalePercent()) / 100.0f;
+		Point goal(int(std::lround(mx - local.x * ns)), int(std::lround(my - local.y * ns)));
+		MoveViewportTo(goal, false);
+		// only pin the cursor point if the map edges didn't clamp the goal
+		camera.pivot = std::abs(viewport.x - goal.x) <= 1 && std::abs(viewport.y - goal.y) <= 1;
+		camera.pivotScreen = local;
+		camera.pivotMapX = mx;
+		camera.pivotMapY = my;
+		camera.pivotTarget = viewport.origin;
+	}
+
 	return true;
 }
 
@@ -3172,6 +3274,11 @@ unsigned int GameControl::GetScalePercent() const
 
 Point GameControl::ConvertPointFromScreen(const Point& p) const
 {
+	if (SceneCamera() && camera.scale > 0.0f) {
+		// relative to the logical viewport, through what is actually shown
+		return ScreenToMap(p) - viewport.origin;
+	}
+
 	auto scale = GetScalePercent();
 	if (scale == 100) {
 		return View::ConvertPointFromScreen(p);

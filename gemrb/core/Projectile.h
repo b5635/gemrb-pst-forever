@@ -17,6 +17,7 @@
 
 #include "Animation.h"
 #include "EffectQueue.h"
+#include "Interpolation.h"
 #include "Orientation.h"
 #include "Palette.h"
 #include "PathFinder.h"
@@ -280,6 +281,7 @@ private:
 	ieDword FakeTarget = 0; // a globalID for target that isn't followed
 	std::map<ieDword, uint32_t> lineTargets; // a list of PEF_LINE targets
 	ProjectileState state = ProjectileState::NEW;
+	DrawInterpolation drawInterp;
 	//saved in area
 	ResRef projectileName; // used also for namesake externalized spells
 	ieWord type = 0;
@@ -314,6 +316,13 @@ public:
 	void Cleanup();
 
 	Point GetPos() const { return Pos; }
+	// sub-tick draw interpolation of the travelling projectile (see Interpolation.h)
+	void CaptureDrawPos() { drawInterp.Capture(float(Pos.x), float(Pos.y)); }
+	bool DrawOffset(float& ox, float& oy) const
+	{
+		if (state != ProjectileState::TRAVELLING && state != ProjectileState::HIT) return false;
+		return drawInterp.Offset(float(Pos.x), float(Pos.y), Pos.x, Pos.y, 256.0f, ox, oy);
+	}
 	int GetZPos() const;
 	void SetupZPos();
 	inline Point GetDestination() const { return Destination; }

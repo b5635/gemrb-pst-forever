@@ -383,6 +383,8 @@ public:
 	void DoStepForActor(Actor* actor, ieDword time) const;
 	void UpdateEffects();
 	void UpdateProjectiles();
+	// remember where moving things are before a game tick, for draw interpolation
+	void CaptureDrawPositions() const;
 	/* removes empty heaps and returns total itemcount */
 	int ConsolidateContainers();
 	/* transfers all ever visible piles (loose items) to the specified position */

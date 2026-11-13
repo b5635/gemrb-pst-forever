@@ -6,6 +6,7 @@
 #define MOVABLE_H
 
 #include "CharAnimations.h"
+#include "Interpolation.h"
 #include "PathFinder.h"
 #include "PathFinderRequest.h"
 #include "Region.h"
@@ -92,6 +93,7 @@ protected:
 	// minDistance).
 	unsigned int requestedGoalDistance = 0;
 	int randomWalkCounter = 0;
+	DrawInterpolation drawInterp;
 
 public:
 	inline MovementState GetMovementState() const
@@ -185,6 +187,13 @@ public:
 	void Stop(int flags = 0) override;
 	void ClearPath(bool resetDestination = true);
 	void HandleAnkhegStance(bool emerge);
+
+	// sub-tick draw interpolation (see Interpolation.h)
+	void CaptureDrawPos() { drawInterp.Capture(float(Pos.x) + stepFractionX, float(Pos.y) + stepFractionY); }
+	bool DrawOffset(float& ox, float& oy) const
+	{
+		return drawInterp.Offset(float(Pos.x) + stepFractionX, float(Pos.y) + stepFractionY, Pos.x, Pos.y, 64.0f, ox, oy);
+	}
 
 	/* returns the most likely position of this actor */
 	Point GetMostLikelyPosition() const;

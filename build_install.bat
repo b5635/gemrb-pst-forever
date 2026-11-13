@@ -28,6 +28,10 @@ if not "%BUILD_RESULT%"=="0" (
 	exit /b 1
 )
 
+rem switch every feature on in the installed config (tools\dev_settings.ini)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\apply_dev_settings.ps1" -GameDir "%GAME_DIR%"
+if errorlevel 1 echo *** Could not apply tools\dev_settings.ini ***
+
 echo.
 echo === Done: %GAME_DIR% is up to date ===
 

@@ -1062,7 +1062,11 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 						Color baseTint = area->GetLighting(actor->Pos);
 						Color tint(baseTint);
 						game->ApplyGlobalTint(tint, flags);
+						float ox, oy;
+						bool shifted = actor->DrawOffset(ox, oy);
+						if (shifted) VideoDriver->SetObjectOffset(ox, oy);
 						actor->Draw(viewport, baseTint, tint, flags | BlitFlags::BLENDED);
+						if (shifted) VideoDriver->SetObjectOffset(0.0f, 0.0f);
 					}
 				}
 
@@ -1121,7 +1125,11 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 			case AnimationObjectType::PROJECTILE:
 				{
 					BlitFlags flags = SetDrawingStencilForProjectile(pro, viewport);
+					float ox, oy;
+					bool shifted = pro->DrawOffset(ox, oy);
+					if (shifted) VideoDriver->SetObjectOffset(ox, oy);
 					pro->Draw(viewport, flags);
+					if (shifted) VideoDriver->SetObjectOffset(0.0f, 0.0f);
 					pro = GetNextProjectile(++proidx);
 				}
 				break;
@@ -1196,7 +1204,11 @@ void Map::DrawOverheadText() const
 
 	size_t count = actors.size();
 	while (count--) {
+		float ox, oy;
+		bool shifted = actors[count]->DrawOffset(ox, oy);
+		if (shifted) VideoDriver->SetObjectOffset(ox, oy);
 		actors[count]->overHead.Draw();
+		if (shifted) VideoDriver->SetObjectOffset(0.0f, 0.0f);
 	}
 }
 
@@ -1314,7 +1326,7 @@ void Map::SetDrawingStencilForObject(const void* object, const Region& objectRgn
 			if (stencilRgn.size.IsInvalid()) {
 				stencil = wallStencil;
 			} else {
-				stencil = VideoDriver->CreateBuffer(stencilRgn, Video::BufferFormat::DISPLAY_ALPHA);
+				stencil = VideoDriver->CreateBuffer(stencilRgn, Video::BufferFormat::MASK);
 				DrawStencil(stencil, objectRgn, walls.first);
 				objectStencils[object] = std::make_pair(stencil, objectRgn);
 			}
@@ -1604,6 +1616,16 @@ void Map::UpdateEffects()
 	size_t i = actors.size();
 	while (i--) {
 		actors[i]->RefreshEffects();
+	}
+}
+
+void Map::CaptureDrawPositions() const
+{
+	for (auto actor : actors) {
+		actor->CaptureDrawPos();
+	}
+	for (const auto& pro : projectiles) {
+		pro->CaptureDrawPos();
 	}
 }
 
@@ -2342,11 +2364,14 @@ void Map::RedrawScreenStencil(const Region& vp, const WallPolygonGroup& walls)
 
 	stencilViewport = vp;
 
-	if (wallStencil == nullptr) {
+	if (wallStencil == nullptr || wallStencil->Size().w < vp.w || wallStencil->Size().h < vp.h) {
 		// FIXME: this should be forced 8bit*4 color format
 		// but currently that is forcing some performance killing conversion issues on some platforms
 		// for now things will break if we use 16 bit color settings
-		wallStencil = VideoDriver->CreateBuffer(Region(Point(), vp.size), Video::BufferFormat::DISPLAY_ALPHA);
+		// grows when the viewport does (zooming out); rounded up so a zoom animation
+		// doesn't recreate it every frame
+		Size sz((vp.w + 63) & ~63, (vp.h + 63) & ~63);
+		wallStencil = VideoDriver->CreateBuffer(Region(Point(), sz), Video::BufferFormat::MASK);
 	}
 
 	wallStencil->Clear();

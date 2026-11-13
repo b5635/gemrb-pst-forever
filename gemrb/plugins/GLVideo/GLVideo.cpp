@@ -75,22 +75,52 @@ static inline int GetModState(int modstate)
 
 // ---------------------------------------------------------------- video buffers
 
-GLVideoBuffer::GLVideoBuffer(const Region& r, Video::BufferFormat fmt, GLVideoDriver* drv)
-	: VideoBuffer(r), driver(drv), format(fmt)
+static Size PhysSize(const Size& s, float scale)
 {
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, std::max(r.w, 1), std::max(r.h, 1), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	return Size(std::max(1, int(std::lround(s.w * scale))), std::max(1, int(std::lround(s.h * scale))));
+}
+
+// colour texture + FBO, cleared to transparent
+static void CreateTarget(Size size, GLuint& tex, GLuint& fbo)
+{
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, size.w, size.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
 	glClearColor(0, 0, 0, 0);
 	glDisable(GL_SCISSOR_TEST);
 	glClear(GL_COLOR_BUFFER_BIT);
+}
+
+GLVideoBuffer::GLVideoBuffer(const Region& r, Video::BufferFormat fmt, GLVideoDriver* drv, float s)
+	: VideoBuffer(r), driver(drv), format(fmt), scale(s), physSize(PhysSize(r.size, s))
+{
+	CreateTarget(physSize, texture, fbo);
+}
+
+void GLVideoBuffer::Rescale(float newScale)
+{
+	::GemRB::Size newPhys = PhysSize(rect.size, newScale);
+	if (newPhys == physSize) {
+		scale = newScale;
+		return;
+	}
+	driver->Flush();
+	GLuint newTex = 0, newFbo = 0;
+	CreateTarget(newPhys, newTex, newFbo);
+	driver->CopyTexture(newFbo, newPhys, Region(Point(), newPhys), texture, Region(Point(), physSize), true);
+	glDeleteFramebuffers(1, &fbo);
+	glDeleteTextures(1, &texture);
+	texture = newTex;
+	fbo = newFbo;
+	physSize = newPhys;
+	scale = newScale;
 }
 
 GLVideoBuffer::~GLVideoBuffer()
@@ -199,9 +229,20 @@ void GLVideoBuffer::CopyPixels(const Region& dest, const void* pixelBuf, const i
 	}
 	va_end(args);
 
-	glBindTexture(GL_TEXTURE_2D, texture);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, dest.x, dest.y, dest.w, dest.h, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+	if (physSize == rect.size) {
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, dest.x, dest.y, dest.w, dest.h, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+		return;
+	}
+	// scaled buffer: upload at the source size, then resample into place
+	GLuint tmp = 0;
+	glGenTextures(1, &tmp);
+	glBindTexture(GL_TEXTURE_2D, tmp);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, dest.w, dest.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+	Region dst(int(std::floor(dest.x * scale)), int(std::floor(dest.y * scale)), int(std::lround(dest.w * scale)), int(std::lround(dest.h * scale)));
+	driver->CopyTexture(fbo, physSize, dst, tmp, Region(0, 0, dest.w, dest.h), true);
+	glDeleteTextures(1, &tmp);
 }
 
 bool GLVideoBuffer::RenderOnDisplay(void*) const
@@ -279,6 +320,7 @@ int GLVideoDriver::CreateDriverDisplay(const char* title, bool vsync)
 
 	Log(MESSAGE, "GLVideo", "OpenGL {} on {}", reinterpret_cast<const char*>(glGetString(GL_VERSION)), reinterpret_cast<const char*>(glGetString(GL_RENDERER)));
 
+	highRes = core->GetDictionary().Get("GLHighResolution", 1) != 0;
 	if (!CreateResources()) return GEM_ERROR;
 
 	SDL_DisplayMode dm {};
@@ -303,7 +345,8 @@ bool GLVideoDriver::CreateResources()
 	uni.stencil = glGetUniformLocation(program, "u_stencil");
 	uni.stencilChannel = glGetUniformLocation(program, "u_stencilChannel");
 	uni.dither = glGetUniformLocation(program, "u_dither");
-	uni.stencilOrigin = glGetUniformLocation(program, "u_stencilOrigin");
+	uni.stencilA = glGetUniformLocation(program, "u_stencilA");
+	uni.stencilB = glGetUniformLocation(program, "u_stencilB");
 	uni.smooth = glGetUniformLocation(program, "u_smooth");
 	uni.post = glGetUniformLocation(program, "u_post");
 	glUseProgram(program);
@@ -336,17 +379,9 @@ bool GLVideoDriver::CreateResources()
 	glBindTexture(GL_TEXTURE_2D, whiteTex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &white);
 
-	// logical screen composite target
-	glGenTextures(1, &screenTex);
-	glBindTexture(GL_TEXTURE_2D, screenTex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, screenSize.w, screenSize.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glGenFramebuffers(1, &screenFbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, screenFbo);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, screenTex, 0);
+	// screen composite target (physical size, follows the render scale)
+	screenPhys = screenSize;
+	CreateTarget(screenPhys, screenTex, screenFbo);
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 		Log(ERROR, "GLVideo", "Screen framebuffer incomplete");
 		return false;
@@ -354,10 +389,55 @@ bool GLVideoDriver::CreateResources()
 	return true;
 }
 
+void GLVideoDriver::ResizeScreenTarget()
+{
+	Flush();
+	glDeleteFramebuffers(1, &screenFbo);
+	glDeleteTextures(1, &screenTex);
+	CreateTarget(screenPhys, screenTex, screenFbo);
+}
+
+Region GLVideoDriver::ToPhys(const Region& r, float scale)
+{
+	int x0 = int(std::floor(r.x * scale));
+	int y0 = int(std::floor(r.y * scale));
+	int x1 = int(std::ceil((r.x + r.w) * scale));
+	int y1 = int(std::ceil((r.y + r.h) * scale));
+	return Region(x0, y0, x1 - x0, y1 - y0);
+}
+
+Region GLVideoDriver::XfRegion(const Region& r) const
+{
+	float x0 = float(r.x), y0 = float(r.y), x1 = float(r.x + r.w), y1 = float(r.y + r.h);
+	xf.Apply(x0, y0);
+	xf.Apply(x1, y1);
+	int ix0 = int(std::floor(std::min(x0, x1)));
+	int iy0 = int(std::floor(std::min(y0, y1)));
+	return Region(ix0, iy0, int(std::ceil(std::max(x0, x1))) - ix0, int(std::ceil(std::max(y0, y1))) - iy0);
+}
+
+void GLVideoDriver::CopyTexture(GLuint dstFbo, Size dstSize, const Region& dstRect, GLuint srcTex, const Region& srcRect, bool smooth)
+{
+	GLBatchState st;
+	st.fbo = dstFbo;
+	st.targetSize = dstSize;
+	st.scissor = Region(Point(), dstSize);
+	st.texMode = 1;
+	st.texture = srcTex;
+	st.blend = GLBlend::None;
+	st.smooth = smooth;
+	SetBatch(st);
+	xf = GLXform();
+	PushQuad(float(dstRect.x), float(dstRect.y), float(dstRect.x + dstRect.w), float(dstRect.y + dstRect.h),
+		 float(srcRect.x), float(srcRect.y), float(srcRect.x + srcRect.w), float(srcRect.y + srcRect.h), ColorWhite);
+	Flush();
+	batchValid = false;
+}
+
 VideoBuffer* GLVideoDriver::NewVideoBuffer(const Region& r, BufferFormat fmt)
 {
 	Flush();
-	return new GLVideoBuffer(r, fmt, this);
+	return new GLVideoBuffer(r, fmt, this, GLVideoBuffer::FollowsRenderScale(fmt) ? renderScale : 1.0f);
 }
 
 Holder<Sprite2D> GLVideoDriver::CreateSprite(const Region& rgn, void* pixels, const PixelFormat& fmt)
@@ -393,7 +473,8 @@ void GLVideoDriver::Flush()
 	glUniform1i(uni.texMode, st.texMode);
 	glUniform1i(uni.stencilChannel, st.stencilChannel);
 	glUniform1i(uni.dither, st.dither);
-	glUniform2f(uni.stencilOrigin, float(st.stencilOrigin.x), float(st.stencilOrigin.y));
+	glUniform1f(uni.stencilA, st.stencilA);
+	glUniform2f(uni.stencilB, st.stencilBx, st.stencilBy);
 	glUniform1i(uni.smooth, st.smooth ? 1 : 0);
 	glUniform2f(uni.post, st.brightness, st.contrast);
 
@@ -465,21 +546,62 @@ void GLVideoDriver::SetBatch(const GLBatchState& state)
 	}
 }
 
-GLBatchState GLVideoDriver::TargetState() const
+// state for drawing into the current buffer; also sets the vertex transform:
+// logical buffer pixels (or scene map units) -> physical target pixels
+GLBatchState GLVideoDriver::TargetState()
 {
 	GLBatchState st;
 	const GLVideoBuffer* target = static_cast<const GLVideoBuffer*>(drawingBuffer);
 	assert(target);
 	st.fbo = target->fbo;
-	st.targetSize = target->Size();
+	st.targetSize = target->physSize;
+	float s = target->scale;
 	Region bufRgn(Point(), target->Size());
-	st.scissor = screenClip.Intersect(bufRgn);
-	if (st.scissor.size.IsInvalid()) st.scissor = Region(0, 0, 0, 0);
+	Region clip = screenClip.Intersect(bufRgn);
+	if (SceneAppliesToTarget()) {
+		float z = scene.zoom * s;
+		baseXf.sx = baseXf.sy = z;
+		baseXf.tx = (scene.rect.x + scene.offsetX) * s;
+		baseXf.ty = (scene.rect.y + scene.offsetY) * s;
+		xf = baseXf;
+		xf.tx += scene.objectX * z;
+		xf.ty += scene.objectY * z;
+		clip = clip.Intersect(scene.rect);
+	} else {
+		baseXf = GLXform();
+		baseXf.sx = baseXf.sy = s;
+		xf = baseXf;
+	}
+	st.scissor = clip.size.IsInvalid() ? Region(0, 0, 0, 0) : ToPhys(clip, s);
 	return st;
+}
+
+void GLVideoDriver::SetupStencil(GLBatchState& st, BlitFlags flags)
+{
+	if (!(flags & BlitFlags::STENCIL_MASK) || !stencilBuffer) return;
+	const GLVideoBuffer* sb = static_cast<const GLVideoBuffer*>(stencilBuffer.get());
+	st.stencilTex = sb->texture;
+	// fragment (physical target px) -> drawing units -> stencil texel
+	float k = sb->scale;
+	float S = baseXf.sx;
+	st.stencilA = k / S;
+	st.stencilBx = (-baseXf.tx / S - float(sb->Origin().x)) * k;
+	st.stencilBy = (-baseXf.ty / S - float(sb->Origin().y)) * k;
+	st.stencilChannel = 3;
+	if (flags & BlitFlags::STENCIL_RED) {
+		st.stencilChannel = 0;
+	} else if (flags & BlitFlags::STENCIL_GREEN) {
+		st.stencilChannel = 1;
+	} else if (flags & BlitFlags::STENCIL_BLUE) {
+		st.stencilChannel = 2;
+	}
+	st.dither = (flags & BlitFlags::STENCIL_DITHER) ? 1 : 0;
 }
 
 void GLVideoDriver::PushQuad(float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, const Color& c, float pal, float grey, float ckey)
 {
+	xf.Apply(x0, y0);
+	xf.Apply(x1, y1);
 	GLVertex a { x0, y0, u0, v0, c.r, c.g, c.b, c.a, pal, grey, ckey, 0 };
 	GLVertex b { x1, y0, u1, v0, c.r, c.g, c.b, c.a, pal, grey, ckey, 0 };
 	GLVertex d { x0, y1, u0, v1, c.r, c.g, c.b, c.a, pal, grey, ckey, 0 };
@@ -520,11 +642,13 @@ void GLVideoDriver::PushLine(const BasePoint& p1, const BasePoint& p2, const Col
 	bx += dx * 0.5f;
 	by += dy * 0.5f;
 	float nx = -dy * 0.5f, ny = dx * 0.5f;
+	float q[4][2] = { { ax + nx, ay + ny }, { bx + nx, by + ny }, { ax - nx, ay - ny }, { bx - nx, by - ny } };
+	for (auto& pt : q) xf.Apply(pt[0], pt[1]);
 	GLVertex v[4] = {
-		{ ax + nx, ay + ny, 0, 0, c.r, c.g, c.b, c.a, -1, 0, -1, 0 },
-		{ bx + nx, by + ny, 0, 0, c.r, c.g, c.b, c.a, -1, 0, -1, 0 },
-		{ ax - nx, ay - ny, 0, 0, c.r, c.g, c.b, c.a, -1, 0, -1, 0 },
-		{ bx - nx, by - ny, 0, 0, c.r, c.g, c.b, c.a, -1, 0, -1, 0 },
+		{ q[0][0], q[0][1], 0, 0, c.r, c.g, c.b, c.a, -1, 0, -1, 0 },
+		{ q[1][0], q[1][1], 0, 0, c.r, c.g, c.b, c.a, -1, 0, -1, 0 },
+		{ q[2][0], q[2][1], 0, 0, c.r, c.g, c.b, c.a, -1, 0, -1, 0 },
+		{ q[3][0], q[3][1], 0, 0, c.r, c.g, c.b, c.a, -1, 0, -1, 0 },
 	};
 	vertices.push_back(v[0]);
 	vertices.push_back(v[1]);
@@ -609,7 +733,7 @@ void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, c
 
 	GLBatchState st = TargetState();
 	if (st.scissor.w <= 0 || st.scissor.h <= 0) return;
-	if (!dst.IntersectsRegion(st.scissor)) return;
+	if (!XfRegion(dst).IntersectsRegion(st.scissor)) return;
 
 	float pal = -1;
 	float ckey = -1;
@@ -651,20 +775,7 @@ void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, c
 	st.texture = tex;
 	st.blend = BlendForFlags(flags);
 
-	if ((flags & BlitFlags::STENCIL_MASK) && stencilBuffer) {
-		const GLVideoBuffer* sb = static_cast<const GLVideoBuffer*>(stencilBuffer.get());
-		st.stencilTex = sb->texture;
-		st.stencilOrigin = sb->Origin();
-		st.stencilChannel = 3;
-		if (flags & BlitFlags::STENCIL_RED) {
-			st.stencilChannel = 0;
-		} else if (flags & BlitFlags::STENCIL_GREEN) {
-			st.stencilChannel = 1;
-		} else if (flags & BlitFlags::STENCIL_BLUE) {
-			st.stencilChannel = 2;
-		}
-		st.dither = (flags & BlitFlags::STENCIL_DITHER) ? 1 : 0;
-	}
+	SetupStencil(st, flags);
 	SetBatch(st);
 
 	Color c = ColorWhite;
@@ -697,15 +808,7 @@ void GLVideoDriver::DrawTexture(const GLVideoBuffer* buf, const Region& src, con
 	st.texMode = 1;
 	st.texture = buf->texture;
 	st.blend = BlendForFlags(flags);
-	if ((flags & BlitFlags::STENCIL_MASK) && stencilBuffer) {
-		const GLVideoBuffer* sb = static_cast<const GLVideoBuffer*>(stencilBuffer.get());
-		st.stencilTex = sb->texture;
-		st.stencilOrigin = sb->Origin();
-		st.stencilChannel = (flags & BlitFlags::STENCIL_RED) ? 0 : (flags & BlitFlags::STENCIL_GREEN) ? 1 :
-			(flags & BlitFlags::STENCIL_BLUE)                                                     ? 2 :
-														3;
-		st.dither = (flags & BlitFlags::STENCIL_DITHER) ? 1 : 0;
-	}
+	SetupStencil(st, flags);
 	SetBatch(st);
 	Color c = ColorWhite;
 	if (flags & BlitFlags::COLOR_MOD) {
@@ -717,8 +820,9 @@ void GLVideoDriver::DrawTexture(const GLVideoBuffer* buf, const Region& src, con
 	if (flags & BlitFlags::HALFTRANS) c.a /= 2;
 	float grey = (flags & BlitFlags::GREY) ? 1.0f : (flags & BlitFlags::SEPIA) ? 2.0f :
 										     0.0f;
-	float u0 = float(src.x), u1 = float(src.x + src.w);
-	float v0 = float(src.y), v1 = float(src.y + src.h);
+	float k = buf->scale;
+	float u0 = src.x * k, u1 = (src.x + src.w) * k;
+	float v0 = src.y * k, v1 = (src.y + src.h) * k;
 	if (flags & BlitFlags::MIRRORX) std::swap(u0, u1);
 	if (flags & BlitFlags::MIRRORY) std::swap(v0, v1);
 	PushQuad(float(dst.x), float(dst.y), float(dst.x + dst.w), float(dst.y + dst.h), u0, v0, u1, v1, c, -1, grey, -1);
@@ -835,7 +939,9 @@ void GLVideoDriver::DrawRawGeometry(const std::vector<float>& verts, const std::
 	size_t n = verts.size() / 2;
 	for (size_t i = 0; i < n; ++i) {
 		const Color& c = colors[i];
-		vertices.push_back({ verts[i * 2], verts[i * 2 + 1], 0, 0, c.r, c.g, c.b, c.a, -1, 0, -1, 0 });
+		float x = verts[i * 2], y = verts[i * 2 + 1];
+		xf.Apply(x, y);
+		vertices.push_back({ x, y, 0, 0, c.r, c.g, c.b, c.a, -1, 0, -1, 0 });
 	}
 }
 
@@ -843,10 +949,12 @@ void GLVideoDriver::ClearBuffer(GLVideoBuffer* buf, const Region& rgn)
 {
 	GLBatchState st;
 	st.fbo = buf->fbo;
-	st.targetSize = buf->Size();
-	st.scissor = Region(Point(), buf->Size());
+	st.targetSize = buf->physSize;
+	st.scissor = Region(Point(), buf->physSize);
 	st.blend = GLBlend::None;
 	SetBatch(st);
+	xf = GLXform();
+	xf.sx = xf.sy = buf->scale;
 	PushColorRect(rgn, Color(0, 0, 0, 0));
 }
 
@@ -856,15 +964,18 @@ void GLVideoDriver::CompositeBuffer(const GLVideoBuffer* buf)
 {
 	GLBatchState st;
 	st.fbo = screenFbo;
-	st.targetSize = screenSize;
-	st.scissor = Region(Point(), screenSize);
+	st.targetSize = screenPhys;
+	st.scissor = Region(Point(), screenPhys);
 	st.texMode = 1;
 	st.texture = buf->texture;
 	st.blend = GLBlend::Alpha;
-	st.smooth = false;
+	// same physical scale on both sides: plain copy, unless the buffer didn't follow the render scale
+	st.smooth = buf->scale != renderScale;
 	SetBatch(st);
+	xf = GLXform();
+	xf.sx = xf.sy = renderScale;
 	const Region& r = buf->Rect();
-	PushQuad(float(r.x), float(r.y), float(r.x + r.w), float(r.y + r.h), 0, 0, float(r.w), float(r.h), ColorWhite);
+	PushQuad(float(r.x), float(r.y), float(r.x + r.w), float(r.y + r.h), 0, 0, float(buf->physSize.w), float(buf->physSize.h), ColorWhite);
 }
 
 void GLVideoDriver::UpdatePresentRect()
@@ -877,6 +988,22 @@ void GLVideoDriver::UpdatePresentRect()
 	int pw = int(std::lround(screenSize.w * scale));
 	int ph = int(std::lround(screenSize.h * scale));
 	presentRect = Region((w - pw) / 2, (h - ph) / 2, pw, ph);
+
+	// render everything at the presented size, so zoomed and scaled art is
+	// filtered once, at the final resolution (never below the logical size)
+	float newScale = highRes ? Clamp(scale, 1.0f, 4.0f) : 1.0f;
+	if (newScale == renderScale) return;
+	renderScale = newScale;
+	Size phys = PhysSize(screenSize, renderScale);
+	if (phys != screenPhys) {
+		screenPhys = phys;
+		if (screenTex) ResizeScreenTarget();
+	}
+	for (VideoBuffer* vb : buffers) {
+		auto* gb = static_cast<GLVideoBuffer*>(vb);
+		if (gb->FollowsRenderScale()) gb->Rescale(renderScale);
+	}
+	Log(MESSAGE, "GLVideo", "Render scale {:.3f} ({}x{})", renderScale, screenPhys.w, screenPhys.h);
 }
 
 Point GLVideoDriver::WindowToScreen(float x, float y) const
@@ -912,16 +1039,17 @@ void GLVideoDriver::SwapBuffers(VideoBuffers& bufs)
 	st.texture = screenTex;
 	st.blend = GLBlend::None;
 	st.flipY = true;
-	st.smooth = true;
+	st.smooth = screenPhys != presentRect.size;
 	st.brightness = brightness;
 	st.contrast = contrast;
 	SetBatch(st);
+	xf = GLXform();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glDisable(GL_SCISSOR_TEST);
 	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT);
 	const Region& p = presentRect;
-	PushQuad(float(p.x), float(p.y), float(p.x + p.w), float(p.y + p.h), 0, 0, float(screenSize.w), float(screenSize.h), ColorWhite);
+	PushQuad(float(p.x), float(p.y), float(p.x + p.w), float(p.y + p.h), 0, 0, float(screenPhys.w), float(screenPhys.h), ColorWhite);
 	Flush();
 	batchValid = false;
 
@@ -975,19 +1103,37 @@ Holder<Sprite2D> GLVideoDriver::GetScreenshot(Region r, const VideoBufferPtr& bu
 {
 	Flush();
 	GLuint fbo = screenFbo;
+	GLuint tex = screenTex;
 	Size srcSize = screenSize;
+	float scale = renderScale;
 	if (buf) {
-		fbo = static_cast<const GLVideoBuffer*>(buf.get())->fbo;
+		const GLVideoBuffer* gb = static_cast<const GLVideoBuffer*>(buf.get());
+		fbo = gb->fbo;
+		tex = gb->texture;
 		srcSize = buf->Size();
+		scale = gb->scale;
 	}
 	if (r.w <= 0 || r.h <= 0) {
 		r = Region(Point(), srcSize);
 	}
 	r = r.Intersect(Region(Point(), srcSize));
+	if (r.w <= 0 || r.h <= 0) return nullptr;
 	std::vector<uint32_t> px(size_t(r.w) * r.h);
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	glPixelStorei(GL_PACK_ALIGNMENT, 4);
-	glReadPixels(r.x, r.y, r.w, r.h, GL_RGBA, GL_UNSIGNED_BYTE, px.data());
+	if (scale == 1.0f) {
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glReadPixels(r.x, r.y, r.w, r.h, GL_RGBA, GL_UNSIGNED_BYTE, px.data());
+	} else {
+		// screenshots are in logical pixels: resample the physical region first
+		GLuint tmpTex = 0, tmpFbo = 0;
+		CreateTarget(r.size, tmpTex, tmpFbo);
+		Region src(int(std::lround(r.x * scale)), int(std::lround(r.y * scale)), int(std::lround(r.w * scale)), int(std::lround(r.h * scale)));
+		CopyTexture(tmpFbo, r.size, Region(Point(), r.size), tex, src, true);
+		glBindFramebuffer(GL_FRAMEBUFFER, tmpFbo);
+		glReadPixels(0, 0, r.w, r.h, GL_RGBA, GL_UNSIGNED_BYTE, px.data());
+		glDeleteFramebuffers(1, &tmpFbo);
+		glDeleteTextures(1, &tmpTex);
+	}
 	void* pixels = malloc(px.size() * 4);
 	for (auto& p : px) p |= 0xff000000; // screenshots are opaque
 	memcpy(pixels, px.data(), px.size() * 4);

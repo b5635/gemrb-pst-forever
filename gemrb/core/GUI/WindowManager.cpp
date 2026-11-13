@@ -645,7 +645,8 @@ void WindowManager::DrawWindows() const
 		auto gameControl = core->GetGameControl();
 		if (gameControl) {
 			auto scale = gameControl->GetScalePercent();
-			if (scale != 100) {
+			// drivers with scene transforms zoom while drawing, no oversized buffer needed
+			if (scale != 100 && !video->SupportsSceneTransform()) {
 				gameWin->UseScaleBuffer(scale);
 			} else {
 				gameWin->DropScaleBuffer();

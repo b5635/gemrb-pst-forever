@@ -28,9 +28,16 @@ public:
 	GLuint texture = 0;
 	GLuint fbo = 0;
 	Video::BufferFormat format;
+	float scale = 1.0f; // physical texels per logical pixel
+	::GemRB::Size physSize;
 
-	GLVideoBuffer(const Region& r, Video::BufferFormat fmt, GLVideoDriver* drv);
+	GLVideoBuffer(const Region& r, Video::BufferFormat fmt, GLVideoDriver* drv, float scale);
 	~GLVideoBuffer() override;
+
+	// change the physical resolution, keeping (resampled) content
+	void Rescale(float newScale);
+	static bool FollowsRenderScale(Video::BufferFormat fmt) { return fmt == Video::BufferFormat::DISPLAY || fmt == Video::BufferFormat::DISPLAY_ALPHA; }
+	bool FollowsRenderScale() const { return FollowsRenderScale(format); }
 
 	void Clear() override { Clear(Region(Point(), rect.size)); }
 	void Clear(const Region& rgn) override;
@@ -57,6 +64,16 @@ struct GLVertex {
 	float pal, grey, ckey, extra;
 };
 
+// logical (or map unit) coordinates -> physical target pixels
+struct GLXform {
+	float sx = 1.0f, sy = 1.0f, tx = 0.0f, ty = 0.0f;
+	void Apply(float& x, float& y) const
+	{
+		x = x * sx + tx;
+		y = y * sy + ty;
+	}
+};
+
 struct GLBatchState {
 	GLuint fbo = 0;
 	Size targetSize;
@@ -66,8 +83,10 @@ struct GLBatchState {
 	GLuint stencilTex = 0;
 	int stencilChannel = -1;
 	int dither = 0;
-	Point stencilOrigin;
-	Region scissor;
+	float stencilA = 1.0f; // stencil texel = fragCoord * A + B
+	float stencilBx = 0.0f;
+	float stencilBy = 0.0f;
+	Region scissor; // physical
 	bool flipY = false;
 	bool smooth = true;
 	float brightness = 0.0f;
@@ -75,7 +94,7 @@ struct GLBatchState {
 
 	bool operator==(const GLBatchState& o) const
 	{
-		return fbo == o.fbo && targetSize == o.targetSize && blend == o.blend && texMode == o.texMode && texture == o.texture && stencilTex == o.stencilTex && stencilChannel == o.stencilChannel && dither == o.dither && stencilOrigin == o.stencilOrigin && scissor == o.scissor && flipY == o.flipY && smooth == o.smooth && brightness == o.brightness && contrast == o.contrast;
+		return fbo == o.fbo && targetSize == o.targetSize && blend == o.blend && texMode == o.texMode && texture == o.texture && stencilTex == o.stencilTex && stencilChannel == o.stencilChannel && dither == o.dither && stencilA == o.stencilA && stencilBx == o.stencilBx && stencilBy == o.stencilBy && scissor == o.scissor && flipY == o.flipY && smooth == o.smooth && brightness == o.brightness && contrast == o.contrast;
 	}
 	bool operator!=(const GLBatchState& o) const { return !(*this == o); }
 };
@@ -113,6 +132,10 @@ public:
 	void Flush();
 	void ClearBuffer(GLVideoBuffer* buf, const Region& rgn);
 	void CompositeBuffer(const GLVideoBuffer* buf);
+	// draws srcRect (texels) of a texture into dstRect (physical pixels) of a framebuffer, no blending
+	void CopyTexture(GLuint dstFbo, Size dstSize, const Region& dstRect, GLuint srcTex, const Region& srcRect, bool smooth);
+	float RenderScale() const { return renderScale; }
+	bool SupportsSceneTransform() const override { return true; }
 
 private:
 	SDL_Window* window = nullptr;
@@ -128,13 +151,18 @@ private:
 	GLuint paletteTex = 0;
 	GLuint whiteTex = 0;
 	struct Uniforms {
-		GLint targetSize, flipY, texMode, rgba, index, palette, stencil, stencilChannel, dither, stencilOrigin, smooth, post;
+		GLint targetSize, flipY, texMode, rgba, index, palette, stencil, stencilChannel, dither, stencilA, stencilB, smooth, post;
 	} uni {};
 
 	GLuint screenTex = 0;
 	GLuint screenFbo = 0;
+	Size screenPhys; // physical size of the composited screen (== presentRect.size)
 	Size windowPixels;
 	Region presentRect; // where the logical screen lands in the window
+	float renderScale = 1.0f; // physical pixels per logical pixel
+	GLXform xf; // transform for the vertices being pushed
+	GLXform baseXf; // xf without the per-object offset (stencils are not offset)
+	bool highRes = true; // render at the window's resolution instead of the logical one
 
 	std::vector<GLVertex> vertices;
 	GLBatchState batch;
@@ -172,7 +200,7 @@ private:
 
 	bool CreateResources();
 	void SetBatch(const GLBatchState& state);
-	GLBatchState TargetState() const;
+	GLBatchState TargetState();
 	void ApplyColorBlend(GLBatchState& st, BlitFlags flags) const;
 	void PushQuad(float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, const Color& c, float pal = -1, float grey = 0, float ckey = -1);
 	void PushColorRect(const Region& r, const Color& c);
@@ -181,6 +209,10 @@ private:
 	void DrawTexture(const GLVideoBuffer* buf, const Region& src, const Region& dst, BlitFlags flags, const Color& tint);
 	void DrawSprite(const Holder<Sprite2D>& spr, const Region& src, const Region& dst, BlitFlags flags, const Color& tint);
 	void UpdatePresentRect();
+	void ResizeScreenTarget();
+	static Region ToPhys(const Region& logical, float scale);
+	Region XfRegion(const Region& r) const;
+	void SetupStencil(GLBatchState& st, BlitFlags flags);
 	void DevScreenshot();
 	Point WindowToScreen(float x, float y) const;
 

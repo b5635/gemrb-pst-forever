@@ -34,6 +34,7 @@ FILE(GLOB gemrb_core_LIB_SRCS
 	ImageMgr.cpp
 	IniSpawn.cpp
 	Interface.cpp
+	Interpolation.cpp
 	InterfaceConfig.cpp
 	Inventory.cpp
 	Item.cpp

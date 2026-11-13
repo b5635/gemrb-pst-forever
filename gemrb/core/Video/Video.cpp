@@ -51,8 +51,44 @@ int Video::CreateDisplay(const Size& s, int bits, bool fs, const char* title, bo
 	return ret;
 }
 
+void Video::BeginScene(float zoom, float offsetX, float offsetY, const Region& rect)
+{
+	scene.active = true;
+	scene.suspended = false;
+	scene.zoom = zoom;
+	scene.offsetX = offsetX;
+	scene.offsetY = offsetY;
+	scene.rect = rect;
+	scene.buffer = drawingBuffer;
+	scene.objectX = scene.objectY = 0.0f;
+}
+
+void Video::EndScene()
+{
+	scene = SceneTransform();
+}
+
+Region Video::DrawingClip() const
+{
+	if (!SceneAppliesToTarget()) return screenClip;
+	float z = scene.zoom;
+	return Region(int(std::floor(-scene.offsetX / z)) - 1, int(std::floor(-scene.offsetY / z)) - 1,
+		      int(std::ceil(scene.rect.w / z)) + 3, int(std::ceil(scene.rect.h / z)) + 3);
+}
+
 Region Video::ClippedDrawingRect(const Region& target, const Region* clip) const
 {
+	if (SceneAppliesToTarget()) {
+		// target is in map units: clip against what the scene can show instead of the buffer
+		Region r = target.Intersect(DrawingClip());
+		if (clip) r = clip->Intersect(r);
+		if (r.size.IsInvalid()) {
+			r.h = 0;
+			r.w = 0;
+		}
+		return r;
+	}
+
 	// clip to both screen and the target buffer
 	Region bufRgn(Point(), drawingBuffer->Size());
 	Region r = target.Intersect(screenClip).Intersect(bufRgn);
@@ -70,6 +106,9 @@ Region Video::ClippedDrawingRect(const Region& target, const Region* clip) const
 
 VideoBufferPtr Video::CreateBuffer(const Region& r, BufferFormat fmt)
 {
+	if (fmt == BufferFormat::MASK && !SupportsSceneTransform()) {
+		fmt = BufferFormat::DISPLAY_ALPHA;
+	}
 	VideoBuffer* buf = NewVideoBuffer(r, fmt);
 	if (buf) {
 		buffers.push_back(buf);

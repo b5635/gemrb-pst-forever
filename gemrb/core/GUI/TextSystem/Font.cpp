@@ -251,7 +251,7 @@ size_t Font::RenderText(const String& string, Region& rgn, ieByte alignment, con
 
 	bool singleLine = (alignment & IE_FONT_SINGLE_LINE);
 	Point dp = point ? *point : Point();
-	const Region& sclip = VideoDriver->GetScreenClip();
+	const Region sclip = VideoDriver->DrawingClip();
 
 	size_t charCount = 0;
 	bool lineBreak = false;

@@ -57,6 +57,25 @@ private:
 	Point screenMousePos;
 	Region viewport;
 	bool updateVPTimer = true;
+
+	// What is shown, with video drivers that support scene transforms: eases toward
+	// viewport/zoom (the logical camera that the game and scripts use) with sub-pixel
+	// position and continuous zoom. scale = map units per screen pixel, 0 = unused.
+	struct Camera {
+		float x = 0.0f;
+		float y = 0.0f;
+		float scale = 0.0f;
+		bool pivot = false; // zooming around a fixed screen point (the cursor)
+		Point pivotScreen;
+		float pivotMapX = 0.0f;
+		float pivotMapY = 0.0f;
+		Point pivotTarget; // viewport origin the pivot zoom ends at
+		const Map* area = nullptr;
+		tick_t lastTick = 0;
+	} camera;
+	bool SceneCamera() const;
+	void UpdateCamera();
+	Point ScreenToMap(const Point& screenPos) const;
 	float_t formationBaseAngle = 0.0;
 
 	// currently selected targeting type, such as talk, attack, cast, ...

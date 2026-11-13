@@ -52,7 +52,8 @@ uniform sampler2D u_palette;
 uniform sampler2D u_stencil;
 uniform int u_stencilChannel; // -1 off
 uniform int u_dither;
-uniform vec2 u_stencilOrigin;
+uniform float u_stencilA; // stencil texel = fragCoord * A + B
+uniform vec2 u_stencilB;
 uniform int u_smooth;
 uniform vec2 u_post; // brightness add, contrast mul
 
@@ -88,8 +89,10 @@ void main()
 		ivec2 p = ivec2(floor(pos));
 		vec2 f = fract(pos);
 		if (u_smooth == 1) {
+			// sharpen only while magnifying; when minifying plain bilinear shimmers less
 			vec2 px = max(fwidth(v_uv), vec2(0.0001));
-			f = clamp((f - 0.5) / px + 0.5, 0.0, 1.0);
+			vec2 sharp = clamp((f - 0.5) / px + 0.5, 0.0, 1.0);
+			f = mix(sharp, f, step(1.0, px));
 		} else {
 			f = step(0.5, f);
 		}
@@ -106,10 +109,11 @@ void main()
 	}
 
 	if (u_stencilChannel >= 0) {
-		float s = texelFetch(u_stencil, ivec2(gl_FragCoord.xy - u_stencilOrigin), 0)[u_stencilChannel];
+		ivec2 sp = ivec2(floor(gl_FragCoord.xy * u_stencilA + u_stencilB));
+		float s = texelFetch(u_stencil, clamp(sp, ivec2(0), textureSize(u_stencil, 0) - 1), 0)[u_stencilChannel];
 		if (u_dither == 1 && s > 0.25 && s < 0.75) {
-			ivec2 fc = ivec2(gl_FragCoord.xy);
-			c.a *= float((fc.x + fc.y) & 1);
+			// checker in stencil (map) pixels, so it keeps the original pattern size when scaled
+			c.a *= float((sp.x + sp.y) & 1);
 		} else {
 			c.a *= 1.0 - s;
 		}
@@ -119,7 +123,6 @@ void main()
 	o_color = c;
 }
 )GLSL";
-
 }
 
 #endif

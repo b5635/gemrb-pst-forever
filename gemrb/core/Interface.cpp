@@ -22,6 +22,7 @@
 #include "EffectQueue.h"
 #include "Factory.h"
 #include "FontManager.h"
+#include "Interpolation.h"
 #include "KeyMap.h"
 #include "Map.h"
 #include "MapMgr.h"
@@ -880,6 +881,10 @@ void Interface::HandleFlags() noexcept
 				gc->ChangeMap(actor, true);
 			}
 			gc->SetScalePercent(GetGame()->zoomLevel);
+			// dev hook for screenshots: GEMRB_DEV_ZOOM=<percent> (25..160, >100 is zoomed out)
+			if (const char* devZoom = getenv("GEMRB_DEV_ZOOM")) {
+				gc->SetScalePercent(unsigned(atoi(devZoom)));
+			}
 
 			Window* gamewin = winmgr->GetGameWindow();
 			gamewin->AddSubviewInFrontOfView(gc);
@@ -1904,6 +1909,14 @@ void Interface::GameLoop(void)
 	GameControl* gc = GetGameControl();
 	if (gc) {
 		update_scripts = !(gc->GetDialogueFlags() & DF_FREEZE_SCRIPTS);
+	}
+
+	// draw interpolation: everything that can move this tick remembers where it was
+	TickInterpolation::BeginTick(GetMilliseconds(), 1000 / Time.ticksPerSec);
+	if (game) {
+		if (const Map* area = game->GetCurrentArea()) {
+			area->CaptureDrawPositions();
+		}
 	}
 
 	bool do_update = GSUpdate(update_scripts);
