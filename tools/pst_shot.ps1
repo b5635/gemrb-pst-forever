@@ -5,6 +5,8 @@ param(
 	[int]$Save = 0,
 	[int]$Wait = 25,
 	[string]$GameDir = "D:\Games\GemRB",
+	[string]$Driver = "",
+	[string[]]$Set = @(),
 	[switch]$Keep
 )
 Add-Type -AssemblyName System.Drawing
@@ -24,8 +26,44 @@ public class W32 {
 [W32]::SetProcessDPIAware() | Out-Null
 
 $env:GEMRB_AUTOLOAD = "$Save"
-$p = Start-Process -FilePath (Join-Path $GameDir "gemrb.exe") -WorkingDirectory $GameDir -PassThru
+# optional overrides go into a temporary copy of the config (VideoDriver and any Key=Value from -Set)
+$gemArgs = @()
+if ($Driver -or $Set.Count) {
+	$cfg = Get-Content (Join-Path $GameDir "GemRB.cfg") | Where-Object { $_ -notmatch '^\s*VideoDriver\s*=' }
+	$keys = $Set | ForEach-Object { ($_ -split '=')[0] }
+	$cfg = $cfg | Where-Object { $line = $_; -not ($keys | Where-Object { $line -match "^\s*$_\s*=" }) }
+	if ($Driver) { $cfg += "VideoDriver=$Driver" }
+	$cfg += $Set
+	$tmpCfg = Join-Path $GameDir "GemRB.shot.cfg"
+	$cfg | Set-Content -Encoding ascii $tmpCfg
+	$gemArgs = @("-c", $tmpCfg)
+}
+# the GL driver can write its own frame (no window focus needed)
+$useDevShot = ($Driver -ne "sdl") -and ((Get-Content (Join-Path $GameDir "GemRB.cfg") | Select-String -Quiet '^\s*VideoDriver\s*=\s*opengl') -or $Driver -eq "opengl")
+if ($useDevShot) {
+	$bmp = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetFullPath($Out), ".bmp")
+	if (Test-Path $bmp) { Remove-Item $bmp }
+	$env:GEMRB_GL_SHOT = "$bmp;$Wait"
+}
+if ($gemArgs.Count) {
+	$p = Start-Process -FilePath (Join-Path $GameDir "gemrb.exe") -WorkingDirectory $GameDir -ArgumentList $gemArgs -PassThru
+} else {
+	$p = Start-Process -FilePath (Join-Path $GameDir "gemrb.exe") -WorkingDirectory $GameDir -PassThru
+}
 Start-Sleep -Seconds $Wait
+if ($useDevShot) {
+	for ($i = 0; $i -lt 30 -and -not (Test-Path $bmp); $i++) { Start-Sleep -Milliseconds 500 }
+	Start-Sleep -Milliseconds 500
+	if (Test-Path $bmp) {
+		$img = [System.Drawing.Image]::FromFile($bmp)
+		$img.Save([System.IO.Path]::GetFullPath($Out), [System.Drawing.Imaging.ImageFormat]::Png)
+		$img.Dispose(); Remove-Item $bmp
+		Write-Output "saved $Out (driver capture)"
+		if (-not $Keep) { Stop-Process -Id $p.Id -Force }
+		exit 0
+	}
+	Write-Output "driver capture missing, falling back to desktop grab"
+}
 $p.Refresh()
 $h = $p.MainWindowHandle
 if ($h -eq [IntPtr]::Zero) { Write-Error "no window"; exit 1 }
