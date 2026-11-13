@@ -323,6 +323,9 @@ public:
 		if (state != ProjectileState::TRAVELLING && state != ProjectileState::HIT) return false;
 		return drawInterp.Offset(float(Pos.x), float(Pos.y), Pos.x, Pos.y, 256.0f, ox, oy);
 	}
+	// scene lighting (phase 4): whether the flying projectile glows; col.a == 0
+	// means "use the colour of frame"
+	bool GetGlow(Point& pos, int& radius, Color& col, Holder<Sprite2D>& frame) const;
 	int GetZPos() const;
 	void SetupZPos();
 	inline Point GetDestination() const { return Destination; }

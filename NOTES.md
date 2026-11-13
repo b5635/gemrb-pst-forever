@@ -26,7 +26,7 @@ Rule: every visual feature has a `GemRB.cfg` toggle and falls back to the origin
 
 | 3. Frame-rate interpolation (camera, actors, projectiles) | done |
 
-| 4. Lighting (ambient, point lights, actor tint, optional depth/normal maps) | — |
+| 4. Lighting (ambient, point lights, actor tint, optional depth/normal maps) | done |
 
 | 5. Polish (shadows, rings, outlines, bloom, grading, vignette, particles, shake, ambience) | — |
 
@@ -177,6 +177,40 @@ Game state still advances in fixed ticks (`Time.ticksPerSec`, 15/s); frames are 
 - Snaps (no interpolation) on jumps over 64 map units (actors) / 256 (projectiles), area changes and objects that
   weren't there at the last tick. Cost: one tick (≈66 ms) of display latency on movement.
 - Camera: already per-frame since phase 2 (eased toward the logical viewport; edge/key scrolling is per frame).
+
+## Phase 4 — lighting
+
+GL-only light pass, `Lighting=0` in GemRB.cfg turns it off (original look).
+
+- `Map::DrawMap` calls `Map::CollectSceneLights` + `Video::DrawSceneLighting` after actors, animations, spells and
+  weather, before fog and overhead text (text/fog/UI are never lit). Drivers without scene support ignore it.
+- GL (`GLVideo.cpp` `DrawSceneLighting`, `LightFS` in `GLShaders.h`): a half-resolution RGBA16F light buffer is
+  cleared to the ambient colour, every light is added as a soft ellipse (`(1-r²)²`, squashed 0.72 vertically for the
+  isometric ground); the scene region is copied out and drawn back multiplied by it. Light above 1 rolls off softly
+  to `maxLight`; very bright pixels (painted fires, spell glows) keep part of their brightness.
+- Ambient by area type: dungeon 0.66, indoor/city 0.76, outdoor 0.86, slightly cool. `LightingAmbient=<0..200>`
+  scales the darkening (0 = none).
+- Lights: warm party light on every living PC (`PartyLight=0` off); `DynamicLights=0` turns off the rest:
+  area animations with BlendBlack (fires, braziers, portals), additive/light-spot VVCs and flying projectiles (light
+  spot from the PRO, or the frame colour of brighten/blend projectiles). Colour and strength come from the
+  luminance-weighted average of the current frame (cached per sprite), so flickering fires flicker their light.
+- Actor tint: the original lightmap tint at the feet is kept; actors also pick up point lights since the pass is
+  per pixel over everything. Moving lights use the phase 3 interpolated positions.
+- **Generated depth + normal maps** (`LightGeometry=1`, `LightNormalStrength=0..100`, default 80). The game has no
+  such data, so both are built on the GPU every frame:
+  - Depth = the ground line under every pixel. Sprites (actors, standing area animations, VVCs, projectiles) write
+    their feet line (`Video::SetObjectDepth`) into a second colour attachment of the scene buffer while they are
+    drawn (`SceneBegan`/`SceneEnding` attach/detach it; wall-stencilled pixels don't write). Wall polygons are
+    rasterised into a wall depth map from their base lines (no baseline: polygon bottom), nearest wins.
+    Pixels above their ground line are vertical surfaces at height = ground − y.
+  - Normals = luminance gradient of the drawn art (one map unit apart), applied on top of the surface orientation
+    (floor faces up, walls/sprites face the viewer).
+  - Each light is evaluated per pixel in 3D (lights have a height: party 45, fires ~⅓ of their sprite), with
+    wrapped Lambert shading taken relative to a flat floor, so the overall falloff matches the flat version.
+    The light buffer is full resolution in this mode (half otherwise).
+  - `GEMRB_LIGHT_DEBUG=1`: shows the light buffer instead (red = vertical surface, green = falloff, blue = normal x).
+- Not done: shadows from lights (phase 5).
+- Shots: `shots/phase4_on.png` (flat), `phase4_geom.png` (depth/normals), `phase4_off.png`, `phase4_debug.png` (save 0).
 
 ## Decisions
 

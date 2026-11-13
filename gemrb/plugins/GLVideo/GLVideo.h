@@ -91,10 +91,12 @@ struct GLBatchState {
 	bool smooth = true;
 	float brightness = 0.0f;
 	float contrast = 1.0f;
+	bool depthWrite = false; // write objDepth into the lighting depth map (attachment 1)
+	float objDepth = 0.0f;
 
 	bool operator==(const GLBatchState& o) const
 	{
-		return fbo == o.fbo && targetSize == o.targetSize && blend == o.blend && texMode == o.texMode && texture == o.texture && stencilTex == o.stencilTex && stencilChannel == o.stencilChannel && dither == o.dither && stencilA == o.stencilA && stencilBx == o.stencilBx && stencilBy == o.stencilBy && scissor == o.scissor && flipY == o.flipY && smooth == o.smooth && brightness == o.brightness && contrast == o.contrast;
+		return depthWrite == o.depthWrite && objDepth == o.objDepth && fbo == o.fbo && targetSize == o.targetSize && blend == o.blend && texMode == o.texMode && texture == o.texture && stencilTex == o.stencilTex && stencilChannel == o.stencilChannel && dither == o.dither && stencilA == o.stencilA && stencilBx == o.stencilBx && stencilBy == o.stencilBy && scissor == o.scissor && flipY == o.flipY && smooth == o.smooth && brightness == o.brightness && contrast == o.contrast;
 	}
 	bool operator!=(const GLBatchState& o) const { return !(*this == o); }
 };
@@ -136,6 +138,9 @@ public:
 	void CopyTexture(GLuint dstFbo, Size dstSize, const Region& dstRect, GLuint srcTex, const Region& srcRect, bool smooth);
 	float RenderScale() const { return renderScale; }
 	bool SupportsSceneTransform() const override { return true; }
+	void DrawSceneLighting(const SceneLighting& lighting) override;
+	void SceneBegan() override;
+	void SceneEnding() override;
 
 private:
 	SDL_Window* window = nullptr;
@@ -151,8 +156,28 @@ private:
 	GLuint paletteTex = 0;
 	GLuint whiteTex = 0;
 	struct Uniforms {
-		GLint targetSize, flipY, texMode, rgba, index, palette, stencil, stencilChannel, dither, stencilA, stencilB, smooth, post;
+		GLint targetSize, flipY, texMode, rgba, index, palette, stencil, stencilChannel, dither, stencilA, stencilB, smooth, post, objDepth, depthPremul;
 	} uni {};
+
+	// scene lighting (phase 4)
+	GLuint lightProgram = 0;
+	struct LightUniforms {
+		GLint targetSize, flipY, mode, scene, light, sceneSize, keep, maxLight;
+		GLint spriteDepth, wallDepth, geom, lightPos, lightColor, map, regionOrigin, lightToPhys, bump, normalStrength, debug;
+	} luni {};
+	// generated depth map: ground line per pixel. Sprites write theirs while the
+	// scene is drawn (second colour attachment of the scene buffer), walls are
+	// rasterised from their polygons when lighting is applied
+	GLuint depthTex = 0, depthFbo = 0; // depthFbo only to own the texture; it is attached to the scene's FBO
+	Size depthSize;
+	GLuint depthAttachedFbo = 0;
+	GLuint wallTex = 0, wallFbo = 0;
+	Size wallSize;
+	GLuint zeroTex = 0;
+	GLuint lightTex = 0, lightFbo = 0; // RGBA16F accumulation, lower resolution
+	Size lightSize;
+	GLuint copyTex = 0, copyFbo = 0; // copy of the lit part of the scene
+	Size copySize;
 
 	GLuint screenTex = 0;
 	GLuint screenFbo = 0;
@@ -214,6 +239,8 @@ private:
 	Region XfRegion(const Region& r) const;
 	void SetupStencil(GLBatchState& st, BlitFlags flags);
 	void DevScreenshot();
+	void DrawLightVertices(const std::vector<GLVertex>& verts);
+	bool LightingWanted() const;
 	Point WindowToScreen(float x, float y) const;
 
 	int ProcessEvent(const SDL_Event& event);

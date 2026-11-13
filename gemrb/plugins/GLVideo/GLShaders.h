@@ -56,8 +56,11 @@ uniform float u_stencilA; // stencil texel = fragCoord * A + B
 uniform vec2 u_stencilB;
 uniform int u_smooth;
 uniform vec2 u_post; // brightness add, contrast mul
+uniform float u_objDepth; // ground line of the object (scene y), see SceneLighting
+uniform int u_depthPremul;
 
-out vec4 o_color;
+layout(location = 0) out vec4 o_color;
+layout(location = 1) out vec4 o_depth; // only written while a depth map is attached and wanted
 
 ivec2 texSize()
 {
@@ -121,6 +124,119 @@ void main()
 
 	c.rgb = clamp((c.rgb + u_post.x) * u_post.y, 0.0, 1.0);
 	o_color = c;
+	// covered (alpha >= 0.5) pixels own the depth; blending keeps it cheap for edges
+	float cov = step(0.5, c.a);
+	o_depth = u_depthPremul == 1 ? vec4(u_objDepth * cov, 0.0, 0.0, cov) : vec4(u_objDepth, 0.0, 0.0, cov);
+}
+)GLSL";
+// Scene lighting (phase 4), same vertex shader as the sprites.
+// mode 0: one point light, additive into the light buffer. Without geometry it
+//         is a flat ellipse on the screen. With geometry every pixel is put
+//         back into 3D from the generated depth map (ground line per pixel:
+//         walls from their polygons' base lines, sprites from their feet) and
+//         gets a normal generated from the art's luminance (bump) on top of its
+//         surface orientation (floor faces up, walls/sprites face the viewer).
+// mode 1: multiplies a copy of the scene by the light buffer; very bright
+//         pixels keep part of their brightness.
+// mode 2: writes wall polygon rows into the wall depth map (v_uv.x = ground y).
+static const char* const LightFS = R"GLSL(
+#version 330 core
+in vec2 v_uv;
+in vec4 v_color;
+flat in vec4 v_param;
+
+uniform int u_mode;
+uniform sampler2D u_scene; // copy of the scene region, physical px (region relative)
+uniform sampler2D u_light;
+uniform sampler2D u_spriteDepth; // scene buffer physical px
+uniform sampler2D u_wallDepth; // region relative
+uniform vec2 u_sceneSize;
+uniform float u_keep;
+uniform float u_maxLight;
+
+uniform int u_geom;
+uniform vec4 u_lightPos; // ground x, ground y, height, radius (scene map units)
+uniform vec3 u_lightColor;
+uniform vec3 u_map; // physical = map * x + (y, z)
+uniform vec2 u_regionOrigin; // physical px of the region's top left
+uniform float u_lightToPhys; // physical px per light buffer px
+uniform float u_bump;
+uniform float u_normalStrength;
+uniform int u_debug; // GEMRB_LIGHT_DEBUG: red = vertical surface, green = falloff, blue = normal x
+
+out vec4 o_color;
+
+float luma(ivec2 p)
+{
+	p = clamp(p, ivec2(0), textureSize(u_scene, 0) - 1);
+	return dot(texelFetch(u_scene, p, 0).rgb, vec3(0.299, 0.587, 0.114));
+}
+
+float lambert(vec3 n, vec3 l)
+{
+	return clamp((dot(n, l) + 0.4) / 1.4, 0.0, 1.0); // wrapped, so shading stays soft
+}
+
+void main()
+{
+	if (u_mode == 2) {
+		o_color = vec4(v_uv.x, 0.0, 0.0, 1.0);
+		return;
+	}
+	if (u_mode == 0) {
+		vec2 phys = gl_FragCoord.xy * u_lightToPhys + u_regionOrigin;
+		vec2 m = (phys - u_map.yz) / u_map.x;
+		if (u_geom == 0) {
+			vec2 d = vec2(m.x - u_lightPos.x, (m.y - (u_lightPos.y - u_lightPos.z)) / 0.72) / u_lightPos.w;
+			float r2 = dot(d, d);
+			if (r2 >= 1.0) discard;
+			float f = 1.0 - r2;
+			o_color = vec4(u_lightColor * (f * f), 1.0);
+			return;
+		}
+		ivec2 rp = ivec2(floor(phys - u_regionOrigin));
+		// depth: ground line under this pixel
+		float ground = m.y;
+		vec4 wd = texelFetch(u_wallDepth, clamp(rp, ivec2(0), textureSize(u_wallDepth, 0) - 1), 0);
+		if (wd.a > 0.5) ground = max(ground, wd.r);
+		vec4 sd = texelFetch(u_spriteDepth, clamp(ivec2(floor(phys)), ivec2(0), textureSize(u_spriteDepth, 0) - 1), 0);
+		if (sd.a > 0.5) ground = sd.r / sd.a;
+		float h = max(ground - m.y, 0.0);
+		bool vertical = h > 2.0;
+		vec3 P = vec3(m.x, ground, h);
+		vec3 L = u_lightPos.xyz - P;
+		float dist = length(vec3(L.x, L.y / 0.72, L.z)) / u_lightPos.w;
+		if (dist >= 1.0) discard;
+		float att = 1.0 - dist * dist;
+		att *= att;
+		// normal from the art: brighter = higher, sampled one map unit apart
+		int k = max(1, int(u_map.x + 0.5));
+		float gx = (luma(rp + ivec2(k, 0)) - luma(rp - ivec2(k, 0))) * 0.5 * u_bump;
+		float gy = (luma(rp + ivec2(0, k)) - luma(rp - ivec2(0, k))) * 0.5 * u_bump;
+		vec3 n = vertical ? normalize(vec3(-gx, 1.0, gy)) : normalize(vec3(-gx, -gy, 1.0));
+		vec3 l = normalize(L);
+		// relative to an unbumped floor, so overall falloff matches the flat lights
+		float ratio = clamp(lambert(n, l) / max(lambert(vec3(0.0, 0.0, 1.0), l), 0.25), 0.0, 2.5);
+		if (u_debug == 1) {
+			o_color = vec4(vertical ? 0.5 : 0.0, att * 0.5, (n.x * 0.5 + 0.5) * att, 1.0);
+			return;
+		}
+		o_color = vec4(u_lightColor * att * mix(1.0, ratio, u_normalStrength), 1.0);
+		return;
+	}
+	vec4 c = texelFetch(u_scene, ivec2(floor(v_uv)), 0);
+	vec3 l = texture(u_light, v_uv / u_sceneSize).rgb;
+	if (u_debug == 1) {
+		o_color = vec4(l, 1.0);
+		return;
+	}
+	// soft shoulder towards the cap, so overlapping lights don't clip hard
+	vec3 over = max(l - 1.0, vec3(0.0));
+	l = min(l, vec3(1.0)) + over / (1.0 + over / max(u_maxLight - 1.0, 0.001));
+	vec3 lit = c.rgb * l;
+	float hi = smoothstep(0.72, 1.0, max(c.r, max(c.g, c.b)));
+	lit = mix(lit, max(lit, c.rgb), hi * u_keep);
+	o_color = vec4(min(lit, vec3(1.0)), c.a);
 }
 )GLSL";
 }

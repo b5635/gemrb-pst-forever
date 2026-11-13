@@ -2021,6 +2021,31 @@ void Projectile::DrawTravel(const Region& viewport, BlitFlags flags)
 	}
 }
 
+bool Projectile::GetGlow(Point& pos, int& radius, Color& col, Holder<Sprite2D>& frame) const
+{
+	if (state != ProjectileState::TRAVELLING && state != ProjectileState::HIT && state != ProjectileState::AWAITING_TRIGGER) {
+		return false;
+	}
+	pos = Pos;
+	frame = nullptr;
+	orient_t face = GetOrientation();
+	if (size_t(face) < travelData.anim.size() && travelData.anim[face]) {
+		frame = travelData.anim[face].CurrentFrame();
+	}
+	if (light) {
+		radius = std::max<int>(std::max(LightX, LightY), 48);
+		col = (travelData.flags & TravelData::PTF_TINT) ? tint : Color(255, 228, 190, 255);
+		col.a = 255;
+		return true;
+	}
+	if ((travelData.flags & (TravelData::PTF_BRIGHTEN | TravelData::PTF_BLEND | TravelData::PTF_TRANS)) && frame) {
+		radius = std::min(std::max(std::max(frame->Frame.w, frame->Frame.h) * 2, 48), 220);
+		col = Color(0, 0, 0, 0);
+		return true;
+	}
+	return false;
+}
+
 int Projectile::GetZPos() const
 {
 	return ZPos;

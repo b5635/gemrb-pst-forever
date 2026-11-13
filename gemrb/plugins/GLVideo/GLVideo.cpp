@@ -349,11 +349,44 @@ bool GLVideoDriver::CreateResources()
 	uni.stencilB = glGetUniformLocation(program, "u_stencilB");
 	uni.smooth = glGetUniformLocation(program, "u_smooth");
 	uni.post = glGetUniformLocation(program, "u_post");
+	uni.objDepth = glGetUniformLocation(program, "u_objDepth");
+	uni.depthPremul = glGetUniformLocation(program, "u_depthPremul");
 	glUseProgram(program);
 	glUniform1i(uni.rgba, 0);
 	glUniform1i(uni.index, 1);
 	glUniform1i(uni.palette, 2);
 	glUniform1i(uni.stencil, 3);
+
+	lightProgram = LinkProgram(SpriteVS, LightFS);
+	if (lightProgram) {
+		luni.targetSize = glGetUniformLocation(lightProgram, "u_targetSize");
+		luni.flipY = glGetUniformLocation(lightProgram, "u_flipY");
+		luni.mode = glGetUniformLocation(lightProgram, "u_mode");
+		luni.scene = glGetUniformLocation(lightProgram, "u_scene");
+		luni.light = glGetUniformLocation(lightProgram, "u_light");
+		luni.sceneSize = glGetUniformLocation(lightProgram, "u_sceneSize");
+		luni.keep = glGetUniformLocation(lightProgram, "u_keep");
+		luni.maxLight = glGetUniformLocation(lightProgram, "u_maxLight");
+		luni.spriteDepth = glGetUniformLocation(lightProgram, "u_spriteDepth");
+		luni.wallDepth = glGetUniformLocation(lightProgram, "u_wallDepth");
+		luni.geom = glGetUniformLocation(lightProgram, "u_geom");
+		luni.lightPos = glGetUniformLocation(lightProgram, "u_lightPos");
+		luni.lightColor = glGetUniformLocation(lightProgram, "u_lightColor");
+		luni.map = glGetUniformLocation(lightProgram, "u_map");
+		luni.regionOrigin = glGetUniformLocation(lightProgram, "u_regionOrigin");
+		luni.lightToPhys = glGetUniformLocation(lightProgram, "u_lightToPhys");
+		luni.bump = glGetUniformLocation(lightProgram, "u_bump");
+		luni.normalStrength = glGetUniformLocation(lightProgram, "u_normalStrength");
+		luni.debug = glGetUniformLocation(lightProgram, "u_debug");
+		glUseProgram(lightProgram);
+		glUniform1i(luni.scene, 0);
+		glUniform1i(luni.light, 1);
+		glUniform1i(luni.spriteDepth, 2);
+		glUniform1i(luni.wallDepth, 3);
+		glUseProgram(program);
+	} else {
+		Log(WARNING, "GLVideo", "Lighting shader unavailable, scene lighting disabled");
+	}
 
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
@@ -371,6 +404,13 @@ bool GLVideoDriver::CreateResources()
 	glGenTextures(1, &paletteTex);
 	glBindTexture(GL_TEXTURE_2D, paletteTex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 256, PaletteRows, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	const float zero4[4] = { 0, 0, 0, 0 };
+	glGenTextures(1, &zeroTex);
+	glBindTexture(GL_TEXTURE_2D, zeroTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, 1, 1, 0, GL_RGBA, GL_FLOAT, zero4);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
@@ -477,6 +517,12 @@ void GLVideoDriver::Flush()
 	glUniform2f(uni.stencilB, st.stencilBx, st.stencilBy);
 	glUniform1i(uni.smooth, st.smooth ? 1 : 0);
 	glUniform2f(uni.post, st.brightness, st.contrast);
+	if (depthAttachedFbo && st.fbo == depthAttachedFbo) {
+		bool write = st.depthWrite && st.texMode != 0 && (st.blend == GLBlend::Alpha || st.blend == GLBlend::Premultiplied);
+		glColorMaski(1, write, write, write, write);
+		glUniform1f(uni.objDepth, st.objDepth);
+		glUniform1i(uni.depthPremul, st.blend == GLBlend::Premultiplied ? 1 : 0);
+	}
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, st.texMode == 1 ? st.texture : whiteTex);
@@ -567,6 +613,10 @@ GLBatchState GLVideoDriver::TargetState()
 		xf.tx += scene.objectX * z;
 		xf.ty += scene.objectY * z;
 		clip = clip.Intersect(scene.rect);
+		if (scene.objectHasDepth && depthAttachedFbo == target->fbo) {
+			st.depthWrite = true;
+			st.objDepth = scene.objectDepth;
+		}
 	} else {
 		baseXf = GLXform();
 		baseXf.sx = baseXf.sy = s;
@@ -1062,6 +1112,232 @@ void GLVideoDriver::SwapBuffers(VideoBuffers& bufs)
 }
 
 // dev hook: GEMRB_GL_SHOT="file.bmp;seconds" writes the presented frame once, focus-independent
+// ---------------------------------------------------------------- scene lighting
+
+void GLVideoDriver::DrawLightVertices(const std::vector<GLVertex>& verts)
+{
+	if (verts.empty()) return;
+	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, verts.size() * sizeof(GLVertex), verts.data(), GL_STREAM_DRAW);
+	glDrawArrays(GL_TRIANGLES, 0, GLsizei(verts.size()));
+}
+
+static void PushLightQuad(std::vector<GLVertex>& v, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float r, float g, float b)
+{
+	GLVertex a { x0, y0, u0, v0, 255, 255, 255, 255, r, g, b, 0 };
+	GLVertex c { x1, y0, u1, v0, 255, 255, 255, 255, r, g, b, 0 };
+	GLVertex d { x0, y1, u0, v1, 255, 255, 255, 255, r, g, b, 0 };
+	GLVertex e { x1, y1, u1, v1, 255, 255, 255, 255, r, g, b, 0 };
+	v.insert(v.end(), { a, c, d, c, e, d });
+}
+
+static void EnsureTarget(GLuint& tex, GLuint& fbo, Size& have, const Size& want, GLint internalFormat, GLenum type, bool linear)
+{
+	if (tex && have == want) return;
+	if (fbo) glDeleteFramebuffers(1, &fbo);
+	if (tex) glDeleteTextures(1, &tex);
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, want.w, want.h, 0, GL_RGBA, type, nullptr);
+	GLint filter = linear ? GL_LINEAR : GL_NEAREST;
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glGenFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+	have = want;
+}
+
+// The scene drawn so far is copied out, then drawn back multiplied by a light
+// buffer: cleared to the ambient colour, every light added as a soft ellipse.
+// The light buffer is half the physical resolution; it is smooth anyway.
+bool GLVideoDriver::LightingWanted() const
+{
+	return lightProgram && core->GetDictionary().Get("Lighting", 1) && core->GetDictionary().Get("LightGeometry", 1);
+}
+
+// the scene buffer gets a second colour attachment for the sprites' depth while the scene is drawn
+void GLVideoDriver::SceneBegan()
+{
+	if (!SupportsSceneTransform() || !LightingWanted() || !scene.buffer) return;
+	const GLVideoBuffer* target = static_cast<const GLVideoBuffer*>(scene.buffer);
+	Flush();
+	batchValid = false;
+	EnsureTarget(depthTex, depthFbo, depthSize, target->physSize, GL_RGBA16F, GL_HALF_FLOAT, false);
+	glBindFramebuffer(GL_FRAMEBUFFER, target->fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, depthTex, 0);
+	const GLenum bufs[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+	glDrawBuffers(2, bufs);
+	const float zero4[4] = { 0, 0, 0, 0 };
+	glDisable(GL_SCISSOR_TEST);
+	glClearBufferfv(GL_COLOR, 1, zero4);
+	glColorMaski(1, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	depthAttachedFbo = target->fbo;
+}
+
+void GLVideoDriver::SceneEnding()
+{
+	if (!depthAttachedFbo) return;
+	Flush();
+	batchValid = false;
+	glBindFramebuffer(GL_FRAMEBUFFER, depthAttachedFbo);
+	glColorMaski(1, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, 0, 0);
+	const GLenum buf = GL_COLOR_ATTACHMENT0;
+	glDrawBuffers(1, &buf);
+	depthAttachedFbo = 0;
+}
+
+// The scene drawn so far is copied out, then drawn back multiplied by a light
+// buffer: cleared to the ambient colour, every light added on top. With
+// geometry the lights are evaluated per pixel in 3D from the generated depth
+// and normal maps (full resolution); without, as flat ellipses at half resolution.
+void GLVideoDriver::DrawSceneLighting(const SceneLighting& lighting)
+{
+	if (!lightProgram || !SceneAppliesToTarget()) return;
+	Flush();
+	batchValid = false;
+
+	GLBatchState st = TargetState(); // also sets baseXf: map units -> physical target px
+	const Region R = st.scissor.Intersect(Region(Point(), st.targetSize));
+	if (R.w <= 0 || R.h <= 0) return;
+	const GLVideoBuffer* target = static_cast<const GLVideoBuffer*>(drawingBuffer);
+	const bool geom = lighting.geometry && depthAttachedFbo == target->fbo;
+
+	Size lsz = geom ? R.size : Size(std::max(1, (R.w + 1) / 2), std::max(1, (R.h + 1) / 2));
+	EnsureTarget(lightTex, lightFbo, lightSize, lsz, GL_RGBA16F, GL_HALF_FLOAT, true);
+	EnsureTarget(copyTex, copyFbo, copySize, R.size, GL_RGBA8, GL_UNSIGNED_BYTE, false);
+
+	// sprites are done; stop writing their depth
+	if (depthAttachedFbo) {
+		glBindFramebuffer(GL_FRAMEBUFFER, depthAttachedFbo);
+		glColorMaski(1, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	}
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_BLEND);
+
+	// 1. copy of the scene region (also the normal map's source)
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, target->fbo);
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, copyFbo);
+	glBlitFramebuffer(R.x, R.y, R.x + R.w, R.y + R.h, 0, 0, R.w, R.h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+	glUseProgram(lightProgram);
+	glUniform1i(luni.flipY, 0);
+	static const bool debug = getenv("GEMRB_LIGHT_DEBUG") != nullptr;
+	glUniform1i(luni.debug, debug ? 1 : 0);
+	const float S = baseXf.sx;
+
+	// 2. wall depth map: polygon rows carrying their ground line, nearest wins
+	if (geom) {
+		EnsureTarget(wallTex, wallFbo, wallSize, R.size, GL_RGBA16F, GL_HALF_FLOAT, false);
+		glBindFramebuffer(GL_FRAMEBUFFER, wallFbo);
+		glViewport(0, 0, R.w, R.h);
+		glClearColor(0, 0, 0, 0);
+		glClear(GL_COLOR_BUFFER_BIT);
+		if (!lighting.wallSpans.empty()) {
+			glUniform1i(luni.mode, 2);
+			glUniform2f(luni.targetSize, float(R.w), float(R.h));
+			glEnable(GL_BLEND);
+			glBlendEquation(GL_MAX);
+			glBlendFunc(GL_ONE, GL_ONE);
+			std::vector<GLVertex> verts;
+			verts.reserve(lighting.wallSpans.size() * 6);
+			for (const SceneSpan& sp : lighting.wallSpans) {
+				float x0 = sp.x0, y0 = sp.y, x1 = sp.x1, y1 = sp.y + 1.0f;
+				baseXf.Apply(x0, y0);
+				baseXf.Apply(x1, y1);
+				x0 -= float(R.x);
+				x1 -= float(R.x);
+				y0 -= float(R.y);
+				y1 -= float(R.y);
+				if (x1 < 0 || y1 < 0 || x0 > float(R.w) || y0 > float(R.h)) continue;
+				GLVertex a { x0, y0, sp.base0, 0, 255, 255, 255, 255, 0, 0, 0, 0 };
+				GLVertex b { x1, y0, sp.base1, 0, 255, 255, 255, 255, 0, 0, 0, 0 };
+				GLVertex c { x0, y1, sp.base0, 0, 255, 255, 255, 255, 0, 0, 0, 0 };
+				GLVertex d { x1, y1, sp.base1, 0, 255, 255, 255, 255, 0, 0, 0, 0 };
+				verts.insert(verts.end(), { a, b, c, b, d, c });
+			}
+			DrawLightVertices(verts);
+			glBlendEquation(GL_FUNC_ADD);
+			glDisable(GL_BLEND);
+		}
+	}
+
+	// 3. light buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, lightFbo);
+	glViewport(0, 0, lsz.w, lsz.h);
+	if (debug) {
+		glClearColor(0, 0, 0, 1);
+	} else {
+		glClearColor(lighting.ambient[0], lighting.ambient[1], lighting.ambient[2], 1.0f);
+	}
+	glClear(GL_COLOR_BUFFER_BIT);
+	glClearColor(0, 0, 0, 0);
+	if (!lighting.lights.empty()) {
+		glUniform1i(luni.mode, 0);
+		glUniform1i(luni.geom, geom ? 1 : 0);
+		glUniform2f(luni.targetSize, float(lsz.w), float(lsz.h));
+		const float toPhys = float(R.w) / float(lsz.w);
+		glUniform1f(luni.lightToPhys, toPhys);
+		glUniform2f(luni.regionOrigin, float(R.x), float(R.y));
+		glUniform3f(luni.map, S, baseXf.tx, baseXf.ty);
+		glUniform1f(luni.bump, lighting.bump);
+		glUniform1f(luni.normalStrength, lighting.normalStrength);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, copyTex);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, geom ? depthTex : zeroTex);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, geom ? wallTex : zeroTex);
+		glActiveTexture(GL_TEXTURE0);
+		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_ONE, GL_ONE);
+		std::vector<GLVertex> quad;
+		for (const SceneLight& l : lighting.lights) {
+			// screen footprint: the ground ellipse, plus up to one radius above it (walls, sprites)
+			float gx0 = l.x - l.radius, gx1 = l.x + l.radius;
+			float gy0 = l.y - l.radius * 0.72f - (geom ? l.radius : l.z), gy1 = l.y + l.radius * 0.72f;
+			baseXf.Apply(gx0, gy0);
+			baseXf.Apply(gx1, gy1);
+			float x0 = (gx0 - float(R.x)) / toPhys, x1 = (gx1 - float(R.x)) / toPhys;
+			float y0 = (gy0 - float(R.y)) / toPhys, y1 = (gy1 - float(R.y)) / toPhys;
+			if (x1 < 0 || y1 < 0 || x0 > float(lsz.w) || y0 > float(lsz.h)) continue;
+			glUniform4f(luni.lightPos, l.x, l.y, l.z, l.radius);
+			glUniform3f(luni.lightColor, l.r, l.g, l.b);
+			quad.clear();
+			PushLightQuad(quad, x0, y0, x1, y1, 0, 0, 0, 0, 0, 0, 0);
+			DrawLightVertices(quad);
+		}
+	}
+
+	// 4. composite back, lit (the depth map is attached to this FBO: don't keep it bound)
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glDisable(GL_BLEND);
+	glBindFramebuffer(GL_FRAMEBUFFER, target->fbo);
+	glViewport(0, 0, target->physSize.w, target->physSize.h);
+	glUniform1i(luni.mode, 1);
+	glUniform2f(luni.targetSize, float(target->physSize.w), float(target->physSize.h));
+	glUniform2f(luni.sceneSize, float(R.w), float(R.h));
+	glUniform1f(luni.keep, lighting.highlightKeep);
+	glUniform1f(luni.maxLight, lighting.maxLight);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, lightTex);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, copyTex);
+	std::vector<GLVertex> quad;
+	PushLightQuad(quad, float(R.x), float(R.y), float(R.x + R.w), float(R.y + R.h), 0, 0, float(R.w), float(R.h), 0, 0, 0);
+	DrawLightVertices(quad);
+
+	glUseProgram(program);
+	batchValid = false;
+}
+
 void GLVideoDriver::DevScreenshot()
 {
 	static const char* spec = getenv("GEMRB_GL_SHOT");

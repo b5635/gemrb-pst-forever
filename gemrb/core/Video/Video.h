@@ -70,6 +70,42 @@ struct SceneTransform {
 	// extra map-unit offset for the object being drawn (sub-tick interpolation)
 	float objectX = 0.0f;
 	float objectY = 0.0f;
+	// ground line (scene y) of the object being drawn, for the lighting depth map
+	bool objectHasDepth = false;
+	float objectDepth = 0.0f;
+};
+
+// Dynamic lighting for the scene (phase 4). Positions are scene coordinates
+// (map units relative to the scene's viewport origin). The scene is multiplied
+// by ambient + the sum of all lights; bright pixels keep part of their
+// original brightness (painted fires, spell effects).
+struct SceneLight {
+	float x = 0.0f;
+	float y = 0.0f;
+	float z = 0.0f; // height above the ground at (x, y), map units
+	float radius = 100.0f; // map units, horizontal; vertical is squashed (isometric ground)
+	float r = 1.0f, g = 1.0f, b = 1.0f; // linear multiplier contributed at the centre
+};
+
+// one raster row of a wall polygon (scene coordinates), with the ground line
+// (base) of the wall at both ends: the wall's pixels are vertical surfaces
+// standing on that line
+struct SceneSpan {
+	float x0, x1, y;
+	float base0, base1;
+};
+
+struct SceneLighting {
+	float ambient[3] = { 1.0f, 1.0f, 1.0f };
+	float highlightKeep = 0.6f; // how much of very bright pixels escapes the ambient darkening
+	float maxLight = 1.25f; // cap of ambient + lights
+	// generated depth + normal maps: lights work in 3D over walls and sprites and
+	// surfaces get relief from the art's own shading
+	bool geometry = true;
+	float bump = 6.0f; // slope per unit of luminance change
+	float normalStrength = 0.8f; // 0 = flat, 1 = full normal-map shading
+	std::vector<SceneLight> lights;
+	std::vector<SceneSpan> wallSpans;
 };
 
 class GEM_EXPORT Video : public Plugin {
@@ -111,6 +147,9 @@ protected:
 	SceneTransform scene;
 
 	bool SceneAppliesToTarget() const { return scene.active && !scene.suspended && scene.buffer == drawingBuffer; }
+	// driver hooks around a scene (scene is already set up / still set up)
+	virtual void SceneBegan() {}
+	virtual void SceneEnding() {}
 
 	Region ClippedDrawingRect(const Region& target, const Region* clip = NULL) const;
 	virtual void Wait(uint32_t) = 0;
@@ -177,7 +216,15 @@ public:
 		scene.objectX = x;
 		scene.objectY = y;
 	}
+	void SetObjectDepth(float groundY)
+	{
+		scene.objectHasDepth = true;
+		scene.objectDepth = groundY;
+	}
+	void ClearObjectDepth() { scene.objectHasDepth = false; }
 	const SceneTransform& GetScene() const { return scene; }
+	// applies SceneLighting to what has been drawn into the active scene so far
+	virtual void DrawSceneLighting(const SceneLighting& /*lighting*/) {}
 	virtual void ConfigurePointer(int pointerSpeed, int pointerAccel, int deadZoneL, int deadZoneR) = 0;
 
 	virtual Holder<Sprite2D> CreateSprite(const Region&, void* pixels, const PixelFormat&) = 0;

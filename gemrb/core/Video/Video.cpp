@@ -61,10 +61,13 @@ void Video::BeginScene(float zoom, float offsetX, float offsetY, const Region& r
 	scene.rect = rect;
 	scene.buffer = drawingBuffer;
 	scene.objectX = scene.objectY = 0.0f;
+	scene.objectHasDepth = false;
+	SceneBegan();
 }
 
 void Video::EndScene()
 {
+	if (scene.active) SceneEnding();
 	scene = SceneTransform();
 }
 

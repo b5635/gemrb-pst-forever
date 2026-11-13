@@ -17,6 +17,7 @@
 #include "ImageMgr.h"
 #include "IniSpawn.h"
 #include "Interface.h"
+#include "Interpolation.h"
 #include "MapMgr.h"
 #include "MusicMgr.h"
 #include "Palette.h"
@@ -1003,7 +1004,10 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 
 		game->ApplyGlobalTint(tint, flags);
 
+		// standing animations get a ground line in the lighting depth map; background ones are floor
+		if (a->GetHeight() != ANI_PRI_BACKGROUND) VideoDriver->SetObjectDepth(float(a->Pos.y - viewport.y));
 		a->Draw(viewport, tint, flags);
+		VideoDriver->ClearObjectDepth();
 		a->Update(masterAreaAnimation);
 		if (!masterAreaAnimation && bool(a->flags & AreaAnimation::Flags::Sync)) {
 			masterAreaAnimation = a;
@@ -1065,7 +1069,9 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 						float ox, oy;
 						bool shifted = actor->DrawOffset(ox, oy);
 						if (shifted) VideoDriver->SetObjectOffset(ox, oy);
+						VideoDriver->SetObjectDepth(float(actor->Pos.y - viewport.y) + (shifted ? oy : 0.0f));
 						actor->Draw(viewport, baseTint, tint, flags | BlitFlags::BLENDED);
+						VideoDriver->ClearObjectDepth();
 						if (shifted) VideoDriver->SetObjectOffset(0.0f, 0.0f);
 					}
 				}
@@ -1117,7 +1123,9 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 						flags |= BlitFlags::GREY;
 					}
 					game->ApplyGlobalTint(tint, flags);
+					VideoDriver->SetObjectDepth(float(sca->Pos.y - viewport.y));
 					sca->Draw(viewport, tint, 0, flags);
+					VideoDriver->ClearObjectDepth();
 					scaidx++;
 				}
 				sca = GetNextScriptedAnimation(scaidx);
@@ -1128,7 +1136,9 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 					float ox, oy;
 					bool shifted = pro->DrawOffset(ox, oy);
 					if (shifted) VideoDriver->SetObjectOffset(ox, oy);
+					VideoDriver->SetObjectDepth(float(pro->GetPos().y - viewport.y) + (shifted ? oy : 0.0f));
 					pro->Draw(viewport, flags);
+					VideoDriver->ClearObjectDepth();
 					if (shifted) VideoDriver->SetObjectOffset(0.0f, 0.0f);
 					pro = GetNextProjectile(++proidx);
 				}
@@ -1160,6 +1170,13 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 	bool updateScripts = (core->GetGameControl()->GetDialogueFlags() & DF_FREEZE_SCRIPTS) == 0;
 	game->DrawWeather(viewport, updateScripts);
 
+	// phase 4: dynamic lighting over everything in the world, under fog and text
+	if (!bgoverride && VideoDriver->GetScene().active && core->GetDictionary().Get("Lighting", 1)) {
+		SceneLighting lighting;
+		CollectSceneLights(viewport, lighting, viewportWalls.first);
+		VideoDriver->DrawSceneLighting(lighting);
+	}
+
 	if (dFlags & (DEBUG_SHOW_LIGHTMAP | DEBUG_SHOW_HEIGHTMAP | DEBUG_SHOW_MATERIALMAP | DEBUG_SHOW_SEARCHMAP)) {
 		DrawDebugOverlay(viewport, dFlags);
 	}
@@ -1185,6 +1202,193 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 	// Show wallpolygons
 	if (debugFlags & (DEBUG_SHOW_WALLS_ALL | DEBUG_SHOW_DOORS_DISABLED)) {
 		DrawWallPolygons(viewport);
+	}
+}
+
+// ---------------------------------------------------------------- scene lighting (phase 4)
+
+namespace {
+	struct SpriteGlow {
+		float r = 0.0f, g = 0.0f, b = 0.0f; // normalised: brightest channel is 1
+		float strength = 0.0f; // mean luminance over the whole frame, 0..1
+	};
+
+	// luminance-weighted colour of a frame; cached per sprite (frames are shared and long-lived)
+	SpriteGlow GetSpriteGlow(const Holder<Sprite2D>& spr)
+	{
+		static std::unordered_map<const Sprite2D*, SpriteGlow> cache;
+		if (!spr) return {};
+		auto it = cache.find(spr.get());
+		if (it != cache.end()) return it->second;
+		if (cache.size() > 8192) cache.clear();
+
+		SpriteGlow glow;
+		const Region& f = spr->Frame;
+		int step = std::max(1, std::max(f.w, f.h) / 40);
+		float sr = 0, sg = 0, sb = 0, sw = 0;
+		int n = 0;
+		for (int y = 0; y < f.h; y += step) {
+			for (int x = 0; x < f.w; x += step) {
+				++n;
+				Color c = spr->GetPixel(Point(x, y));
+				if (c.a == 0) continue;
+				float l = (0.299f * c.r + 0.587f * c.g + 0.114f * c.b) / 255.0f * (c.a / 255.0f);
+				sr += c.r / 255.0f * l;
+				sg += c.g / 255.0f * l;
+				sb += c.b / 255.0f * l;
+				sw += l;
+			}
+		}
+		if (sw > 0.0f && n > 0) {
+			float m = std::max({ sr, sg, sb });
+			glow.r = sr / m;
+			glow.g = sg / m;
+			glow.b = sb / m;
+			glow.strength = sw / float(n);
+		}
+		cache.emplace(spr.get(), glow);
+		return glow;
+	}
+
+	// (x, y) is the ground point under the light, z its height
+	void AddLight(SceneLighting& out, const Region& vp, float x, float y, float z, float radius, float r, float g, float b)
+	{
+		// cull against the viewport with a margin of the light's radius (and its reach up walls)
+		if (x + radius < vp.x || y + radius < vp.y || x - radius > vp.x + vp.w || y - z - 2 * radius > vp.y + vp.h) return;
+		SceneLight l;
+		l.x = x - float(vp.x);
+		l.y = y - float(vp.y);
+		l.z = z;
+		l.radius = radius;
+		l.r = r;
+		l.g = g;
+		l.b = b;
+		out.lights.push_back(l);
+	}
+
+	void AddGlowLight(SceneLighting& out, const Region& vp, const Point& ground, float z, float radius, const SpriteGlow& glow, float gain)
+	{
+		if (glow.strength <= 0.01f) return;
+		float k = std::min(0.9f, std::max(0.12f, glow.strength * gain));
+		AddLight(out, vp, float(ground.x), float(ground.y), z, radius, glow.r * k, glow.g * k, glow.b * k);
+	}
+}
+
+void Map::CollectSceneLights(const Region& viewport, SceneLighting& out, const WallPolygonGroup& walls)
+{
+	const auto& vars = core->GetDictionary();
+	// ambient by area type: dungeons darkest, indoor/city mid, open outdoors light
+	float amb;
+	if (AreaType & AT_DUNGEON) {
+		amb = 0.66f;
+	} else if (AreaType & AT_OUTDOOR) {
+		amb = 0.86f;
+	} else {
+		amb = 0.76f;
+	}
+	// LightingAmbient scales the darkening: 0 = none (original brightness), 100 = default, 200 = double
+	float strength = std::max(0, std::min(200, int(vars.Get("LightingAmbient", 100)))) / 100.0f;
+	amb = 1.0f - (1.0f - amb) * strength;
+	out.ambient[0] = amb * 0.97f;
+	out.ambient[1] = amb * 0.98f;
+	out.ambient[2] = std::min(1.0f, amb * 1.05f);
+	out.lights.clear();
+	out.wallSpans.clear();
+	out.geometry = vars.Get("LightGeometry", 1) != 0;
+	out.normalStrength = std::max(0, std::min(100, int(vars.Get("LightNormalStrength", 80)))) / 100.0f;
+
+	// depth map source: every visible wall polygon row, with the wall's ground line
+	if (out.geometry) {
+		const float vx = float(viewport.x), vy = float(viewport.y);
+		for (const auto& wp : walls) {
+			if (!wp || (wp->GetPolygonFlag() & WF_DISABLED)) continue;
+			float bx0 = float(wp->base0.x), by0 = float(wp->base0.y);
+			float bx1 = float(wp->base1.x), by1 = float(wp->base1.y);
+			bool hasBase = (wp->GetPolygonFlag() & WF_BASELINE) && wp->base0 != wp->base1;
+			float bottom = float(wp->BBox.y + wp->BBox.h);
+			auto baseAt = [&](float x) {
+				if (!hasBase) return bottom;
+				if (std::abs(bx1 - bx0) < 1.0f) return std::max(by0, by1);
+				return by0 + (x - bx0) * (by1 - by0) / (bx1 - bx0);
+			};
+			const Point& o = wp->BBox.origin;
+			for (const auto& row : wp->rasterData) {
+				for (const auto& seg : row) {
+					float x0 = float(seg.first.x + o.x), x1 = float(seg.second.x + o.x + 1);
+					float y = float(seg.first.y + o.y);
+					if (y + 1 < vy || y > vy + viewport.h || x1 < vx || x0 > vx + viewport.w) continue;
+					out.wallSpans.push_back({ x0 - vx, x1 - vx, y - vy, baseAt(x0) - vy, baseAt(x1) - vy });
+				}
+			}
+		}
+	}
+
+	const Game* game = core->GetGame();
+	const ieDword gametime = game->GameTime;
+
+	// warm light carried by the party
+	if (vars.Get("PartyLight", 1)) {
+		int n = game->GetPartySize(true);
+		float k = 0.42f / std::sqrt(float(std::max(1, n)));
+		for (int i = 0; i < n; ++i) {
+			const Actor* pc = game->GetPC(i, true);
+			if (!pc || pc->GetCurrentArea() != this) continue;
+			float ox = 0.0f, oy = 0.0f;
+			pc->DrawOffset(ox, oy);
+			AddLight(out, viewport, float(pc->Pos.x) + ox, float(pc->Pos.y) + oy, 45.0f, 240.0f, 1.0f * k, 0.86f * k, 0.62f * k);
+		}
+	}
+
+	if (!vars.Get("DynamicLights", 1)) return;
+
+	// glowing area animations (fires, braziers, portals: drawn additively, black = transparent)
+	aniIterator it = animations.begin();
+	while (AreaAnimation* a = GetNextAreaAnimation(it, gametime)) {
+		if (!bool(a->flags & AreaAnimation::Flags::BlendBlack) || a->animation.empty()) continue;
+		Region r = a->DrawingRegion();
+		float radius = std::min(420.0f, std::max(70.0f, float(std::max(r.w, r.h)) * 1.4f));
+		SpriteGlow glow = GetSpriteGlow(a->animation[0].CurrentFrame());
+		// the light sits in the middle of the glow, standing on the sprite's lower part
+		Point ground(r.x + r.w / 2, r.y + r.h * 17 / 20);
+		AddGlowLight(out, viewport, ground, float(r.h) * 0.35f, radius, glow, 2.6f);
+	}
+
+	// spell effects drawn additively or with a light spot
+	for (const auto& vef : vvcCells) {
+		ScriptedAnimation* sca = vef->GetSingleObject();
+		if (!sca || !sca->active) continue;
+		bool additive = (sca->Transparency & IE_VVC_BLENDED) || (sca->SequenceFlags & IE_VVC_LIGHTSPOT);
+		if (!additive) continue;
+		Holder<Sprite2D> frame;
+		int phase = std::max(0, std::min(2, sca->Phase));
+		for (size_t i = 0; i < MAX_ORIENT && !frame; ++i) {
+			const auto& anim = sca->anims[phase * MAX_ORIENT + i];
+			if (anim) frame = anim->CurrentFrame();
+		}
+		if (!frame) continue;
+		Region r = sca->DrawingRegion();
+		float radius = std::min(380.0f, std::max(60.0f, float(std::max(r.w, r.h)) * 1.3f));
+		Point ground(r.x + r.w / 2, std::max(sca->Pos.y, r.Center().y));
+		AddGlowLight(out, viewport, ground, float(ground.y - r.Center().y), radius, GetSpriteGlow(frame), 3.0f);
+	}
+
+	// flying projectiles
+	for (const auto& pro : projectiles) {
+		Point pos;
+		int radius = 0;
+		Color col;
+		Holder<Sprite2D> frame;
+		if (!pro->GetGlow(pos, radius, col, frame)) continue;
+		float ox = 0.0f, oy = 0.0f;
+		pro->DrawOffset(ox, oy);
+		Point c(int(float(pos.x) + ox), int(float(pos.y) + oy));
+		float z = float(std::max(30, pro->GetZPos()));
+		if (col.a) {
+			const float k = 0.55f / 255.0f;
+			AddLight(out, viewport, float(c.x), float(c.y), z, float(radius), col.r * k, col.g * k, col.b * k);
+		} else {
+			AddGlowLight(out, viewport, c, z, float(radius), GetSpriteGlow(frame), 3.0f);
+		}
 	}
 }
 

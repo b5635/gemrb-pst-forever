@@ -27,6 +27,8 @@
 
 namespace GemRB {
 
+struct SceneLighting;
+
 class Actor;
 class Ambient;
 class Animation;
@@ -385,6 +387,8 @@ public:
 	void UpdateProjectiles();
 	// remember where moving things are before a game tick, for draw interpolation
 	void CaptureDrawPositions() const;
+	// phase 4 scene lighting: ambient + light sources visible around the viewport
+	void CollectSceneLights(const Region& viewport, SceneLighting& out, const WallPolygonGroup& walls);
 	/* removes empty heaps and returns total itemcount */
 	int ConsolidateContainers();
 	/* transfers all ever visible piles (loose items) to the specified position */
