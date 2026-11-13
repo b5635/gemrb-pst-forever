@@ -10,7 +10,25 @@
 import GemRB
 from GUIDefines import *
 
+def AutoLoad():
+	# dev hook for reproducible screenshots: GEMRB_AUTOLOAD=<save index> loads that save straight away
+	import os
+	idx = os.environ.get ("GEMRB_AUTOLOAD")
+	if idx is None:
+		return False
+	Games = GemRB.GetSaveGames ()
+	if not Games:
+		return False
+	import LoadScreen
+	GemRB.SetVar ("PlayMode", 0)
+	LoadScreen.StartLoadScreen ()
+	GemRB.LoadGame (Games[min(int(idx), len(Games) - 1)])
+	GemRB.EnterGame ()
+	return True
+
 def OnLoad():
+	if AutoLoad():
+		return
 	skip_videos = GemRB.GetVar ("SkipIntroVideos")
 
 	if not skip_videos:
