@@ -88,6 +88,8 @@ vec4 fetch(ivec2 p, ivec2 size)
 float alphaAt(ivec2 p, ivec2 size)
 {
 	if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, size))) return 0.0;
+	// creature BAMs keep their baked-in ground shadow in palette index 1: not part of the body
+	if (u_texMode == 2 && int(texelFetch(u_index, p, 0).r) == 1) return 0.0;
 	return fetch(p, size).a;
 }
 
