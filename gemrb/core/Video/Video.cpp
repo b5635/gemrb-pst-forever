@@ -62,6 +62,7 @@ void Video::BeginScene(float zoom, float offsetX, float offsetY, const Region& r
 	scene.buffer = drawingBuffer;
 	scene.objectX = scene.objectY = 0.0f;
 	scene.objectHasDepth = false;
+	scene.objectOutline.a = 0;
 	SceneBegan();
 }
 

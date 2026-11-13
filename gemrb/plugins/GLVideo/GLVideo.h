@@ -93,10 +93,12 @@ struct GLBatchState {
 	float contrast = 1.0f;
 	bool depthWrite = false; // write objDepth into the lighting depth map (attachment 1)
 	float objDepth = 0.0f;
+	Color outline = Color(0, 0, 0, 0); // outline pass (phase 5)
+	float outlineRadius = 0.0f; // texels
 
 	bool operator==(const GLBatchState& o) const
 	{
-		return depthWrite == o.depthWrite && objDepth == o.objDepth && fbo == o.fbo && targetSize == o.targetSize && blend == o.blend && texMode == o.texMode && texture == o.texture && stencilTex == o.stencilTex && stencilChannel == o.stencilChannel && dither == o.dither && stencilA == o.stencilA && stencilBx == o.stencilBx && stencilBy == o.stencilBy && scissor == o.scissor && flipY == o.flipY && smooth == o.smooth && brightness == o.brightness && contrast == o.contrast;
+		return outline == o.outline && outlineRadius == o.outlineRadius && depthWrite == o.depthWrite && objDepth == o.objDepth && fbo == o.fbo && targetSize == o.targetSize && blend == o.blend && texMode == o.texMode && texture == o.texture && stencilTex == o.stencilTex && stencilChannel == o.stencilChannel && dither == o.dither && stencilA == o.stencilA && stencilBx == o.stencilBx && stencilBy == o.stencilBy && scissor == o.scissor && flipY == o.flipY && smooth == o.smooth && brightness == o.brightness && contrast == o.contrast;
 	}
 	bool operator!=(const GLBatchState& o) const { return !(*this == o); }
 };
@@ -141,6 +143,9 @@ public:
 	void DrawSceneLighting(const SceneLighting& lighting) override;
 	void SceneBegan() override;
 	void SceneEnding() override;
+	bool DrawSoftShapes(const std::vector<SoftShape>& shapes, BlitFlags flags) override;
+	bool BlitSpriteQuad(const Holder<Sprite2D>& spr, const Holder<Palette>& pal, const float corners[8], const Color colors[4], BlitFlags flags) override;
+	void DrawScenePost(const ScenePost& post) override;
 
 private:
 	SDL_Window* window = nullptr;
@@ -156,8 +161,18 @@ private:
 	GLuint paletteTex = 0;
 	GLuint whiteTex = 0;
 	struct Uniforms {
-		GLint targetSize, flipY, texMode, rgba, index, palette, stencil, stencilChannel, dither, stencilA, stencilB, smooth, post, objDepth, depthPremul;
+		GLint targetSize, flipY, texMode, rgba, index, palette, stencil, stencilChannel, dither, stencilA, stencilB, smooth, post, objDepth, depthPremul, outline, outlineRadius;
 	} uni {};
+
+	// scene post pass (phase 5): bloom chain at quarter resolution
+	GLuint postProgram = 0;
+	struct PostUniforms {
+		GLint targetSize, flipY, mode, src, bloom, srcSize, dir, threshold, bloomStrength, grade, saturation, contrast, lift, gain, vignette;
+	} puni {};
+	GLuint bloomTex[2] = { 0, 0 }, bloomFbo[2] = { 0, 0 };
+	Size bloomSize[2];
+	GLuint postTex = 0, postFbo = 0; // linear copy of the scene region
+	Size postSize;
 
 	// scene lighting (phase 4)
 	GLuint lightProgram = 0;
@@ -233,6 +248,8 @@ private:
 	int PaletteRow(const Palette* pal);
 	void DrawTexture(const GLVideoBuffer* buf, const Region& src, const Region& dst, BlitFlags flags, const Color& tint);
 	void DrawSprite(const Holder<Sprite2D>& spr, const Region& src, const Region& dst, BlitFlags flags, const Color& tint);
+	// batch state, palette row and colour key for drawing a sprite; false = nothing to draw
+	bool PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags, GLBatchState& st, float& pal, float& ckey);
 	void UpdatePresentRect();
 	void ResizeScreenTarget();
 	static Region ToPhys(const Region& logical, float scale);

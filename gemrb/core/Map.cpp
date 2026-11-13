@@ -26,6 +26,7 @@
 #include "Projectile.h"
 #include "RNG.h"
 #include "SaveGameIterator.h"
+#include "ScenePolish.h"
 #include "ScriptedAnimation.h"
 #include "TileMap.h"
 #include "VEFObject.h"
@@ -985,6 +986,15 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 	RedrawScreenStencil(viewport, viewportWalls.first);
 	VideoDriver->SetStencilBuffer(wallStencil);
 
+	// phase 4/5: scene lights are known before anything stands in them (shadows need them)
+	const bool sceneActive = !bgoverride && VideoDriver->GetScene().active;
+	const bool lit = sceneActive && core->GetDictionary().Get("Lighting", 1);
+	SceneLighting frameLighting;
+	ScenePolish& polish = ScenePolish::Get();
+	if (lit) CollectSceneLights(viewport, frameLighting, viewportWalls.first);
+	polish.SetFrameLights(lit ? &frameLighting : nullptr);
+	if (sceneActive) polish.BeginFrame(this, viewport);
+
 	//draw all background animations first
 	aniIterator aniidx = animations.begin();
 	const AreaAnimation* masterAreaAnimation = nullptr; // save one for syncing purposes
@@ -1069,6 +1079,7 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 						float ox, oy;
 						bool shifted = actor->DrawOffset(ox, oy);
 						if (shifted) VideoDriver->SetObjectOffset(ox, oy);
+						if (sceneActive) actor->DrawPolishShadows(viewport, flags, shifted ? ox : 0.0f, shifted ? oy : 0.0f);
 						VideoDriver->SetObjectDepth(float(actor->Pos.y - viewport.y) + (shifted ? oy : 0.0f));
 						actor->Draw(viewport, baseTint, tint, flags | BlitFlags::BLENDED);
 						VideoDriver->ClearObjectDepth();
@@ -1171,11 +1182,9 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 	game->DrawWeather(viewport, updateScripts);
 
 	// phase 4: dynamic lighting over everything in the world, under fog and text
-	if (!bgoverride && VideoDriver->GetScene().active && core->GetDictionary().Get("Lighting", 1)) {
-		SceneLighting lighting;
-		CollectSceneLights(viewport, lighting, viewportWalls.first);
-		VideoDriver->DrawSceneLighting(lighting);
-	}
+	if (sceneActive) polish.DrawParticles(viewport);
+	if (lit) VideoDriver->DrawSceneLighting(frameLighting);
+	polish.SetFrameLights(nullptr);
 
 	if (dFlags & (DEBUG_SHOW_LIGHTMAP | DEBUG_SHOW_HEIGHTMAP | DEBUG_SHOW_MATERIALMAP | DEBUG_SHOW_SEARCHMAP)) {
 		DrawDebugOverlay(viewport, dFlags);
@@ -1193,6 +1202,13 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 		gamedata->Visibility.Get()->LargeFog
 	};
 	fogRenderer.DrawFog(mapData);
+
+	// phase 5: bloom, grading, vignette over the finished world
+	if (sceneActive) {
+		ScenePost post;
+		polish.BuildPost(this, post);
+		VideoDriver->DrawScenePost(post);
+	}
 
 	// This must go AFTER the fog!
 	DrawOverheadText();
@@ -1341,6 +1357,8 @@ void Map::CollectSceneLights(const Region& viewport, SceneLighting& out, const W
 
 	if (!vars.Get("DynamicLights", 1)) return;
 
+	ScenePolish::Get().AddLights(out, viewport);
+
 	// glowing area animations (fires, braziers, portals: drawn additively, black = transparent)
 	aniIterator it = animations.begin();
 	while (AreaAnimation* a = GetNextAreaAnimation(it, gametime)) {
@@ -1351,6 +1369,7 @@ void Map::CollectSceneLights(const Region& viewport, SceneLighting& out, const W
 		// the light sits in the middle of the glow, standing on the sprite's lower part
 		Point ground(r.x + r.w / 2, r.y + r.h * 17 / 20);
 		AddGlowLight(out, viewport, ground, float(r.h) * 0.35f, radius, glow, 2.6f);
+		ScenePolish::Get().AddFireEmitter(r, glow.r, glow.g, glow.b, glow.strength);
 	}
 
 	// spell effects drawn additively or with a light spot

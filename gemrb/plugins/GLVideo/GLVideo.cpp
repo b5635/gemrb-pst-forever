@@ -351,6 +351,8 @@ bool GLVideoDriver::CreateResources()
 	uni.post = glGetUniformLocation(program, "u_post");
 	uni.objDepth = glGetUniformLocation(program, "u_objDepth");
 	uni.depthPremul = glGetUniformLocation(program, "u_depthPremul");
+	uni.outline = glGetUniformLocation(program, "u_outline");
+	uni.outlineRadius = glGetUniformLocation(program, "u_outlineRadius");
 	glUseProgram(program);
 	glUniform1i(uni.rgba, 0);
 	glUniform1i(uni.index, 1);
@@ -386,6 +388,31 @@ bool GLVideoDriver::CreateResources()
 		glUseProgram(program);
 	} else {
 		Log(WARNING, "GLVideo", "Lighting shader unavailable, scene lighting disabled");
+	}
+
+	postProgram = LinkProgram(SpriteVS, PostFS);
+	if (postProgram) {
+		puni.targetSize = glGetUniformLocation(postProgram, "u_targetSize");
+		puni.flipY = glGetUniformLocation(postProgram, "u_flipY");
+		puni.mode = glGetUniformLocation(postProgram, "u_mode");
+		puni.src = glGetUniformLocation(postProgram, "u_src");
+		puni.bloom = glGetUniformLocation(postProgram, "u_bloom");
+		puni.srcSize = glGetUniformLocation(postProgram, "u_srcSize");
+		puni.dir = glGetUniformLocation(postProgram, "u_dir");
+		puni.threshold = glGetUniformLocation(postProgram, "u_threshold");
+		puni.bloomStrength = glGetUniformLocation(postProgram, "u_bloomStrength");
+		puni.grade = glGetUniformLocation(postProgram, "u_grade");
+		puni.saturation = glGetUniformLocation(postProgram, "u_saturation");
+		puni.contrast = glGetUniformLocation(postProgram, "u_contrast");
+		puni.lift = glGetUniformLocation(postProgram, "u_lift");
+		puni.gain = glGetUniformLocation(postProgram, "u_gain");
+		puni.vignette = glGetUniformLocation(postProgram, "u_vignette");
+		glUseProgram(postProgram);
+		glUniform1i(puni.src, 0);
+		glUniform1i(puni.bloom, 1);
+		glUseProgram(program);
+	} else {
+		Log(WARNING, "GLVideo", "Post shader unavailable, bloom/grading/vignette disabled");
 	}
 
 	glGenVertexArrays(1, &vao);
@@ -517,6 +544,8 @@ void GLVideoDriver::Flush()
 	glUniform2f(uni.stencilB, st.stencilBx, st.stencilBy);
 	glUniform1i(uni.smooth, st.smooth ? 1 : 0);
 	glUniform2f(uni.post, st.brightness, st.contrast);
+	glUniform4f(uni.outline, st.outline.r / 255.0f, st.outline.g / 255.0f, st.outline.b / 255.0f, st.outline.a / 255.0f);
+	glUniform1f(uni.outlineRadius, st.outlineRadius);
 	if (depthAttachedFbo && st.fbo == depthAttachedFbo) {
 		bool write = st.depthWrite && st.texMode != 0 && (st.blend == GLBlend::Alpha || st.blend == GLBlend::Premultiplied);
 		glColorMaski(1, write, write, write, write);
@@ -767,13 +796,12 @@ void GLVideoDriver::BlitGameSprite(const Holder<Sprite2D>& spr, const Point& p, 
 	DrawSprite(spr, src, dst, flags, tint);
 }
 
-void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, const Region& dst, BlitFlags flags, const Color& tint)
+bool GLVideoDriver::PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags, GLBatchState& st, float& pal, float& ckey)
 {
-	if (!spr || src.w <= 0 || src.h <= 0 || dst.w <= 0 || dst.h <= 0) return;
 	const GLSprite2D* gspr = dynamic_cast<const GLSprite2D*>(spr.get());
 	if (!gspr) {
 		Log(WARNING, "GLVideo", "Skipping a sprite not created by this driver");
-		return;
+		return false;
 	}
 
 	if (spr->renderFlags & BlitFlags::MIRRORX) flags ^= BlitFlags::MIRRORX;
@@ -781,15 +809,11 @@ void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, c
 	flags |= spr->renderFlags & BlitFlags::BLEND_MASK;
 	if (!spr->HasTransparency()) flags &= ~BlitFlags::BLENDED;
 
-	GLBatchState st = TargetState();
-	if (st.scissor.w <= 0 || st.scissor.h <= 0) return;
-	if (!XfRegion(dst).IntersectsRegion(st.scissor)) return;
-
-	float pal = -1;
-	float ckey = -1;
+	pal = -1;
+	ckey = -1;
 	if (gspr->IsIndexed()) {
 		const Holder<Palette>& palette = spr->GetPalette();
-		if (!palette) return;
+		if (!palette) return false;
 		if (flags & (BlitFlags::ONE_MINUS_DST | BlitFlags::DST | BlitFlags::SRC)) {
 			// same trick as the SDL driver: index 0 must be black for these blenders
 			Color ck = palette->GetColorAt(0);
@@ -819,15 +843,17 @@ void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, c
 	if (gspr->NeedsReupload()) Flush();
 	bool uploaded = false;
 	GLuint tex = gspr->GetTexture(uploaded);
-	if (!tex) return;
+	if (!tex) return false;
 
 	st.texMode = gspr->IsIndexed() ? 2 : 1;
 	st.texture = tex;
 	st.blend = BlendForFlags(flags);
-
 	SetupStencil(st, flags);
-	SetBatch(st);
+	return true;
+}
 
+static Color SpriteVertexColor(BlitFlags flags, const Color& tint)
+{
 	Color c = ColorWhite;
 	if (flags & BlitFlags::COLOR_MOD) {
 		c.r = tint.r;
@@ -836,7 +862,21 @@ void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, c
 	}
 	if (flags & BlitFlags::ALPHA_MOD) c.a = tint.a;
 	if (flags & BlitFlags::HALFTRANS) c.a /= 2;
+	return c;
+}
 
+void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, const Region& dst, BlitFlags flags, const Color& tint)
+{
+	if (!spr || src.w <= 0 || src.h <= 0 || dst.w <= 0 || dst.h <= 0) return;
+
+	GLBatchState st = TargetState();
+	if (st.scissor.w <= 0 || st.scissor.h <= 0) return;
+	if (!XfRegion(dst).IntersectsRegion(st.scissor)) return;
+
+	float pal, ckey;
+	if (!PrepareSprite(spr, flags, st, pal, ckey)) return;
+
+	Color c = SpriteVertexColor(flags, tint);
 	float grey = 0;
 	if (flags & BlitFlags::GREY) {
 		grey = 1;
@@ -848,7 +888,96 @@ void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, c
 	float v0 = float(src.y), v1 = float(src.y + src.h);
 	if (flags & BlitFlags::MIRRORX) std::swap(u0, u1);
 	if (flags & BlitFlags::MIRRORY) std::swap(v0, v1);
+
+	// phase 5 hover outline: the quad grown by the outline width, drawn under the sprite
+	if (SceneAppliesToTarget() && scene.objectOutline.a && xf.sx > 0.0f && (st.blend == GLBlend::Alpha || st.blend == GLBlend::None)) {
+		const GLVideoBuffer* target = static_cast<const GLVideoBuffer*>(drawingBuffer);
+		float texPerUnit = float(src.w) / float(dst.w);
+		float e = scene.outlineWidth * target->scale / xf.sx; // drawing units
+		GLBatchState ost = st;
+		ost.blend = GLBlend::Alpha;
+		ost.outline = scene.objectOutline;
+		ost.outlineRadius = e * texPerUnit;
+		ost.depthWrite = false;
+		SetBatch(ost);
+		float eu = (u1 > u0 ? 1.0f : -1.0f) * e * texPerUnit;
+		float ev = (v1 > v0 ? 1.0f : -1.0f) * e * texPerUnit;
+		PushQuad(float(dst.x) - e, float(dst.y) - e, float(dst.x + dst.w) + e, float(dst.y + dst.h) + e,
+			 u0 - eu, v0 - ev, u1 + eu, v1 + ev, c, pal, 0, ckey);
+	}
+
+	SetBatch(st);
 	PushQuad(float(dst.x), float(dst.y), float(dst.x + dst.w), float(dst.y + dst.h), u0, v0, u1, v1, c, pal, grey, ckey);
+}
+
+bool GLVideoDriver::BlitSpriteQuad(const Holder<Sprite2D>& spr, const Holder<Palette>& palOverride, const float corners[8], const Color colors[4], BlitFlags flags)
+{
+	if (!spr || !SceneAppliesToTarget()) return false;
+	GLBatchState st = TargetState();
+	if (st.scissor.w <= 0 || st.scissor.h <= 0) return true;
+	st.depthWrite = false;
+
+	Holder<Palette> oldPal;
+	if (palOverride) {
+		oldPal = spr->GetPalette();
+		spr->SetPalette(palOverride);
+	}
+	float pal, ckey;
+	bool ok = PrepareSprite(spr, flags, st, pal, ckey);
+	if (palOverride) spr->SetPalette(oldPal);
+	if (!ok) return true;
+	if (st.blend == GLBlend::None) st.blend = GLBlend::Alpha;
+	SetBatch(st);
+
+	float u0 = 0, u1 = float(spr->Frame.w), v0 = 0, v1 = float(spr->Frame.h);
+	if (flags & BlitFlags::MIRRORX) std::swap(u0, u1);
+	if (flags & BlitFlags::MIRRORY) std::swap(v0, v1);
+	const float uv[4][2] = { { u0, v0 }, { u1, v0 }, { u0, v1 }, { u1, v1 } };
+	GLVertex v[4];
+	for (int i = 0; i < 4; ++i) {
+		float x = corners[i * 2], y = corners[i * 2 + 1];
+		xf.Apply(x, y);
+		const Color& c = colors[i];
+		v[i] = { x, y, uv[i][0], uv[i][1], c.r, c.g, c.b, c.a, pal, 0, ckey, 0 };
+	}
+	vertices.insert(vertices.end(), { v[0], v[1], v[2], v[1], v[3], v[2] });
+	return true;
+}
+
+bool GLVideoDriver::DrawSoftShapes(const std::vector<SoftShape>& shapes, BlitFlags flags)
+{
+	if (shapes.empty()) return true;
+	GLBatchState st = TargetState();
+	if (st.scissor.w <= 0 || st.scissor.h <= 0) return true;
+	st.depthWrite = false;
+	st.texMode = 3;
+	st.blend = (flags & BlitFlags::ADD) ? GLBlend::Add : GLBlend::Alpha;
+	SetupStencil(st, flags);
+	SetBatch(st);
+	for (const SoftShape& sh : shapes) {
+		float rx = std::max(sh.rx, 0.01f), ry = std::max(sh.ry, 0.01f);
+		float hw = 0, gw = 0, ext = 1.0f;
+		if (sh.profile == SoftShape::Profile::Ring) {
+			// widths in units of the horizontal radius (ellipse space is close enough)
+			hw = sh.ringWidth * 0.5f / rx;
+			gw = sh.glowWidth / rx;
+			ext = 1.0f + hw + gw * 2.0f + 2.0f / rx;
+		} else if (sh.profile == SoftShape::Profile::Disc) {
+			ext = 1.0f + 2.0f / rx;
+		}
+		float x0 = sh.x - rx * ext, x1 = sh.x + rx * ext;
+		float y0 = sh.y - ry * ext, y1 = sh.y + ry * ext;
+		xf.Apply(x0, y0);
+		xf.Apply(x1, y1);
+		const Color& c = sh.color;
+		float p = float(int(sh.profile));
+		GLVertex a { x0, y0, -ext, -ext, c.r, c.g, c.b, c.a, p, hw, gw, sh.glowAlpha };
+		GLVertex b { x1, y0, ext, -ext, c.r, c.g, c.b, c.a, p, hw, gw, sh.glowAlpha };
+		GLVertex d { x0, y1, -ext, ext, c.r, c.g, c.b, c.a, p, hw, gw, sh.glowAlpha };
+		GLVertex e { x1, y1, ext, ext, c.r, c.g, c.b, c.a, p, hw, gw, sh.glowAlpha };
+		vertices.insert(vertices.end(), { a, b, d, b, e, d });
+	}
+	return true;
 }
 
 void GLVideoDriver::DrawTexture(const GLVideoBuffer* buf, const Region& src, const Region& dst, BlitFlags flags, const Color& tint)
@@ -1343,20 +1472,36 @@ void GLVideoDriver::DevScreenshot()
 	static const char* spec = getenv("GEMRB_GL_SHOT");
 	static bool done = false;
 	static uint32_t start = GetMilliseconds();
-	if (!spec || done) return;
-	std::string str(spec);
-	size_t sep = str.rfind(';');
-	float secs = sep == std::string::npos ? 30.0f : float(atof(str.c_str() + sep + 1));
-	if (GetMilliseconds() - start < uint32_t(secs * 1000)) return;
-	done = true;
-	std::string path = str.substr(0, sep);
+	static unsigned frame = 0;
+	std::string path;
+	// on demand (tools\dev.ps1 shot): dev\shot.req holds the target .bmp path, checked every 10 frames
+	if (++frame % 10 == 0) {
+		if (FILE* req = fopen("dev\\shot.req", "rb")) {
+			char buf[1024] = {};
+			size_t n = fread(buf, 1, sizeof(buf) - 1, req);
+			fclose(req);
+			remove("dev\\shot.req");
+			while (n && (buf[n - 1] == '\n' || buf[n - 1] == '\r' || buf[n - 1] == ' ')) buf[--n] = 0;
+			path = buf;
+		}
+	}
+	if (path.empty()) {
+		if (!spec || done) return;
+		std::string str(spec);
+		size_t sep = str.rfind(';');
+		float secs = sep == std::string::npos ? 30.0f : float(atof(str.c_str() + sep + 1));
+		if (GetMilliseconds() - start < uint32_t(secs * 1000)) return;
+		done = true;
+		path = str.substr(0, sep);
+	}
 	int w = windowPixels.w, h = windowPixels.h;
 	std::vector<uint8_t> px(size_t(w) * h * 4);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glReadBuffer(GL_BACK);
 	glPixelStorei(GL_PACK_ALIGNMENT, 4);
 	glReadPixels(0, 0, w, h, GL_BGRA, GL_UNSIGNED_BYTE, px.data()); // bottom-up, exactly what BMP wants
-	FILE* f = fopen(path.c_str(), "wb");
+	std::string tmpPath = path + ".tmp";
+	FILE* f = fopen(tmpPath.c_str(), "wb");
 	if (!f) return;
 	uint32_t dataSize = uint32_t(px.size());
 	uint8_t hdr[54] = { 'B', 'M' };
@@ -1372,6 +1517,8 @@ void GLVideoDriver::DevScreenshot()
 	fwrite(hdr, 1, 54, f);
 	fwrite(px.data(), 1, px.size(), f);
 	fclose(f);
+	remove(path.c_str());
+	rename(tmpPath.c_str(), path.c_str());
 	Log(MESSAGE, "GLVideo", "Wrote dev screenshot {}", path);
 }
 
@@ -1816,3 +1963,95 @@ int GLVideoDriver::ProcessEvent(const SDL_Event& event)
 GEMRB_PLUGIN(0x6C0A7E11, "OpenGL 3.3 Video Driver")
 PLUGIN_DRIVER(GLVideoDriver, "opengl")
 END_PLUGIN()
+
+// ---------------------------------------------------------------- scene post pass (phase 5)
+
+// Bloom (bright pass at half resolution, two widening separable blurs),
+// colour grading and vignette over the scene region, after lighting and fog.
+void GLVideoDriver::DrawScenePost(const ScenePost& post)
+{
+	if (!postProgram || !SceneAppliesToTarget()) return;
+	if (post.bloom <= 0.0f && !post.grade && post.vignette <= 0.0f) return;
+	Flush();
+	batchValid = false;
+
+	GLBatchState st = TargetState();
+	const Region R = st.scissor.Intersect(Region(Point(), st.targetSize));
+	if (R.w <= 0 || R.h <= 0) return;
+	const GLVideoBuffer* target = static_cast<const GLVideoBuffer*>(drawingBuffer);
+
+	EnsureTarget(postTex, postFbo, postSize, R.size, GL_RGBA8, GL_UNSIGNED_BYTE, true);
+	if (depthAttachedFbo == target->fbo) {
+		glBindFramebuffer(GL_FRAMEBUFFER, depthAttachedFbo);
+		glColorMaski(1, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	}
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_BLEND);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, target->fbo);
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, postFbo);
+	glBlitFramebuffer(R.x, R.y, R.x + R.w, R.y + R.h, 0, 0, R.w, R.h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+	glUseProgram(postProgram);
+	glUniform1i(puni.flipY, 0);
+	std::vector<GLVertex> quad;
+	const bool bloom = post.bloom > 0.0f;
+	if (bloom) {
+		Size half(std::max(1, (R.w + 1) / 2), std::max(1, (R.h + 1) / 2));
+		for (int i = 0; i < 2; ++i) EnsureTarget(bloomTex[i], bloomFbo[i], bloomSize[i], half, GL_RGBA16F, GL_HALF_FLOAT, true);
+		glViewport(0, 0, half.w, half.h);
+		glUniform2f(puni.targetSize, float(half.w), float(half.h));
+
+		// bright pass
+		glBindFramebuffer(GL_FRAMEBUFFER, bloomFbo[0]);
+		glUniform1i(puni.mode, 0);
+		glUniform1f(puni.threshold, post.bloomThreshold);
+		glUniform2f(puni.srcSize, float(R.w), float(R.h));
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, postTex);
+		PushLightQuad(quad, 0, 0, float(half.w), float(half.h), 0, 0, float(R.w), float(R.h), 0, 0, 0);
+		DrawLightVertices(quad);
+
+		// blur: ping-pong, the second round twice as wide; widths follow the render scale
+		glUniform1i(puni.mode, 1);
+		glUniform2f(puni.srcSize, float(half.w), float(half.h));
+		quad.clear();
+		PushLightQuad(quad, 0, 0, float(half.w), float(half.h), 0, 0, float(half.w), float(half.h), 0, 0, 0);
+		float step = std::max(1.0f, renderScale * 0.75f);
+		for (int round = 0; round < 2; ++round) {
+			float k = step * float(1 + round * 2);
+			glBindFramebuffer(GL_FRAMEBUFFER, bloomFbo[1]);
+			glBindTexture(GL_TEXTURE_2D, bloomTex[0]);
+			glUniform2f(puni.dir, k, 0.0f);
+			DrawLightVertices(quad);
+			glBindFramebuffer(GL_FRAMEBUFFER, bloomFbo[0]);
+			glBindTexture(GL_TEXTURE_2D, bloomTex[1]);
+			glUniform2f(puni.dir, 0.0f, k);
+			DrawLightVertices(quad);
+		}
+	}
+
+	// composite back into the scene
+	glBindFramebuffer(GL_FRAMEBUFFER, target->fbo);
+	glViewport(0, 0, target->physSize.w, target->physSize.h);
+	glUniform2f(puni.targetSize, float(target->physSize.w), float(target->physSize.h));
+	glUniform1i(puni.mode, 2);
+	glUniform2f(puni.srcSize, float(R.w), float(R.h));
+	glUniform1f(puni.bloomStrength, bloom ? post.bloom : 0.0f);
+	glUniform1i(puni.grade, post.grade ? 1 : 0);
+	glUniform1f(puni.saturation, post.saturation);
+	glUniform1f(puni.contrast, post.contrast);
+	glUniform3f(puni.lift, post.lift[0], post.lift[1], post.lift[2]);
+	glUniform3f(puni.gain, post.gain[0], post.gain[1], post.gain[2]);
+	glUniform1f(puni.vignette, post.vignette);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, bloom ? bloomTex[0] : zeroTex);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, postTex);
+	quad.clear();
+	PushLightQuad(quad, float(R.x), float(R.y), float(R.x + R.w), float(R.y + R.h), 0, 0, float(R.w), float(R.h), 0, 0, 0);
+	DrawLightVertices(quad);
+
+	glUseProgram(program);
+	batchValid = false;
+}

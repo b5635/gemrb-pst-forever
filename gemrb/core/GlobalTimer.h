@@ -45,6 +45,8 @@ public:
 	bool IsFading() const;
 	bool ViewportIsMoving() const;
 	bool IsShaking() const { return shakeCounter > 0; }
+	const Point& ShakeVector() const { return shakeVec; }
+	int ShakeRemaining() const { return shakeCounter; }
 	void DoStep(int count);
 	void SetMoveViewPort(Point p, int spd, bool center);
 	void SetFadeToColor(tick_t Count, unsigned short factor = 1);

@@ -27,6 +27,7 @@
 #include "Map.h"
 #include "PolymorphCache.h" // stupid polymorph cache hack
 #include "Projectile.h"
+#include "ScenePolish.h"
 #include "ProjectileServer.h"
 #include "RNG.h"
 #include "ScriptEngine.h"
@@ -4408,6 +4409,8 @@ int Actor::Damage(int damage, int damagetype, Scriptable* hitter, int modtype, i
 	if (!(specialFlags & DamageFlags::NoFeedback)) {
 		DisplayCombatFeedback(damage, resisted, damagetype, hitter);
 	}
+	// phase 5: sparks, impact flash, shake (drawing only)
+	ScenePolish::Get().OnDamage(this, damage, damagetype, critical != 0);
 
 	if (damage > 0) {
 		// instant chunky death if the actor is petrified or frozen
@@ -8830,8 +8833,15 @@ void Actor::Draw(const Region& vp, Color baseTint, Color tint, BlitFlags flags) 
 		}
 	}
 
-	// actor itself
+	// actor itself (phase 5: outlined while hovered)
+	const bool outline = Over && VideoDriver->GetScene().active && core->GetDictionary().Get("HoverOutline", 1);
+	if (outline) {
+		Color oc = overColor.a ? overColor : selectedColor;
+		oc.a = 220;
+		VideoDriver->SetObjectOutline(oc, 1.5f);
+	}
 	DrawActorSprite(drawPos, flags, currentStance.anim, tint);
+	if (outline) VideoDriver->ClearObjectOutline();
 
 	// blur sprites in front of the actor
 	if (State & STATE_BLUR) {
@@ -8866,6 +8876,34 @@ void Actor::Draw(const Region& vp, Color baseTint, Color tint, BlitFlags flags) 
 		const auto& vvc = *it;
 		vvc->Draw(vp, baseTint, BBox.h, vvcFlags);
 	}
+}
+
+void Actor::DrawPolishShadows(const Region& vp, BlitFlags flags, float ox, float oy) const
+{
+	if (!(InternalFlags & IF_VISIBLE) || Modified[IE_AVATARREMOVAL] || currentStance.anim.empty()) return;
+	if (!deadArea.IsEmpty() && deadArea != AreaName) return;
+	int State = Modified[IE_STATE_ID];
+	if ((State & STATE_DEAD) || (InternalFlags & IF_REALLYDIED)) return;
+	if (Modified[IE_EA] > EA_GOODCUTOFF && (State & CFGCache.stateInvisible)) return;
+	if (Modified[IE_DONOTJUMP] & DNJ_BIRD) return;
+	float alpha = float(255 - std::min<int>(Modified[IE_TRANSLUCENT], 255)) / 255.0f;
+	if (State & STATE_BLUR) alpha *= 0.6f;
+
+	Point feet = Pos - vp.origin;
+	Point drawPos = feet;
+	drawPos.y -= GetElevation();
+	std::vector<ScenePolish::ShadowPart> parts;
+	int stance = GetStance();
+	// lying down: the sprite isn't standing, a cast silhouette would be wrong
+	if (stance != IE_ANI_DIE && stance != IE_ANI_TWITCH && stance != IE_ANI_SLEEP) {
+		for (const auto& part : currentStance.anim) {
+			if (part.first) parts.push_back({ part.first->CurrentFrame(), part.second, drawPos });
+		}
+	}
+	float contact = std::max(12.0f, float(CircleSize2Radius()) * sizeFactor * 4.0f * 0.8f);
+	ScenePolish& polish = ScenePolish::Get();
+	polish.DrawShadows(parts, feet, float(feet.x) + ox, float(feet.y) + oy, contact, alpha, polish.FrameLights(),
+			   flags & BlitFlags::STENCIL_MASK);
 }
 
 /* Handling automatic stance changes */

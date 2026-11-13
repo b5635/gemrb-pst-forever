@@ -20,6 +20,7 @@
 #include "Map.h"
 #include "PathFinder.h"
 #include "RNG.h"
+#include "ScenePolish.h"
 #include "ScriptEngine.h"
 #include "TileMap.h"
 
@@ -618,10 +619,14 @@ void GameControl::DrawSelf(const Region& screen, const Region& /*clip*/)
 	const bool scene = SceneCamera() && camera.scale > 0.0f;
 	if (scene) {
 		float s = camera.scale;
-		int ox = int(std::floor(camera.x));
-		int oy = int(std::floor(camera.y));
-		float fx = camera.x - float(ox);
-		float fy = camera.y - float(oy);
+		// phase 5: smooth script / impact shake, drawn only (picking keeps the steady camera)
+		float shx = 0.0f, shy = 0.0f;
+		ScenePolish::Get().ShakeOffset(shx, shy);
+		float cx = camera.x + shx, cy = camera.y + shy;
+		int ox = int(std::floor(cx));
+		int oy = int(std::floor(cy));
+		float fx = cx - float(ox);
+		float fy = cy - float(oy);
 		viewport = Region(ox, oy, int(std::ceil(frame.w * s + fx)) + 1, int(std::ceil(frame.h * s + fy)) + 1);
 		float zoom = 1.0f / s;
 		VideoDriver->BeginScene(zoom, -fx * zoom, -fy * zoom, Region(Point(), frame.size));
@@ -1954,7 +1959,7 @@ void GameControl::UpdateCamera()
 	const Map* area = CurrentArea();
 	bool smooth = core->GetDictionary().Get("SmoothCamera", 1) != 0;
 	// jumps (new area, centring on someone far away) and screen shakes are not eased
-	bool snap = !smooth || camera.scale <= 0.0f || area != camera.area || core->timer.IsShaking() ||
+	bool snap = !smooth || camera.scale <= 0.0f || area != camera.area || (core->timer.IsShaking() && !ScenePolish::SmoothShake()) ||
 		std::abs(tx - camera.x) > frame.w * ts * 1.5f || std::abs(ty - camera.y) > frame.h * ts * 1.5f;
 	camera.area = area;
 	if (snap) {

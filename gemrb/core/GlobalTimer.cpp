@@ -4,6 +4,8 @@
 
 #include "GlobalTimer.h"
 
+#include "ScenePolish.h"
+
 #include "Game.h"
 #include "Interface.h"
 #include "Map.h"
@@ -95,7 +97,8 @@ void GlobalTimer::DoStep(int count)
 	// and we assume it is possible to get a shake and pan simultaneously
 	if (shakeCounter > 0) {
 		shakeCounter = std::max(0, shakeCounter - count);
-		if (shakeCounter) {
+		// phase 5 SmoothShake: drawn by the camera instead (ScenePolish::ShakeOffset)
+		if (shakeCounter && !ScenePolish::SmoothShake()) {
 			Point shakeP = gc->Viewport().origin;
 			shakeP += RandomPoint(-shakeVec.x, shakeVec.x, -shakeVec.y, shakeVec.y);
 			gc->MoveViewportUnlockedTo(shakeP, false);

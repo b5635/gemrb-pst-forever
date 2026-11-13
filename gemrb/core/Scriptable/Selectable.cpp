@@ -4,6 +4,8 @@
 
 #include "Selectable.h"
 
+#include "ScenePolish.h"
+
 #include "GUI/GUIAnimation.h"
 #include "Video/Video.h"
 
@@ -47,6 +49,11 @@ void Selectable::DrawCircle(const Point& p) const
 	} else if (IsPC()) {
 		// only dim base EA colors
 		if (*col == ColorGreen || *col == ColorBlue || *col == ColorRed) col = &overColor;
+	}
+
+	// phase 5: antialiased glowing ring in the creature's colour
+	if (ScenePolish::Get().DrawRing(this, Pos - p, *col, Selected && !Over, Over)) {
+		return;
 	}
 
 	if (sprite) {

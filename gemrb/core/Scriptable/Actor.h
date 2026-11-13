@@ -558,6 +558,12 @@ private:
 	void DrawActorSprite(const Point& p, BlitFlags flags,
 			     const std::vector<AnimationPart>& animParts, const Color& tint) const;
 
+public:
+	// phase 5: contact shadow and light-cast silhouettes, drawn before the actor (ox/oy: draw interpolation offset)
+	void DrawPolishShadows(const Region& vp, BlitFlags flags, float ox, float oy) const;
+
+private:
+
 	/** fixes the palette */
 	void SetupColors();
 	/** debugging function, gets the scripting name of an actor referenced by a global ID */

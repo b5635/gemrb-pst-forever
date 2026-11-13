@@ -73,6 +73,38 @@ struct SceneTransform {
 	// ground line (scene y) of the object being drawn, for the lighting depth map
 	bool objectHasDepth = false;
 	float objectDepth = 0.0f;
+	// phase 5: outline drawn around the sprites of the object (hover), width in logical px
+	Color objectOutline = Color(0, 0, 0, 0);
+	float outlineWidth = 1.5f;
+};
+
+// Phase 5 soft shapes: antialiased discs, soft blobs (shadows, particles) and
+// glowing rings, all in the current drawing units (map units inside a scene)
+struct SoftShape {
+	enum class Profile : uint8_t {
+		Disc,
+		Blob,
+		Ring
+	};
+	float x = 0.0f, y = 0.0f; // centre
+	float rx = 1.0f, ry = 1.0f; // radii (ring: of its centre line)
+	Profile profile = Profile::Blob;
+	float ringWidth = 1.5f; // ring line width, drawing units
+	float glowWidth = 0.0f; // ring glow falloff, drawing units
+	float glowAlpha = 0.0f;
+	Color color;
+};
+
+// Phase 5 finishing pass over the scene, after lighting and fog
+struct ScenePost {
+	float bloom = 0.0f; // strength, 0 = off
+	float bloomThreshold = 0.72f;
+	bool grade = false;
+	float saturation = 1.0f;
+	float contrast = 1.0f;
+	float lift[3] = { 0.0f, 0.0f, 0.0f }; // added to the shadows
+	float gain[3] = { 1.0f, 1.0f, 1.0f }; // multiplies the highlights
+	float vignette = 0.0f;
 };
 
 // Dynamic lighting for the scene (phase 4). Positions are scene coordinates
@@ -222,9 +254,22 @@ public:
 		scene.objectDepth = groundY;
 	}
 	void ClearObjectDepth() { scene.objectHasDepth = false; }
+	void SetObjectOutline(const Color& c, float width = 1.5f)
+	{
+		scene.objectOutline = c;
+		scene.outlineWidth = width;
+	}
+	void ClearObjectOutline() { scene.objectOutline.a = 0; }
 	const SceneTransform& GetScene() const { return scene; }
 	// applies SceneLighting to what has been drawn into the active scene so far
 	virtual void DrawSceneLighting(const SceneLighting& /*lighting*/) {}
+	// phase 5; drivers without support return false / ignore them
+	virtual bool DrawSoftShapes(const std::vector<SoftShape>& /*shapes*/, BlitFlags /*flags*/) { return false; }
+	// a sprite frame drawn onto an arbitrary quad: corners of the frame (TL, TR, BL, BR)
+	// in drawing units, one colour (tint/alpha) per corner
+	virtual bool BlitSpriteQuad(const Holder<Sprite2D>& /*spr*/, const Holder<Palette>& /*pal*/, const float /*corners*/[8],
+				    const Color /*colors*/[4], BlitFlags /*flags*/) { return false; }
+	virtual void DrawScenePost(const ScenePost& /*post*/) {}
 	virtual void ConfigurePointer(int pointerSpeed, int pointerAccel, int deadZoneL, int deadZoneR) = 0;
 
 	virtual Holder<Sprite2D> CreateSprite(const Region&, void* pixels, const PixelFormat&) = 0;

@@ -28,7 +28,7 @@ Rule: every visual feature has a `GemRB.cfg` toggle and falls back to the origin
 
 | 4. Lighting (ambient, point lights, actor tint, optional depth/normal maps) | done |
 
-| 5. Polish (shadows, rings, outlines, bloom, grading, vignette, particles, shake, ambience) | — |
+| 5. Polish (shadows, rings, outlines, bloom, grading, vignette, particles, shake, ambience) | done |
 
 
 
@@ -209,8 +209,37 @@ GL-only light pass, `Lighting=0` in GemRB.cfg turns it off (original look).
     wrapped Lambert shading taken relative to a flat floor, so the overall falloff matches the flat version.
     The light buffer is full resolution in this mode (half otherwise).
   - `GEMRB_LIGHT_DEBUG=1`: shows the light buffer instead (red = vertical surface, green = falloff, blue = normal x).
-- Not done: shadows from lights (phase 5).
 - Shots: `shots/phase4_on.png` (flat), `phase4_geom.png` (depth/normals), `phase4_off.png`, `phase4_debug.png` (save 0).
+
+## Phase 5 — polish
+
+GL-only (scene transform drivers); everything lives in `core/ScenePolish.*` plus three driver hooks in `Video.h`:
+`DrawSoftShapes` (antialiased discs, soft blobs, glowing rings; shader texMode 3), `BlitSpriteQuad` (a frame on any
+quad, per-corner colour) and `DrawScenePost`. Presentation only: own RNG, never touches game state or the game RNG.
+
+- Order in `Map::DrawMap`: scene lights are now collected before objects (shadows need them) → per actor
+  `Actor::DrawPolishShadows` before the sprite → weather → particles → lighting → fog → post pass → text.
+- **Shadows**: soft contact blob under every standing creature (`ContactShadows`); silhouettes cast away from the two
+  strongest lights at the feet, flattened onto the ground with a parallelogram, fading towards the tip
+  (`LightShadows`, needs `Lighting=1`). Skipped for the dead, lying stances, birds, invisible enemies.
+- **Rings** (`SelectionRings`): antialiased ellipse in the creature's colour with a dark backing ring; selected =
+  thicker + glow, hovered = pulsing glow. Off = PST's bitmap circles.
+- **Hover outline** (`HoverOutline`): outline pass in the sprite shader (12-direction alpha dilation in texels,
+  grown quad under the sprite), wall-stencilled like the sprite. `Video::SetObjectOutline`.
+- **Hits** (`HitParticles`): `Actor::Damage` → sparks coloured by damage type (bounce once), plus a short impact
+  light (flash) fed into the lighting pass. Crits are bigger.
+- **Ambience** (`AmbientParticles`): floating dust (indoors, warm) / ash (outdoors, grey) at a fixed density over
+  the view; embers rising from warm glowing area animations (needs `DynamicLights`).
+- **Shake**: `SmoothShake=1` stops script shakes from jittering the logical viewport; the shown camera gets smooth
+  noise with the same amplitude and an envelope instead. `ImpactShake`: party members losing ≥8% max HP and
+  crits add trauma (decays in ~0.6 s). Picking always uses the steady camera.
+- **Post** (`Bloom`, `BloomStrength=0..200` (55), `ColorGrading`, `Vignette=0..100` (35)): bright pass at half
+  resolution with a soft knee, two widening separable gaussian rounds, screen-ish add; grading per area type
+  (dungeon cool/desaturated, outdoor smoggy rust, indoor warm): saturation, contrast, lift/gain; vignette from the
+  pst-forever `post.gdshader`.
+- Dev: `tools\dev.ps1 move X Y` hovers; toggles can be flipped live with `GemRB.SetVar('Bloom', 0)` via `dev.ps1 py`.
+- Shots: `shots/phase5_on.png`, `phase5_hover.png`, `phase5_hit.png` (save 0).
+- Not done: per-area grading/ambience overrides from a table, particles behind walls aren't stencilled.
 
 ## Decisions
 
@@ -238,3 +267,12 @@ GL-only light pass, `Lighting=0` in GemRB.cfg turns it off (original look).
 
 - With `VideoDriver=sdl` the screenshot script falls back to a desktop grab (needs the window visible/unoccluded).
 
+
+
+## Testing and crash tools
+
+- `tools\dev.ps1` drives the installed game: `start [-Save N]`, `py "<python>"` (runs inside the game; helpers `here()`, `act(action, slot)`, `goto(area, x, y)`, `pc()`), `click X Y [-Right]`, `key Name`, `shot [out.png]`, `status`, `log`, `crash`, `stop`.
+- In-game side: `GUIScripts/DevConsole.py` polls `dev\cmd.py` every 250 ms and answers in `dev\out.txt`; the GL driver writes a frame when `dev\shot.req` appears.
+- Every run logs to `gemrb.log` in the game dir (previous run: `gemrb.prev.log`).
+- Crashes (access violation, assert/abort, uncaught exception, CRT errors) write `crashes\crash-<time>.txt` with a symbolized stack, a `.dmp`, and `crashes\last_crash.txt`. Release builds emit PDBs (`/Zi`), which stay in `build\` and are found from there.
+- Fixed: area loads crashed (0xc0000409) when started with a console window because fmt throws on invalid UTF-8 written to a Windows console (e.g. AR1500's garbage container script name), killing the logging thread. Log writers are now exception-safe (`Logger::WriteSafely`).
