@@ -1843,7 +1843,8 @@ bool CombatDirector::UseRun(Actor* actor)
 
 bool CombatDirector::UseWithdraw(Actor* actor)
 {
-	if (!actor || !CanAfford(actor, TBAction::Withdraw)) return false;
+	// the player and companions only; hostile and neutral AI never withdraw
+	if (!actor || !actor->InParty || !CanAfford(actor, TBAction::Withdraw)) return false;
 	Spend(actor, TBAction::Withdraw);
 	ApplyMovementFlags(actor, *FindCombatant(actor->GetGlobalID()));
 	PlayCombatSound(actor, "withdraw");
@@ -2100,28 +2101,25 @@ void CombatDirector::StandUp(Actor* actor, Combatant& combatant)
 void CombatDirector::ChooseAIManeuvers(Actor* actor, Combatant& combatant)
 {
 	if (!actor || PlayerControlled(actor)) return;
-	// the maneuvers serve what the script chose: Run and Withdraw cost the action, so they
-	// only go with a melee attack that can't reach, or a retreat out of someone's reach
+	// Run spends the action, so it only closes a melee gap a walk cannot.
+	// Already in reach, or close enough to walk in and attack, they keep the action.
+	// Withdraw is only for the player and companions; the AI never takes it.
 	const Action* intent = actor->GetCurrentAction().get();
 	if (!intent) intent = actor->GetNextAction().get();
 	const std::string& intentName = ActionName(intent);
 	const bool attacking = intentName.rfind("attack", 0) == 0 || intentName == "groupattack";
-	const bool retreating = intentName.rfind("runawayfrom", 0) == 0 || intentName == "panic";
 	const bool melee = attacking && HasMeleeWeapon(actor);
 
 	Actor* enemy = NearestEnemy(actor, combatMap, order);
 	const bool inMelee = enemy && melee && WithinPersonalRange(actor, enemy, actor->GetWeaponRange(false));
 
-	// Run when this turn's walk would not get them into reach
 	if (melee && enemy && !inMelee && CanAfford(actor, TBAction::Run)) {
 		const unsigned int reach = unsigned(Feet2Pixels(int(actor->GetWeaponRange(false)), AngleFromPoints(actor->Pos, enemy->Pos)));
-		const unsigned int dist = Distance(actor->Pos, enemy->Pos);
-		if (dist > unsigned(combatant.movePx) + reach) UseRun(actor);
-	}
-
-	// Withdraw before backing out of someone's reach, so the retreat draws no free swings
-	if (retreating && CanAfford(actor, TBAction::Withdraw) && !ThreatsTo(actor).empty() && RAND(1, 100) <= 60) {
-		UseWithdraw(actor);
+		// personal gap, same measure as the attack range: center distance counts the
+		// bodies twice and made them run when they were already close enough to walk in
+		const unsigned int gap = PersonalDistance(actor, enemy);
+		const unsigned int budget = unsigned(std::max(0, combatant.movePx));
+		if (gap > reach + budget) UseRun(actor);
 	}
 
 	// Fighters (not Morte) sometimes put an extra attack into Block

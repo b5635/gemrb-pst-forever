@@ -204,6 +204,7 @@ public:
 
 	// combat maneuvers (Run, Withdraw, Block, Trip, Knockdown)
 	bool UseRun(Actor* actor);
+	/** Player and companions only. The AI never withdraws. */
 	bool UseWithdraw(Actor* actor);
 	bool UseBlock(Actor* actor); // no action; spends one remaining attack
 	bool UseTrip(Actor* actor); // first swing of the next attack round
