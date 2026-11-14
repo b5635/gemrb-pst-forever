@@ -4099,7 +4099,7 @@ bool Interface::Autopause(AUTOPAUSE flag, Scriptable* target) const
 	AUTOPAUSE autopause_flags = vars.GetAs<AUTOPAUSE>("Auto Pause State", AUTOPAUSE::UNUSABLE);
 
 	// turn based combat waits for the player anyway
-	if (game && game->turnManager.IsActive()) {
+	if (game && game->combat.IsActive()) {
 		return false;
 	}
 

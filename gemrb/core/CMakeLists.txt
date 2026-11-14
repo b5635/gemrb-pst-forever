@@ -76,7 +76,9 @@ FILE(GLOB gemrb_core_LIB_SRCS
 	TileOverlay.cpp
 	TileProps.cpp
 	TraversabilityCache.cpp
-	TurnBasedCombat/TurnManager.cpp
+	TurnBasedCombat/CombatAnalyzer.cpp
+	TurnBasedCombat/CombatDirector.cpp
+	TurnBasedCombat/CombatHud.cpp
 	VEFObject.cpp
 	WorldMap.cpp
 	GameScript/Actions.cpp

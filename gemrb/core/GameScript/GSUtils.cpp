@@ -1584,13 +1584,7 @@ void AttackCore(Scriptable* Sender, Scriptable* target, int flags)
 	    !WithinPersonalRange(attacker, target, weaponRange) ||
 	    !attacker->GetCurrentArea()->IsVisibleLOS(attacker->Pos, target->Pos) ||
 	    !CanSee(attacker, target, true, 0)) {
-		TurnManager& turns = core->GetGame()->turnManager;
-		if (turns.HaltsTime() && turns.IsCombatant(attacker) && turns.GetRemainingMovement(attacker) <= 0) {
-			// out of reach for this turn
-			attacker->SetStance(IE_ANI_READY);
-			Sender->ReleaseCurrentAction();
-			return;
-		}
+		// in turn based combat the director walks the attacker, as far as its turn allows
 		MoveNearerTo(attacker, target, Feet2Pixels(weaponRange, angle));
 		return;
 	} else if (target->Type == ST_DOOR || target->Type == ST_CONTAINER) {
@@ -1607,8 +1601,8 @@ void AttackCore(Scriptable* Sender, Scriptable* target, int flags)
 
 	Sender->objects.LastTarget = target->GetGlobalID();
 	Sender->objects.LastTargetPersistent = Sender->objects.LastTarget;
-	// in turn based combat this runs one paced round of attacks, otherwise it's a plain PerformAttack
-	core->GetGame()->turnManager.DriveAttack(attacker);
+	// in turn based combat the director plays out a round of swings, otherwise it's a plain PerformAttack
+	core->GetGame()->combat.RequestAttackRound(attacker, target);
 }
 
 void MoveNearerTo(Scriptable* Sender, const Scriptable* target, int distance, MNT flags)

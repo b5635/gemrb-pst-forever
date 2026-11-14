@@ -117,6 +117,26 @@ private:
 		int pathCost = 0;
 		bool attackPreview = false;
 		bool attackReachable = false;
+		// what the attack would need and do, for the hover text
+		int hitChance = -1;
+		int hitNeeded = 0;
+		int targetAC = 0;
+		int damageMin = 0;
+		int damageMax = 0;
+		int distanceFt = 0;
+		// where the THAC0 comes from, for the hover panel (see Actor::HitPrediction)
+		int baseThac0 = 0;
+		int thac0 = 0;
+		int abilityBonus = 0;
+		int weaponBonus = 0;
+		int proficiencyBonus = 0;
+		int armorBonus = 0;
+		int otherBonus = 0;
+		int modifier = 0;
+		int totalNeeded = 0;
+		bool ranged = false;
+		bool autoHit = false;
+		int moveNeededFt = 0; // the walk before the attack, 0 if in reach
 
 		bool pending = false; // a destination waiting for confirmation
 		Point pendingDest;
@@ -184,6 +204,17 @@ private:
 	bool TurnBasedForbids(const Actor* source) const;
 	void UpdateTurnPreview();
 	void DrawTurnPreview() const;
+	/** Screen-space combat overlays: dice panel, hit panel, hover HP bar, turn banner. */
+	void DrawCombatOverlays(const Region& screen);
+	void DrawHitPanel(const Region& screen) const;
+	void DrawHoverHP(const Region& screen) const;
+	void DrawTurnBanner(const Region& screen);
+	/** a map point in the control's screen coordinates */
+	Point MapToScreen(const Point& p, const Region& screen) const;
+	ieDword bannerActorID = 0;
+	tick_t bannerStart = 0;
+	bool lastActiveWasParty = false;
+	mutable int hoverBarBottom = 0; // where the hover HP bar ended this frame, 0 if none
 	/** Left click on the ground during a party member's turn: place or commit a move. */
 	void HandleTurnBasedMove(const Point& p, bool commit);
 

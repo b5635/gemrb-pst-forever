@@ -19,7 +19,7 @@
 #include "Callback.h"
 
 #include "Scriptable/Scriptable.h"
-#include "TurnBasedCombat/TurnManager.h"
+#include "TurnBasedCombat/CombatDirector.h"
 
 #include <array>
 #include <atomic>
@@ -57,6 +57,7 @@ enum class ProtagonistMode {
 #define SELECT_NORMAL  0x00
 #define SELECT_REPLACE 0x01 // when selecting actor, deselect all others
 #define SELECT_QUIET   0x02 // do not run handler when changing selection
+#define SELECT_CLICK   0x04 // a player click: selecting the already selected actor again still talks
 
 // Flags bits for EveryoneNearPoint()
 enum ENP {
@@ -278,7 +279,7 @@ public:
 	FixedSizeString<20> RandomEncounterEntry;
 
 	std::unique_ptr<Particles> weather;
-	TurnManager turnManager;
+	CombatDirector combat;
 	int eventTimer = 0;
 	EventHandler eventHandler = nullptr;
 	bool hasInfra = false;

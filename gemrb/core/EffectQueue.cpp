@@ -1124,6 +1124,21 @@ static int CheckResistances(Effect* fx, Actor* target)
 // returns FX_ABORT if the whole spell this effect is in should be aborted
 // it will disable all future effects of same source (only on first apply)
 
+void EffectQueue::ShiftDurations(int delta)
+{
+	if (!delta) return;
+	for (Effect& fx : effects) {
+		if (fx.TimingMode == FX_DURATION_JUST_EXPIRED) continue;
+		TimingType type = DelayType(fx.TimingMode & 0xff);
+		if (type != TimingType::Delayed && type != TimingType::Duration) continue;
+		if (delta < 0 && fx.Duration <= ieDword(-delta)) {
+			fx.Duration = 0;
+		} else {
+			fx.Duration += delta;
+		}
+	}
+}
+
 int EffectQueue::ApplyEffect(Actor* target, Effect* fx, ieDword first_apply, ieDword resistance) const
 {
 	if (fx->TimingMode == FX_DURATION_JUST_EXPIRED) {
@@ -1137,6 +1152,8 @@ int EffectQueue::ApplyEffect(Actor* target, Effect* fx, ieDword first_apply, ieD
 		return FX_NOT_APPLIED;
 	}
 
+	// in turn based combat a taken over actor's effects live on its combat clock
+	CombatClockScope clock(target);
 	ieDword GameTime = core->GetGame()->GameTime;
 
 	if (first_apply) {

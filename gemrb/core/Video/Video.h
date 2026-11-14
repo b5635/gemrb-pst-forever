@@ -241,6 +241,19 @@ public:
 	virtual bool SupportsSceneTransform() const { return false; }
 	void BeginScene(float zoom, float offsetX, float offsetY, const Region& rect);
 	void EndScene();
+	// big UI text and shapes: draws scaled by zoom with (0,0) at 'at', clipped to rect,
+	// without the driver's scene hooks (lighting depth ...); drivers without scene support draw 1:1
+	void BeginScaledUI(float zoom, const Point& at, const Region& rect)
+	{
+		scene = SceneTransform();
+		scene.active = true;
+		scene.zoom = zoom;
+		scene.offsetX = float(at.x - rect.x);
+		scene.offsetY = float(at.y - rect.y);
+		scene.rect = rect;
+		scene.buffer = drawingBuffer;
+	}
+	void EndScaledUI() { scene = SceneTransform(); }
 	// temporarily draw in plain buffer coordinates (UI text over the map...)
 	void SuspendScene(bool suspend) { scene.suspended = suspend; }
 	void SetObjectOffset(float x, float y)

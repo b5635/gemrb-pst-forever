@@ -157,10 +157,10 @@ bool WavPCMReader::Import(DataStream* stream)
 	str->Read(&data_hdr.fourcc, 4);
 	str->ReadDword(data_hdr.length);
 
-	if (memcmp(&data_hdr.fourcc, fact_4cc, 4) == 0) {
-		str->Seek(data_hdr.length, GEM_CURRENT_POS);
-		//str->Read( &data_hdr, sizeof( data_hdr ) );
-		str->ReadDword(data_hdr.fourcc);
+	// skip fact, LIST (metadata) and any other chunk before the samples
+	for (int guard = 0; guard < 16 && memcmp(&data_hdr.fourcc, data_4cc, 4) != 0; ++guard) {
+		if (str->Seek(data_hdr.length + (data_hdr.length & 1), GEM_CURRENT_POS) < 0) return false;
+		str->Read(&data_hdr.fourcc, 4);
 		str->ReadDword(data_hdr.length);
 	}
 	if (memcmp(&data_hdr.fourcc, data_4cc, 4) != 0) {

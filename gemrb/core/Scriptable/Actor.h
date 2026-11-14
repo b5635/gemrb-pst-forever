@@ -728,7 +728,8 @@ public:
 	/* receives undead turning message */
 	void Turn(Scriptable* cleric, ieDword turnlevel);
 	/* call this on gui selects */
-	void PlaySelectionSound(bool force = false);
+	/** fresh: the selection came by itself (a turn passing to it), not from clicks; restarts the click streak, never annoyed */
+	void PlaySelectionSound(bool force = false, bool fresh = false);
 	/* play a roar if the setting isn't disabled */
 	void PlayWarCry(int range) const;
 	/* call this when adding actions via gui */
@@ -858,6 +859,52 @@ public:
 			      int& DamageBonus, int& speed, int& CriticalBonus, int& style, const Actor* target);
 	/* performs attack against target */
 	void PerformAttack(ieDword gameTime, bool turnBased = false);
+	/** One swing of the current round against LastTarget, rules only: the caller started the
+	 * round (InitRound) and decides when swings happen. Returns true if a swing was made. */
+	bool ResolveSwing();
+	/** One main hand swing outside the actor's own round (attack of opportunity) */
+	bool ResolveSingleSwing();
+	/** What a main hand swing at target would need: the same numbers PerformAttack rolls against */
+	struct HitPrediction {
+		bool valid = false;
+		int needed = 21; // d20 roll that hits (1 always misses)
+		int chance = 0; // percent
+		int thac0 = 0; // or the attack bonus where to-hit isn't reversed
+		int defense = 0; // the target's armor class against this weapon
+		int damageMin = 0;
+		int damageMax = 0;
+		bool autoHit = false; // helpless target
+		// where the THAC0 comes from, as bonuses (+ is better): thac0 = base - the sum
+		int baseThac0 = 0;
+		int abilityBonus = 0;
+		int weaponBonus = 0;
+		int proficiencyBonus = 0;
+		int armorBonus = 0; // armor and shield penalties
+		int otherBonus = 0; // situational: effects, racial enemies, invisibility ...
+		bool ranged = false;
+		// the friendly reading: d20 + modifier, needing this total
+		int modifier = 0;
+		int totalNeeded = 0;
+	};
+	HitPrediction PredictHit(const Actor* target);
+	/** How many attacks the next round would have: 3/2 APR alternates 2 and 1, like InitRound */
+	int GetAttacksNextRound();
+	/** What the last swing rolled, for the combat event feed */
+	struct SwingInfo {
+		ieDword target = 0;
+		int roll = 0;
+		int bonus = 0;
+		int defense = 0;
+		int damage = 0;
+		bool hit = false;
+		bool critical = false;
+		bool made = false; // a roll happened at all
+	};
+	SwingInfo lastSwing;
+	/** The current stance animation's frame and frame count, -1 without an animation */
+	int GetStanceFrame() const;
+	int GetStanceFrameCount() const;
+	unsigned char GetAttackStance() const { return static_cast<unsigned char>(AttackStance); }
 	/* returns the adjusted weapon range, since items have odd values stored */
 	unsigned int GetWeaponRange(bool leftOrRight) const;
 	/* filter out any damage reduction that is cancelled by high weapon enchantment and return the resulting resistance */

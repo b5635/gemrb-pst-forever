@@ -120,6 +120,11 @@ public:
 	{
 		randomBackoff--;
 	}
+	inline void ResetBackoff() { randomBackoff = 0; }
+	/** Turn based combat: walk this ready-made path (already clipped to the movement budget) */
+	void SetCombatPath(Path&& newPath, int minDistance, const Point& dest);
+	/** Turn based combat: no path to dest, report it like an empty search result */
+	void FailCombatPath(const Point& dest);
 	using Selectable::Selectable;
 	Movable(const Movable&) = delete;
 	Movable& operator=(const Movable&) = delete;

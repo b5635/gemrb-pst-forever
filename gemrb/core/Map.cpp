@@ -495,6 +495,16 @@ void Map::UpdateScripts()
 			continue;
 		}
 
+		// turn based combat: the director runs this creature's actions and movement itself,
+		// it only gets its timers, effects and animation here
+		if (CombatDirector::Owns(actor)) {
+			actor->fxqueue.Cleanup();
+			actor->UpdateWithoutActions();
+			actor->UpdateActorState();
+			actor->SetSpeed(false);
+			continue;
+		}
+
 		//Avenger moved this here from ApplyAllEffects (this one modifies the effect queue)
 		//.. but then fuzzie moved this here from UpdateActorState, because otherwise
 		//immobile actors (see check below) never become mobile again!
@@ -1838,6 +1848,8 @@ void Map::UpdateEffects()
 {
 	size_t i = actors.size();
 	while (i--) {
+		// turn based combat: their effects move on in the director's upkeep, once per turn
+		if (CombatDirector::Owns(actors[i])) continue;
 		actors[i]->RefreshEffects();
 	}
 }

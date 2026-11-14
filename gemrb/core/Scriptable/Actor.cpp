@@ -7,6 +7,7 @@
 //Actor is a scriptable object (Scriptable). See Scriptable.cpp
 
 #include "Scriptable/Actor.h"
+#include "TurnBasedCombat/CombatHud.h"
 
 #include "damages.h"
 #include "defsounds.h"
@@ -2740,6 +2741,8 @@ static void AddBonusSpells(Actor* actor)
 
 void Actor::RefreshEffects(bool first, const stats_t& previous)
 {
+	// in turn based combat its effects live on its own combat clock
+	CombatClockScope clock(this);
 	// some VVCs are controlled by stats (and so by PCFs), the rest have 'effect_owned' set
 	for (auto& vvc : vfxQueue) {
 		if (vvc->effect_owned) vvc->active = false;
@@ -3307,6 +3310,7 @@ bool Actor::GetSavingThrow(ieDword type, int modifier, const Effect* fx)
 			msg += fmt::format(u" {}", ret);
 			displaymsg->DisplayStringName(std::move(msg), GUIColors::WHITE, this);
 		}
+		CombatHud::NotifySave(GetGlobalID(), lastSave.savingThrow[type], success);
 		lastSave.prevType = type;
 		lastSave.prevRoll = ret;
 		return success;
@@ -3743,9 +3747,19 @@ bool Actor::GetPartyComment(const Actor* target)
 }
 
 //call this only from gui selects
-void Actor::PlaySelectionSound(bool force)
+// selecting the same actor over and over makes it annoyed (the rare select lines)
+static ieDword selectStreakID = 0;
+static int selectStreak = 0;
+static constexpr int ANNOYED_STREAK = 4;
+
+void Actor::PlaySelectionSound(bool force, bool fresh)
 {
 	playedCommandSound = false;
+	if (fresh || selectStreakID != GetGlobalID()) {
+		selectStreakID = GetGlobalID();
+		selectStreak = 0;
+	}
+	if (!fresh) ++selectStreak;
 	// pst uses a slider in lieu of buttons, so the frequency value is off by 1
 	unsigned int frequency = CFGCache.selectionSndFreq + pstflags;
 	if (force || (!pstflags && frequency > 2)) frequency = 5;
@@ -3768,7 +3782,16 @@ void Actor::PlaySelectionSound(bool force)
 	//drop the rare selection comment 5% of the time
 	bool found = false;
 	static int rareSelectChance = gamedata->GetMiscRule("RARE_SELECT_CHANCE");
-	if (InParty && RAND(1, 100) <= rareSelectChance) {
+	// in a fight the annoyed lines only come from clicking the same one again and again
+	bool rare;
+	if (fresh) {
+		rare = false;
+	} else if (core->GetGame() && core->GetGame()->combat.IsActive()) {
+		rare = selectStreak >= ANNOYED_STREAK;
+	} else {
+		rare = selectStreak >= ANNOYED_STREAK || RAND(1, 100) <= rareSelectChance;
+	}
+	if (InParty && rare) {
 		//rare select on main character for BG1 won't work atm
 		int numRareSelects = gamedata->GetVBData("RARE_SELECT_SOUNDS");
 		found = VerbalConstant(Verbal::SelectRare, numRareSelects, DS_CIRCLE);
@@ -6310,6 +6333,7 @@ bool Actor::ValidTarget(int ga_flags, const Scriptable* checker) const
 	}
 	if (ga_flags & GA_ONLY_BUMPABLE) {
 		if (core->GetGame()->CombatCounter) return false;
+		if (InternalFlags & IF_COMBAT_OWNED) return false;
 		if (GetStat(IE_EA) >= EA_EVILCUTOFF) return false;
 		// Skip sitting patrons
 		if (GetStat(IE_ANIMATION_ID) >= 0x4000 && GetStat(IE_ANIMATION_ID) <= 0x4112) return false;
@@ -6636,7 +6660,9 @@ void Actor::SetModalSpell(enum Modal state, const ResRef& spell)
 void Actor::AttackedBy(const Actor* attacker)
 {
 	AddTrigger(TriggerEntry(trigger_attackedby, attacker->GetGlobalID()));
-	if (attacker->GetStat(IE_EA) != EA_PC && Modified[IE_EA] != EA_PC) {
+	// scripts flee from and strike back at LastAttackerOf(Myself), so it has to name the party
+	// too (GemRB skipped any attack involving a PC); only party friendly fire stays out
+	if (attacker->GetStat(IE_EA) != EA_PC || Modified[IE_EA] != EA_PC) {
 		objects.LastAttacker = attacker->GetGlobalID();
 	}
 	if (InParty) {
@@ -6688,23 +6714,11 @@ void Actor::DoStep(unsigned int newWalkScale, ieDword time)
 		return;
 	}
 
-	TurnManager& turns = core->GetGame()->turnManager;
-	if (!turns.HaltsTime() || !turns.IsCombatant(this)) {
-		Movable::DoStep(newWalkScale, time);
+	// in turn based combat only the director's walker moves its creatures
+	if (CombatDirector::Owns(this)) {
 		return;
 	}
-
-	// in turn based combat walking spends the movement allowance
-	if (HasMovementInProgress() && turns.GetRemainingMovement(this) <= 0) {
-		ClearPath(true);
-		SetStance(IE_ANI_READY);
-		return;
-	}
-	Point before = Pos;
 	Movable::DoStep(newWalkScale, time);
-	if (Pos != before) {
-		turns.SpendMovement(this, PathFinder::MovementCost(before, Pos));
-	}
 }
 
 ieDword Actor::GetNumberOfAttacks()
@@ -7371,11 +7385,110 @@ static void ApplyCriticalEffect(Actor* actor, Actor* target, const WeaponInfo& w
 	core->ApplySpell(fx->Resource, target, actor, actor->GetXPLevel(false));
 }
 
-// turnBased: the turn manager already started the round and paces the swings itself
+bool Actor::ResolveSwing()
+{
+	int attacksLeft = attackcount;
+	PerformAttack(core->GetGame()->GameTime, true);
+	return attackcount != attacksLeft;
+}
+
+bool Actor::ResolveSingleSwing()
+{
+	int attacksLeft = attackcount;
+	int perRound = attacksperround;
+	attackcount = 1;
+	attacksperround = std::max(1, perRound);
+	bool made = ResolveSwing();
+	attackcount = attacksLeft;
+	attacksperround = perRound;
+	return made;
+}
+
+Actor::HitPrediction Actor::PredictHit(const Actor* target)
+{
+	static int attackRollDiceSides = gamedata->GetMiscRule("ATTACK_ROLL_DICE_SIDES");
+	HitPrediction p;
+	if (!target) return p;
+	int tohit = 0;
+	int damageBonus = 0;
+	int speed = 0;
+	int criticalBonus = 0;
+	int style = 0;
+	if (!GetCombatDetails(tohit, false, damageBonus, speed, criticalBonus, style, target)) return p;
+	const WeaponInfo& wi = weaponInfo[0];
+	const ITMExtHeader* header = wi.extHeader;
+	if (!header) return p;
+
+	int defense = target->GetDefense(header->DamageType, wi.wflags, this);
+	int sides = attackRollDiceSides ? attackRollDiceSides : 20;
+	// PerformAttack: roll + defense > tohit (reversed, 2e THAC0) or roll + tohit > defense
+	int needed = ReverseToHit ? tohit - defense + 1 : defense - tohit + 1;
+	// a natural 1 misses, a critical (natural max, minus crit bonuses) always hits
+	int critical = std::max(2, sides - static_cast<int>(GetStat(IE_CRITICALHITBONUS)) - criticalBonus);
+	needed = Clamp(needed, 2, critical);
+	if (target->Immobile() || (target->GetStat(IE_STATE_ID) & STATE_SLEEP)) {
+		needed = 2;
+		p.autoHit = true;
+	}
+	p.valid = true;
+	p.needed = needed;
+	p.chance = (sides - needed + 1) * 100 / sides;
+	p.thac0 = tohit;
+	p.defense = defense;
+	{
+		// as bonuses: in 2e a lower THAC0 is better, so the parts are stored negated
+		const int sign = ReverseToHit ? -1 : 1;
+		p.baseThac0 = ToHit.GetBase();
+		p.abilityBonus = sign * ToHit.GetAbilityBonus();
+		p.weaponBonus = sign * ToHit.GetWeaponBonus();
+		p.proficiencyBonus = sign * ToHit.GetProficiencyBonus();
+		p.armorBonus = sign * (ToHit.GetArmorBonus() + ToHit.GetShieldBonus());
+		const int listed = p.abilityBonus + p.weaponBonus + p.proficiencyBonus + p.armorBonus;
+		p.otherBonus = ReverseToHit ? (p.baseThac0 - tohit) - listed : (tohit - p.baseThac0) - listed;
+		p.ranged = (wi.wflags & WEAPON_STYLEMASK) == WEAPON_RANGED;
+		if (ReverseToHit) {
+			p.modifier = 20 - tohit;
+			p.totalNeeded = 21 - defense;
+		} else {
+			p.modifier = tohit;
+			p.totalNeeded = defense + 1;
+		}
+	}
+	if (header->DiceThrown < 256) {
+		p.damageMin = std::max(1, int(header->DiceThrown) + damageBonus);
+		p.damageMax = std::max(1, int(header->DiceThrown) * int(header->DiceSides) + damageBonus);
+	}
+	return p;
+}
+
+int Actor::GetAttacksNextRound()
+{
+	// mirrors InitRound, which flips secondround first
+	int count = static_cast<int>(GetNumberOfAttacks());
+	if (!secondround) count++;
+	count >>= 1;
+	if (count < 1 && BaseStats[IE_NUMBEROFATTACKS] != 0) count = 1;
+	return count;
+}
+
+int Actor::GetStanceFrame() const
+{
+	if (currentStance.anim.empty() || !currentStance.anim[0].first) return -1;
+	return static_cast<int>(currentStance.anim[0].first->GetCurrentFrameIndex());
+}
+
+int Actor::GetStanceFrameCount() const
+{
+	if (currentStance.anim.empty() || !currentStance.anim[0].first) return -1;
+	return static_cast<int>(currentStance.anim[0].first->GetFrameCount());
+}
+
+// turnBased: the combat director already started the round and decides when swings happen
 void Actor::PerformAttack(ieDword gameTime, bool turnBased)
 {
 	static int attackRollDiceSides = gamedata->GetMiscRule("ATTACK_ROLL_DICE_SIDES");
 	static EffectRef fx_puppetmarker_ref = { "PuppetMarker", -1 };
+	lastSwing = SwingInfo();
 
 	// don't let imprisoned or otherwise missing actors continue their attack
 	if (Modified[IE_AVATARREMOVAL]) return;
@@ -7596,6 +7709,13 @@ void Actor::PerformAttack(ieDword gameTime, bool turnBased)
 		}
 	}
 
+	lastSwing.made = true;
+	lastSwing.target = target->GetGlobalID();
+	lastSwing.roll = roll;
+	lastSwing.bonus = rollMod;
+	lastSwing.defense = ReverseToHit ? tohit : defense;
+	lastSwing.critical = critical;
+
 	if (target->GetStat(IE_EXTSTATE_ID) & EXTSTATE_EYE_SWORD) {
 		target->fxqueue.RemoveAllEffects(fx_eye_sword_ref);
 		target->spellbook.RemoveSpell(SevenEyes[EYE_SWORD]);
@@ -7665,6 +7785,7 @@ void Actor::PerformAttack(ieDword gameTime, bool turnBased)
 	}
 
 	ModifyWeaponDamage(wi, target, damage, critical);
+	lastSwing.hit = true;
 
 	if (third && target->GetStat(IE_MC_FLAGS) & MC_INVULNERABLE) {
 		Log(COMBAT, "Actor", "Attacking invulnerable target, nulifying damage!");
@@ -7685,6 +7806,7 @@ void Actor::PerformAttack(ieDword gameTime, bool turnBased)
 		buffer.append("[Hit]");
 		Log(COMBAT, "Attack", "{}", buffer);
 	}
+	lastSwing.damage = damage;
 	UseItem(wi.slot, wi.wflags & WEAPON_RANGED ? -2 : -1, target, (critical ? UI_CRITICAL : 0) | UI_NOAURA, damage);
 	ResetState();
 }
@@ -8014,7 +8136,8 @@ void Actor::UpdateModalState(ieDword gameTime)
 	// but we shouldn't be resetting rounds/attacks just because the actor
 	// wandered away, the action code should probably be responsible somehow
 	// see also line above (search for comment containing UpdateActorState)!
-	if (objects.LastTarget && Timers.lastAttack && Timers.lastAttack < (gameTime - 1)) {
+	// the combat director runs whole attack rounds itself, so this doesn't apply to its creatures
+	if (objects.LastTarget && Timers.lastAttack && Timers.lastAttack < (gameTime - 1) && !CombatDirector::Owns(this)) {
 		const Actor* target = area->GetActorByGlobalID(objects.LastTarget);
 		if (!target || target->GetStat(IE_STATE_ID) & STATE_DEAD ||
 		    (target->GetStance() == IE_ANI_WALK && target->GetAnims()->GetAnimType() == IE_ANI_TWO_PIECE)) {

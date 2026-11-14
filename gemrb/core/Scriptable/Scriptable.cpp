@@ -158,6 +158,27 @@ bool Scriptable::IsPC() const
 	return ((const Actor*) this)->GetStat(IE_EA) <= EA_CHARMED;
 }
 
+void Scriptable::UpdateWithoutActions()
+{
+	Ticks++;
+	AdjustedTicks++;
+	if (AuraCooldown) AuraCooldown--;
+
+	if (UnselectableTimer) {
+		UnselectableTimer--;
+		if (!UnselectableTimer && Type == ST_ACTOR) {
+			Actor* actor = (Actor*) this;
+			actor->SetCircleSize();
+			if (actor->InParty) {
+				core->GetGame()->SelectActor(actor, true, SELECT_QUIET);
+				core->SetEventFlag(EF_PORTRAIT);
+			}
+		}
+		if (!UnselectableTimer) UnselectableType = 0;
+	}
+	InterruptCasting = false;
+}
+
 void Scriptable::Update()
 {
 	Ticks++;
@@ -1266,7 +1287,7 @@ int Scriptable::CastSpellPoint(const Point& target, bool deplete, bool instant, 
 	objects.LastSpellTarget = 0;
 	objects.LastTargetPos.Invalidate();
 	Actor* actor = Scriptable::As<Actor>(this);
-	TurnManager& turns = core->GetGame()->turnManager;
+	CombatDirector& turns = core->GetGame()->combat;
 	if (actor && !instant && !turns.CanAfford(actor, TBAction::CastSpell)) {
 		return -1;
 	}
@@ -1310,7 +1331,7 @@ int Scriptable::CastSpell(Scriptable* target, bool deplete, bool instant, bool n
 	objects.LastSpellTarget = 0;
 	objects.LastTargetPos.Invalidate();
 	Actor* actor = Scriptable::As<Actor>(this);
-	TurnManager& turns = core->GetGame()->turnManager;
+	CombatDirector& turns = core->GetGame()->combat;
 	if (actor && !instant && !turns.CanAfford(actor, TBAction::CastSpell)) {
 		return -1;
 	}
@@ -1393,7 +1414,7 @@ int Scriptable::SpellCast(bool instant, Scriptable* target, int level)
 	int duration = (casting_time * core->Time.round_size) / 10;
 	if (instant) {
 		duration = 0;
-	} else if (actor && core->GetGame()->turnManager.IsCombatant(actor)) {
+	} else if (actor && core->GetGame()->combat.IsCombatant(actor)) {
 		// the spell resolves within the turn, so just play out the casting
 		duration = std::min<int>(duration, core->Time.round_size / 6);
 	}

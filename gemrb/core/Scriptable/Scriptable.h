@@ -82,6 +82,7 @@ class Spell;
 #define IF_FORCEUPDATE 0x400000
 #define IF_TRIGGER_AP  0x800000
 #define IF_DUMPED      0x1000000
+#define IF_COMBAT_OWNED 0x2000000 // turn based combat runs this actor, not its scripts and actions
 
 //the actor should stop attacking
 #define IF_STOPATTACK (IF_JUSTDIED | IF_REALLYDIED | IF_CLEANUP | IF_IDLE)
@@ -351,6 +352,8 @@ public:
 	void ImmediateEvent();
 	bool IsPC() const;
 	virtual void Update();
+	/** Update() without the script and action processing, for creatures the combat director runs */
+	void UpdateWithoutActions();
 	void TickScripting();
 	virtual void ExecuteScript(int scriptCount);
 	void AddAction(std::string actStr);

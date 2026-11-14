@@ -602,7 +602,10 @@ bool Game::SelectActor(Actor* actor, bool select, unsigned flags)
 		if (flags & SELECT_REPLACE) {
 			if (selected.size() == 1 && actor->IsSelected()) {
 				assert(selected[0] == actor);
-				// already the only selected actor
+				// already the only selected actor; clicking it again keeps it talking (and annoyed, eventually)
+				if (flags & SELECT_CLICK) {
+					actor->PlaySelectionSound();
+				}
 				return true;
 			}
 			SelectActor(nullptr, false, SELECT_QUIET);
@@ -1614,7 +1617,7 @@ void Game::UpdateScripts()
 	}
 
 	// needs PartyAttack from this tick to notice a fight starting
-	turnManager.Update();
+	combat.Update();
 
 	bool combatEnded = false;
 	if (PartyAttack) {
@@ -2157,7 +2160,7 @@ bool Game::TimeStoppedFor(const Actor* target) const
 
 bool Game::IsActorFrozen(const Actor* target) const
 {
-	return TimeStoppedFor(target) || turnManager.IsFrozen(target);
+	return TimeStoppedFor(target);
 }
 
 //recalculate the party's infravision state

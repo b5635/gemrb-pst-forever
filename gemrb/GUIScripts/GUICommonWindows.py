@@ -323,7 +323,7 @@ def PortraitButtonOnPress (btn):
 	if (not SelectionChangeHandler):
 		if GemRB.GameIsPCSelected (pcID):
 			GemRB.GameControlSetScreenFlags (SF_CENTERONACTOR, OP_OR)
-		GemRB.GameSelectPC (pcID, True, SELECT_REPLACE)
+		GemRB.GameSelectPC (pcID, True, SELECT_REPLACE | SELECT_CLICK)
 	else:
 		GemRB.GameSelectPCSingle (pcID)
 	return

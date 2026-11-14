@@ -170,9 +170,18 @@ void Window::DrawAfterSubviews(const Region& /*drawFrame*/, const Region& /*clip
 void Window::WillDraw(const Region& /*drawFrame*/, const Region& /*clip*/)
 {
 	backBuffer->SetOrigin(frame.origin);
+	// a see-through window redraws everything on top of what it drew before; start from clear
+	// or moved and resized controls leave trails (nothing paints the uncovered parts)
+	bool clear = (flags & AlphaChannel) && NeedsDraw();
+	if (clear) {
+		backBuffer->Clear();
+	}
 	VideoDriver->PushDrawingBuffer(backBuffer);
 
 	if (scaleBuffer) {
+		if (clear) {
+			scaleBuffer->Clear();
+		}
 		scaleBuffer->SetOrigin(frame.origin);
 		VideoDriver->PushDrawingBuffer(scaleBuffer);
 	}

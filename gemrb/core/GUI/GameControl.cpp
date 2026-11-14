@@ -30,6 +30,11 @@
 #include "GUI/WindowManager.h"
 #include "GameScript/GSUtils.h"
 #include "Scriptable/Container.h"
+#include "Spell.h"
+#include "Effect.h"
+#include <map>
+#include "TurnBasedCombat/CombatHud.h"
+#include "GUI/TextSystem/Font.h"
 #include "Scriptable/Door.h"
 #include "Scriptable/InfoPoint.h"
 #include "Video/Video.h"
@@ -430,8 +435,8 @@ void GameControl::WillDraw(const Region& /*drawFrame*/, const Region& /*clip*/)
 
 	// in turn based combat the camera follows whoever is walking on their turn
 	const Game* game = core->GetGame();
-	if (game && game->turnManager.HaltsTime() && update_scripts && !core->timer.ViewportIsMoving()) {
-		const Actor* active = game->turnManager.GetActiveActor();
+	if (game && game->combat.IsRunning() && update_scripts && !core->timer.ViewportIsMoving()) {
+		const Actor* active = game->combat.GetActiveActor();
 		if (active && active->InMove() && active->GetCurrentArea() == CurrentArea() && CurrentArea()->IsVisible(active->Pos)) {
 			Point center = viewport.origin + Point(viewport.w / 2, viewport.h / 2);
 			// only once it strays from the middle, so short steps don't make it swim
@@ -657,6 +662,8 @@ void GameControl::DrawSelf(const Region& screen, const Region& /*clip*/)
 		viewport = logicalViewport;
 	}
 
+	DrawCombatOverlays(screen);
+
 	if (core->HasFeature(GFFlags::ONSCREEN_TEXT) && !DisplayText.empty()) {
 		Font::PrintColors colors = { displaymsg->GetColor(GUIColors::FLOAT_TXT_INFO), ColorBlack };
 		core->GetTextFont()->Print(screen, DisplayText, IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_MIDDLE, colors);
@@ -702,8 +709,8 @@ void GameControl::DrawTargetReticles() const
 Actor* GameControl::GetTurnBasedActor() const
 {
 	const Game* game = core->GetGame();
-	if (!game || !game->turnManager.HaltsTime()) return nullptr;
-	Actor* actor = game->turnManager.GetActiveActor();
+	if (!game || !game->combat.IsRunning()) return nullptr;
+	Actor* actor = game->combat.GetActiveActor();
 	if (!actor || !actor->InParty || actor->GetCurrentArea() != CurrentArea()) return nullptr;
 	return actor;
 }
@@ -711,13 +718,13 @@ Actor* GameControl::GetTurnBasedActor() const
 bool GameControl::TurnBasedForbids(const Actor* source) const
 {
 	const Game* game = core->GetGame();
-	if (!game || !source || !game->turnManager.HaltsTime()) return false;
-	return source != game->turnManager.GetActiveActor();
+	if (!game || !source || !game->combat.IsRunning()) return false;
+	return source != game->combat.GetActiveActor();
 }
 
 static bool IsTurnBasedBusy(const Actor* actor)
 {
-	return actor->InMove() || actor->GetCurrentAction() || actor->GetNextAction();
+	return core->GetGame()->combat.IsBusy(actor);
 }
 
 void GameControl::UpdateTurnPreview()
@@ -740,7 +747,7 @@ void GameControl::UpdateTurnPreview()
 
 	const Game* game = core->GetGame();
 	Map* area = actor->GetCurrentArea();
-	int budget = game->turnManager.GetRemainingMovement(actor);
+	int budget = game->combat.GetRemainingMovement(actor);
 	if (preview.actorPos != actor->Pos || preview.budget != budget) {
 		preview.reach = PathFinder::ReachableBoundary(area->tileProps, actor->Pos, actor->circleSize, budget);
 		preview.actorPos = actor->Pos;
@@ -760,6 +767,31 @@ void GameControl::UpdateTurnPreview()
 	preview.targetActorID = targetID;
 	preview.attackPreview = attack;
 	preview.attackReachable = false;
+	preview.hitChance = -1;
+	preview.moveNeededFt = 0;
+	if (attack) {
+		// the numbers PerformAttack will roll against
+		const Actor::HitPrediction hit = actor->PredictHit(hovered);
+		if (hit.valid) {
+			preview.hitChance = hit.chance;
+			preview.hitNeeded = hit.needed;
+			preview.damageMin = hit.damageMin;
+			preview.damageMax = hit.damageMax;
+			preview.baseThac0 = hit.baseThac0;
+			preview.thac0 = hit.thac0;
+			preview.abilityBonus = hit.abilityBonus;
+			preview.weaponBonus = hit.weaponBonus;
+			preview.proficiencyBonus = hit.proficiencyBonus;
+			preview.armorBonus = hit.armorBonus;
+			preview.otherBonus = hit.otherBonus;
+			preview.modifier = hit.modifier;
+			preview.totalNeeded = hit.totalNeeded;
+			preview.ranged = hit.ranged;
+			preview.autoHit = hit.autoHit;
+		}
+		preview.targetAC = static_cast<int>(hovered->GetStat(IE_ARMORCLASS));
+		preview.distanceFt = PathFinder::MovementCost(actor->Pos, hovered->Pos) / SEARCHMAP_TILE_WIDTH;
+	}
 	preview.path = Path();
 	preview.pathCost = 0;
 
@@ -769,7 +801,7 @@ void GameControl::UpdateTurnPreview()
 		bool leftOrRight = false;
 		actor->GetWeapon(leftOrRight);
 		unsigned int range = actor->GetWeaponRange(leftOrRight);
-		bool canAttack = game->turnManager.CanAfford(actor, TBAction::Attack);
+		bool canAttack = game->combat.CanAfford(actor, TBAction::Attack);
 		if (WithinPersonalRange(actor, hovered, range)) {
 			preview.attackReachable = canAttack;
 			return;
@@ -780,9 +812,14 @@ void GameControl::UpdateTurnPreview()
 
 	const ActorPathContext context { static_cast<unsigned int>(actor->circleSize), actor->GetScriptName(), actor->ValidTarget(GA_ONLY_BUMPABLE) };
 	preview.path = PathFinder::FindPath(area->GetTraversabilityCacheData(), area->tileProps, actor->Pos, target, context, minDistance, PF_SIGHT | PF_ACTORS_ARE_BLOCKING);
+	if (!preview.path) {
+		// boxed in by other creatures: the director's walker then takes the open floor path too
+		preview.path = PathFinder::FindPath(area->GetTraversabilityCacheData(), area->tileProps, actor->Pos, target, context, minDistance, PF_SIGHT);
+	}
 	preview.pathCost = PathFinder::PathCost(actor->Pos, preview.path);
+	preview.moveNeededFt = attack && preview.path ? preview.pathCost / SEARCHMAP_TILE_WIDTH : 0;
 	if (attack) {
-		preview.attackReachable = preview.path && preview.pathCost <= budget && game->turnManager.CanAfford(actor, TBAction::Attack);
+		preview.attackReachable = preview.path && preview.pathCost <= budget && game->combat.CanAfford(actor, TBAction::Attack);
 	}
 }
 
@@ -839,7 +876,8 @@ void GameControl::DrawTurnPreview() const
 		if (target) {
 			DrawTargetReticle(target->CircleSize2Radius(), preview.attackReachable ? inReach : outOfReach, target->Pos - origin);
 		}
-		label = preview.attackReachable ? u"Attack" : u"Out of reach";
+		// the numbers are in the hit panel beside the target
+		label = preview.attackReachable ? String() : String(u"Out of reach");
 	} else if (preview.path) {
 		int cost = std::min(preview.pathCost, budget) / UNITS_PER_FOOT;
 		label = fmt::format(u"{} ft / {} ft left", preview.pathCost / UNITS_PER_FOOT, budget / UNITS_PER_FOOT);
@@ -853,7 +891,7 @@ void GameControl::DrawTurnPreview() const
 		label += u" - click again to move";
 	}
 	Font::PrintColors colors = { preview.attackReachable || (preview.path && preview.pathCost <= budget) ? inReach : ColorWhite, ColorBlack };
-	core->GetTextFont()->Print(Region(labelPos, Size(260, 20)), label, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP, colors);
+	CombatHud::HudFont()->Print(Region(labelPos, Size(560, 20)), label, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP, colors);
 }
 
 void GameControl::HandleTurnBasedMove(const Point& p, bool commit)
@@ -896,6 +934,329 @@ void GameControl::ConfirmTurnBasedMove()
 	if (turnPreview.pending) {
 		HandleTurnBasedMove(turnPreview.pendingDest, true);
 	}
+}
+
+// ------------------------------------------------------------------------------------------
+// screen-space combat overlays
+
+Point GameControl::MapToScreen(const Point& p, const Region& screen) const
+{
+	Point local;
+	if (SceneCamera() && camera.scale > 0.0f) {
+		local = Point(int((float(p.x) - camera.x) / camera.scale), int((float(p.y) - camera.y) / camera.scale));
+	} else {
+		local = p - viewport.origin;
+	}
+	return screen.origin + local;
+}
+
+void GameControl::DrawCombatOverlays(const Region& screen)
+{
+	const Game* game = core->GetGame();
+	if (!game) return;
+	const float mapScale = SceneCamera() && camera.scale > 0.0f ? camera.scale : 1.0f;
+	CombatHud::DrawSaves([&](const Point& p) { return MapToScreen(p, screen); }, mapScale);
+	DrawHoverHP(screen);
+	if (game->combat.IsActive()) {
+		DrawHitPanel(screen);
+		game->combat.GetHud().Draw(screen);
+	}
+	DrawTurnBanner(screen);
+}
+
+static String Signed(int v)
+{
+	return fmt::format(u"{:+d}", v);
+}
+
+void GameControl::DrawHitPanel(const Region& screen) const
+{
+	const TurnPreview& preview = turnPreview;
+	const Actor* actor = GetTurnBasedActor();
+	if (!actor || IsTurnBasedBusy(actor) || preview.budget < 0 || !preview.attackPreview || preview.hitChance < 0) return;
+	const Actor* target = GetLastActor();
+	Holder<Font> font = CombatHud::HudFont();
+	if (!target || !font) return;
+	using Theme = CombatHud::Theme;
+
+	struct Row {
+		String label;
+		String value;
+		Color color;
+	};
+	std::vector<Row> rows;
+	rows.push_back({ u"Base THAC0", fmt::format(u"{}", preview.baseThac0), Theme::text });
+	if (preview.abilityBonus) rows.push_back({ preview.ranged ? u"Dexterity" : u"Strength", Signed(preview.abilityBonus), Theme::text });
+	if (preview.weaponBonus) rows.push_back({ u"Weapon", Signed(preview.weaponBonus), Theme::text });
+	if (preview.proficiencyBonus) rows.push_back({ u"Proficiency", Signed(preview.proficiencyBonus), Theme::text });
+	if (preview.armorBonus) rows.push_back({ u"Armor", Signed(preview.armorBonus), Theme::text });
+	if (preview.otherBonus) rows.push_back({ u"Situational", Signed(preview.otherBonus), Theme::text });
+	rows.push_back({ u"THAC0", fmt::format(u"{}", preview.thac0), Theme::crit });
+	rows.push_back({ u"Target AC", fmt::format(u"{}", preview.targetAC), Theme::text });
+	rows.push_back({ u"Damage", fmt::format(u"{} - {}", preview.damageMin, preview.damageMax), Theme::text });
+
+	String reach;
+	Color reachColor = Theme::hit;
+	if (!preview.attackReachable) {
+		reach = u"Out of reach";
+		reachColor = Theme::miss;
+	} else if (preview.moveNeededFt > 0) {
+		reach = fmt::format(u"Walks {} ft, then attacks", preview.moveNeededFt);
+		reachColor = Theme::text;
+	} else {
+		reach = u"In reach";
+	}
+
+	const int line = font->LineHeight + 2;
+	const int bigH = 30;
+	const int w = 236;
+	const int h = 14 + line + bigH + 6 + line + 8 + int(rows.size()) * line + 8 + line + line + 12;
+
+	// beside the target: right of it, or left near the screen edge
+	const Point at = MapToScreen(target->Pos, screen);
+	const float scale = SceneCamera() && camera.scale > 0.0f ? camera.scale : 1.0f;
+	const int r = int(float(target->CircleSize2Radius()) * 2.0f / scale) + 24;
+	int x = at.x + r;
+	if (x + w > screen.x + screen.w - 8) x = at.x - r - w;
+	int y = at.y - h / 2 - int(40 / scale);
+	x = Clamp(x, screen.x + 8, screen.x + screen.w - w - 8);
+	// never over the hover HP bar at the top
+	const int minY = std::max(screen.y + 8, hoverBarBottom + 8);
+	y = std::max(minY, std::min(y, screen.y + screen.h - h - 8));
+	const Region panel(x, y, w, h);
+	CombatHud::DrawPanel(panel);
+
+	const Font::PrintColors title { target->GetStat(IE_EA) >= EA_EVILCUTOFF ? Color(236, 120, 96, 255) : Theme::text, ColorBlack };
+	int cy = y + 8;
+	font->Print(Region(x + 10, cy, w - 20, line), target->GetShortName(), IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, title);
+	cy += line + 4;
+
+	// the chance, big
+	const int chance = preview.hitChance;
+	const Color chanceColor = chance >= 60 ? Theme::hit : (chance >= 35 ? Theme::crit : Theme::miss);
+	const std::string number = std::to_string(chance);
+	const String suffix = u"% to hit";
+	const int numW = CombatHud::StrokeTextWidth(number, bigH);
+	const int sufW = font->StringSize(suffix).w;
+	const int bx = x + (w - numW - 8 - sufW) / 2;
+	CombatHud::DrawStrokeText(number, Point(bx, cy), bigH, chanceColor);
+	const Font::PrintColors chanceColors { chanceColor, ColorBlack };
+	font->Print(Region(bx + numW + 8, cy + bigH - line, sufW + 4, line), suffix, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, chanceColors);
+	cy += bigH + 6;
+
+	const Font::PrintColors dim { Theme::textDim, ColorBlack };
+	String howTo = preview.autoHit ? String(u"Helpless: always hits") :
+		fmt::format(u"d20 {:+d}, needs {}  (a {}+ on the die)", preview.modifier, preview.totalNeeded, preview.hitNeeded);
+	font->Print(Region(x + 8, cy, w - 16, line), howTo, IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, dim);
+	cy += line + 4;
+	VideoDriver->DrawLine(Point(x + 12, cy), Point(x + w - 12, cy), Theme::borderDark, BlitFlags::BLENDED);
+	cy += 4;
+
+	for (const Row& row : rows) {
+		const Font::PrintColors labelColors { Theme::textDim, ColorBlack };
+		const Font::PrintColors valueColors { row.color, ColorBlack };
+		font->Print(Region(x + 14, cy, w - 28, line), row.label, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, labelColors);
+		font->Print(Region(x + 14, cy, w - 28, line), row.value, IE_FONT_ALIGN_RIGHT | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, valueColors);
+		cy += line;
+	}
+	cy += 4;
+	VideoDriver->DrawLine(Point(x + 12, cy), Point(x + w - 12, cy), Theme::borderDark, BlitFlags::BLENDED);
+	cy += 4;
+	font->Print(Region(x + 8, cy, w - 16, line), fmt::format(u"Distance {} ft", preview.distanceFt), IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, dim);
+	cy += line;
+	const Font::PrintColors reachColors { reachColor, ColorBlack };
+	font->Print(Region(x + 8, cy, w - 16, line), reach, IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, reachColors);
+}
+
+namespace {
+struct EffectInfo {
+	String name;
+	ResRef icon;
+	bool hostile = false;
+	bool valid = false;
+};
+const EffectInfo& SpellEffectInfo(const ResRef& ref)
+{
+	static std::map<std::string, EffectInfo> cache;
+	auto it = cache.find(ref.c_str());
+	if (it != cache.end()) return it->second;
+	EffectInfo info;
+	const Spell* spl = gamedata->GetSpell(ref, true);
+	if (spl) {
+		ieStrRef name = spl->SpellNameIdentified != ieStrRef::INVALID ? spl->SpellNameIdentified : spl->SpellName;
+		if (name != ieStrRef::INVALID) info.name = core->GetString(name);
+		info.icon = spl->SpellbookIcon;
+		info.hostile = (spl->Flags & SF_HOSTILE) != 0;
+		info.valid = !info.name.empty();
+		gamedata->FreeSpell(spl, ref, false);
+	}
+	return cache.emplace(ref.c_str(), info).first->second;
+}
+
+String TitleCase(const std::string& s)
+{
+	String out;
+	bool start = true;
+	for (char c : s) {
+		if (c == '_') {
+			out += u' ';
+			start = true;
+			continue;
+		}
+		out += char16_t(start ? std::toupper(static_cast<unsigned char>(c)) : std::tolower(static_cast<unsigned char>(c)));
+		start = false;
+	}
+	return out;
+}
+}
+
+void GameControl::DrawHoverHP(const Region& screen) const
+{
+	hoverBarBottom = 0;
+	if (!core->GetDictionary().Get("Hover HP Bar", 1)) return;
+	const Actor* actor = GetLastActor();
+	Holder<Font> font = CombatHud::HudFont();
+	if (!actor || !font || (actor->GetStat(IE_STATE_ID) & STATE_DEAD)) return;
+	using Theme = CombatHud::Theme;
+
+	const int hp = std::max(0, int(actor->GetStat(IE_HITPOINTS)));
+	const int maxHP = std::max(1, int(actor->GetStat(IE_MAXHITPOINTS)));
+	const int line = font->LineHeight + 2;
+
+	// buffs and debuffs: the spells with timed effects on it, once each
+	std::vector<const EffectInfo*> effects;
+	for (auto it = actor->fxqueue.GetFirstEffect(); const Effect* fx = actor->fxqueue.GetNextEffect(it);) {
+		if (fx->SourceType != 2 || fx->SourceRef.IsEmpty() || fx->TimingMode != FX_DURATION_INSTANT_LIMITED) continue;
+		const EffectInfo& info = SpellEffectInfo(fx->SourceRef);
+		if (!info.valid || std::find(effects.begin(), effects.end(), &info) != effects.end()) continue;
+		effects.push_back(&info);
+		if (effects.size() >= 4) break;
+	}
+
+	const String className = TitleCase(actor->GetClassName(actor->GetActiveClass()));
+	const bool hasClass = !className.empty();
+	const int w = 380;
+	const int h = 10 + line + (hasClass ? line : 0) + 18 + 8 + (effects.empty() ? 0 : 26) + 6;
+	const Game* game = core->GetGame();
+	// under the turn order bar in a fight
+	const int top = game && game->combat.IsRunning() ? 138 : 12;
+	const Region panel(screen.x + (screen.w - w) / 2, screen.y + top, w, h);
+	CombatHud::DrawPanel(panel);
+	hoverBarBottom = panel.y + panel.h;
+
+	Color nameColor = Theme::text;
+	if (!actor->InParty) nameColor = actor->GetStat(IE_EA) >= EA_EVILCUTOFF ? Color(236, 120, 96, 255) : Theme::textDim;
+	const String name = actor->GetShortName();
+	const String level = fmt::format(u"  Lv. {}", actor->GetXPLevel(true));
+	const int nameW = font->StringSize(name).w;
+	const int levelW = font->StringSize(level).w;
+	int cy = panel.y + 6;
+	const int nx = panel.x + (w - nameW - levelW) / 2;
+	const Font::PrintColors nameColors { nameColor, ColorBlack };
+	const Font::PrintColors dim { Theme::textDim, ColorBlack };
+	font->Print(Region(nx, cy, nameW + 4, line), name, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, nameColors);
+	font->Print(Region(nx + nameW, cy, levelW + 4, line), level, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, dim);
+	cy += line;
+	if (hasClass) {
+		font->Print(Region(panel.x + 10, cy, w - 20, line), className, IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, dim);
+		cy += line;
+	}
+	cy += 2;
+
+	const Region bar(panel.x + 18, cy, w - 36, 18);
+	VideoDriver->DrawRect(bar, Color(34, 10, 8, 255), true);
+	const float ratio = Clamp(float(hp) / float(maxHP), 0.0f, 1.0f);
+	const Region fill(bar.x, bar.y, int(bar.w * ratio), bar.h);
+	const Color barColor = ratio > 0.5f ? Color(168, 34, 26, 255) : (ratio > 0.25f ? Color(190, 74, 22, 255) : Color(210, 28, 20, 255));
+	if (fill.w > 0) {
+		VideoDriver->DrawRect(fill, barColor, true);
+		VideoDriver->DrawRect(Region(fill.x, fill.y, fill.w, 4), Color(255, 255, 255, 46), true, BlitFlags::BLENDED);
+		VideoDriver->DrawRect(Region(fill.x, fill.y + fill.h - 4, fill.w, 4), Color(0, 0, 0, 60), true, BlitFlags::BLENDED);
+	}
+	VideoDriver->DrawRect(bar, Theme::borderDark, false);
+	const Font::PrintColors hpColors { Theme::text, ColorBlack };
+	font->Print(Region(bar.x, bar.y + (bar.h - line) / 2 + 1, bar.w, line), fmt::format(u"{} / {}", hp, maxHP),
+		    IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, hpColors);
+	cy += bar.h + 8;
+
+	if (effects.empty()) return;
+	// icon + name for each, centred as a row
+	constexpr int ICON = 20;
+	int total = 0;
+	for (const EffectInfo* e : effects) total += ICON + 4 + font->StringSize(e->name).w + 14;
+	int ex = panel.x + std::max(8, (w - total) / 2);
+	for (const EffectInfo* e : effects) {
+		Holder<Sprite2D> icon = e->icon.IsEmpty() ? nullptr : gamedata->GetBAMSprite(e->icon, 0, 0, true);
+		if (icon) {
+			VideoDriver->BlitSprite(icon, Region(Point(), icon->Frame.size), Region(ex, cy, ICON, ICON), BlitFlags::BLENDED);
+		} else {
+			VideoDriver->DrawRect(Region(ex + 4, cy + 4, ICON - 8, ICON - 8), e->hostile ? Theme::miss : Theme::hit, true);
+		}
+		ex += ICON + 4;
+		const Font::PrintColors ec { e->hostile ? Color(232, 120, 100, 255) : Color(170, 220, 150, 255), ColorBlack };
+		const int tw = font->StringSize(e->name).w;
+		font->Print(Region(ex, cy + (ICON - line) / 2 + 1, tw + 4, line), e->name, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, ec);
+		ex += tw + 14;
+		if (ex > panel.x + w - 20) break;
+	}
+}
+
+void GameControl::DrawTurnBanner(const Region& screen)
+{
+	const Game* game = core->GetGame();
+	const tick_t now = GetMilliseconds();
+	const Actor* active = game && game->combat.IsRunning() ? game->combat.GetActiveActor() : nullptr;
+	const bool party = active && active->InParty && !core->GetDictionary().Get("Turn Based Party AI", 0);
+	if (party && !lastActiveWasParty && core->GetDictionary().Get("Turn Based Turn Banner", 1)) {
+		bannerStart = now;
+		bannerActorID = active->GetGlobalID();
+	}
+	lastActiveWasParty = party;
+	if (!bannerStart || !game) return;
+
+	constexpr tick_t DURATION = 1800;
+	const tick_t t = now - bannerStart;
+	if (t > DURATION) {
+		bannerStart = 0;
+		return;
+	}
+	Holder<Font> font = CombatHud::HudFont();
+	if (!font) return;
+	float alpha = 1.0f;
+	if (t < 180) alpha = float(t) / 180.0f;
+	if (t > DURATION - 450) alpha = float(DURATION - t) / 450.0f;
+	const float slide = 1.0f - std::min(1.0f, float(t) / 220.0f);
+
+	// a panel under the turn order: "Your Turn" and who shares it
+	String names;
+	const Map* area = CurrentArea();
+	for (ieDword id : game->combat.GetActiveGroup()) {
+		const Actor* who = area ? area->GetActorByGlobalID(id) : nullptr;
+		if (!who || !who->InParty) continue;
+		if (!names.empty()) names += u"     ";
+		names += who->GetShortName();
+	}
+	const int w = std::max(420, font->StringSize(names).w + 80);
+	const int h = 76;
+	const Region panel(screen.x + (screen.w - w) / 2, screen.y + 138 - int(slide * 16), w, h);
+	CombatHud::DrawPanel(panel, alpha);
+
+	const String text = u"Your Turn";
+	const float zoom = 2.0f;
+	const Size size = font->StringSize(text);
+	const Font::PrintColors colors { Color(255, 222, 150, uint8_t(255 * alpha)), Color(0, 0, 0, uint8_t(255 * alpha)) };
+	if (VideoDriver->SupportsSceneTransform()) {
+		const Point at(panel.x + w / 2 - int(size.w * zoom / 2), panel.y + 8);
+		VideoDriver->BeginScaledUI(zoom, at, screen);
+		font->Print(Region(0, 0, size.w + 8, font->LineHeight + 4), text, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, colors);
+		VideoDriver->EndScaledUI();
+	} else {
+		font->Print(Region(panel.x, panel.y + 12, w, font->LineHeight + 4), text, IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, colors);
+	}
+	const int ruleY = panel.y + 8 + int(font->LineHeight * zoom) + 4;
+	VideoDriver->DrawRect(Region(panel.x + w / 4, ruleY, w / 2, 1), Color(158, 118, 66, uint8_t(200 * alpha)), true, BlitFlags::BLENDED);
+	const Font::PrintColors sub { Color(232, 222, 196, uint8_t(230 * alpha)), Color(0, 0, 0, uint8_t(255 * alpha)) };
+	font->Print(Region(panel.x, ruleY + 5, w, font->LineHeight + 4), names, IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, sub);
 }
 
 // show partymember hp/maxhp as overhead text
@@ -1034,10 +1395,10 @@ bool GameControl::OnKeyPress(const KeyboardEvent& Key, unsigned short mod)
 			}
 			break;
 		case ' ': //soft pause, or end turn in turn based combat
-			if (game->turnManager.HaltsTime()) {
-				const Actor* active = game->turnManager.GetActiveActor();
+			if (game->combat.IsRunning()) {
+				const Actor* active = game->combat.GetActiveActor();
 				if (active && active->InParty) {
-					game->turnManager.EndTurn();
+					game->combat.EndTurn();
 				}
 			} else {
 				core->TogglePause();
@@ -1096,7 +1457,7 @@ void GameControl::SelectActor(int whom, int type)
 	}
 
 	bool was_selected = actor->IsSelected();
-	if (game->SelectActor(actor, true, SELECT_REPLACE)) {
+	if (game->SelectActor(actor, true, SELECT_REPLACE | SELECT_CLICK)) {
 		if (was_selected || screenFlags.Test(ScreenFlags::AlwaysCenter)) {
 			screenFlags.Set(ScreenFlags::CenterOnActor);
 		}
@@ -2584,6 +2945,11 @@ bool GameControl::OnMouseUp(const MouseEvent& me, unsigned short Mod)
 
 	// right click
 	if (me.button == GEM_MB_MENU) {
+		// turn based combat: right click stops a party member's walk, the rest of its movement stays
+		if (GetTurnBasedActor() && core->GetGame()->combat.CancelMove()) {
+			ClearMouseState();
+			return true;
+		}
 		if (turnPreview.pending) {
 			CancelTurnBasedMove();
 			ClearMouseState();
@@ -2679,7 +3045,7 @@ bool GameControl::OnMouseUp(const MouseEvent& me, unsigned short Mod)
 	// or if it doesn't make sense due to the location
 	bool saneCursor = lastCursor != IE_CURSOR_BLOCKED && lastCursor != IE_CURSOR_NORMAL && lastCursor != IE_CURSOR_TALK;
 	if ((!core->HasFeature(GFFlags::HAS_FLOAT_MENU) || me.button != GEM_MB_MENU) && saneCursor) {
-		if (core->GetGame()->turnManager.HaltsTime()) {
+		if (core->GetGame()->combat.IsRunning()) {
 			// only the active party member moves, and only as far as its turn allows
 			if (me.button != GEM_MB_MENU) {
 				HandleTurnBasedMove(p, false);

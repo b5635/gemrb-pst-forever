@@ -165,6 +165,11 @@ def UpdatePortraitButton(Button):
 		ButtonHP.SetFlags (IE_GUI_BUTTON_PICTURE, OP_NAND)
 		ButtonHP.SetText ("{} / {}".format(hp, hp_max))
 
+	# lost health fills the portrait red from the bottom up
+	frame = Button.GetFrame ()
+	fill = int (frame['h'] * (1.0 - ratio)) if hp_max > 0 else 0
+	Button.SetBorder (2, {'r' : 170, 'g' : 8, 'b' : 6, 'a' : 150}, fill > 0, 1, {'x' : 0, 'y' : frame['h'] - fill, 'w' : frame['w'], 'h' : fill})
+
 	GemRB.GetVar ("{}_ANIM".format(Button.ControlID))
 
 	UpdateButtonAnimation(Button)

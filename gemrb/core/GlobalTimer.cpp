@@ -173,16 +173,19 @@ bool GlobalTimer::Update()
 		map->UpdateEffects();
 		map->UpdateProjectiles();
 
-		// in turn based combat the world clock only moves by whole rounds
-		if (thisTime && !game->turnManager.HaltsTime()) {
+		if (thisTime) {
 			//this measures in-world time (affected by effects, actions, etc)
+			// turn based combat doesn't stop it: the world keeps running around the fight
 			game->AdvanceTime(1);
 			// drop an area comment, party oneliner or initiate party banter (with Interact)
 			// party comments have a priority, but they happen half of the time, at most
-			if (!game->CheckPartyBanter()) {
-				game->CheckAreaComment();
+			// none of that during a turn based fight
+			if (!game->combat.IsActive()) {
+				if (!game->CheckPartyBanter()) {
+					game->CheckAreaComment();
+				}
+				game->CheckBored();
 			}
-			game->CheckBored();
 		}
 	}
 	//this measures time spent in the game (including pauses)

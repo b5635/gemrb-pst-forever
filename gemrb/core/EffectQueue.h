@@ -292,6 +292,8 @@ public:
 	void DispelEffects(const Effect* dispeller, ieDword level);
 
 	/* returns next saved effect, increases index */
+	/** Moves the expiry and onset times of timed effects by delta ticks (turn based combat clock) */
+	void ShiftDurations(int delta);
 	queue_t::iterator GetFirstEffect()
 	{
 		return effects.begin();

@@ -8,6 +8,7 @@
 
 #include "Actor.h"
 #include "Interface.h"
+#include "Game.h"
 #include "Map.h"
 #include "PathFinderScheduler.h"
 
@@ -650,6 +651,14 @@ void Movable::ScheduleFindPath(
 		PathFinderScheduler::CancelPath(pathRequestId);
 	}
 
+	// in turn based combat the director paths its creatures itself, within their movement budget
+	Actor* owned = Scriptable::As<Actor>(this);
+	if (owned && CombatDirector::Owns(owned)) {
+		pathRequestId = FindPathRequestId::NullId();
+		core->GetGame()->combat.RequestPath(owned, InSource, InDestination, InMinDistance, InOptionalAdditionalFlags);
+		return;
+	}
+
 	// prepare parameters for the request; the actor data is read here, on the main thread,
 	// because the request itself only ever carries our pointer identity
 	const Actor* self = Scriptable::As<Actor>(this);
@@ -927,6 +936,28 @@ void Movable::RandomWalk(bool can_stop, bool run)
 		WalkTo(HomeLocation);
 		return;
 	}
+}
+
+void Movable::SetCombatPath(Path&& newPath, int minDistance, const Point& dest)
+{
+	path = std::move(newPath);
+	path.currentStep = 0;
+	stepFractionX = 0;
+	stepFractionY = 0;
+	timeStartStep = 0;
+	pathAbandoned = false;
+	randomBackoff = 0;
+	Destination = dest;
+	requestedGoalDistance = static_cast<unsigned int>(std::max(0, minDistance));
+	SetMovementState(path ? MovementState::Moving : MovementState::NoMovement);
+}
+
+void Movable::FailCombatPath(const Point& dest)
+{
+	path.Clear();
+	lastFailedDestination = dest;
+	Destination = dest;
+	SetMovementState(MovementState::PathSearchFailed);
 }
 
 void Movable::MoveTo(const Point& Des)

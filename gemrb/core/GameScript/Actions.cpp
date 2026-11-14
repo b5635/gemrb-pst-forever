@@ -6917,7 +6917,7 @@ void GameScript::UseItem(Scriptable* Sender, Holder<Action> parameters)
 	}
 
 	Sender->ReleaseCurrentAction();
-	TurnManager& turns = core->GetGame()->turnManager;
+	CombatDirector& turns = core->GetGame()->combat;
 	if (!turns.CanAfford(act, TBAction::UseItem)) {
 		return;
 	}
@@ -6975,7 +6975,7 @@ void GameScript::UseItemPoint(Scriptable* Sender, Holder<Action> parameters)
 	Point targetPos = parameters->pointParameter;
 
 	Sender->ReleaseCurrentAction();
-	TurnManager& turns = core->GetGame()->turnManager;
+	CombatDirector& turns = core->GetGame()->combat;
 	if (!turns.CanAfford(act, TBAction::UseItem)) {
 		return;
 	}

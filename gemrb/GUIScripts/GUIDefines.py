@@ -229,6 +229,7 @@ CHR_SCRIPTS = 3
 # !!! Keep these synchronized with Game.h !!!
 SELECT_NORMAL  = 0x00
 SELECT_REPLACE = 0x01
+SELECT_CLICK = 0x04
 SELECT_QUIET   = 0x02
 
 # Spell types

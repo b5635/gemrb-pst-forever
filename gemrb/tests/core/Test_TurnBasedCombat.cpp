@@ -8,7 +8,7 @@
 #include "SearchMapBuilder.h"
 
 #include "../../core/PathFinder.h"
-#include "../../core/TurnBasedCombat/TurnManager.h"
+#include "../../core/TurnBasedCombat/CombatDirector.h"
 
 #include <gtest/gtest.h>
 
@@ -35,7 +35,7 @@ static std::vector<ieDword> Ids(const std::vector<Combatant>& combatants)
 	return ids;
 }
 
-TEST(TurnManagerTest, LowestInitiativeGoesFirst)
+TEST(CombatDirectorTest, LowestInitiativeGoesFirst)
 {
 	std::vector<Combatant> order = {
 		MakeCombatant(1, 7, 10, true),
@@ -43,36 +43,36 @@ TEST(TurnManagerTest, LowestInitiativeGoesFirst)
 		MakeCombatant(3, 9, 10, false),
 		MakeCombatant(4, -1, 10, true)
 	};
-	TurnManager::SortByInitiative(order);
+	CombatDirector::SortByInitiative(order);
 	EXPECT_EQ(Ids(order), (std::vector<ieDword> { 4, 2, 1, 3 }));
 }
 
-TEST(TurnManagerTest, TiesGoToHigherDexterityThenParty)
+TEST(CombatDirectorTest, TiesGoToHigherDexterityThenParty)
 {
 	std::vector<Combatant> order = {
 		MakeCombatant(1, 5, 12, false),
 		MakeCombatant(2, 5, 17, false),
 		MakeCombatant(3, 5, 12, true)
 	};
-	TurnManager::SortByInitiative(order);
+	CombatDirector::SortByInitiative(order);
 	EXPECT_EQ(Ids(order), (std::vector<ieDword> { 2, 3, 1 }));
 }
 
-TEST(TurnManagerTest, JoinerIsInsertedAtItsInitiative)
+TEST(CombatDirectorTest, JoinerIsInsertedAtItsInitiative)
 {
 	std::vector<Combatant> order = {
 		MakeCombatant(1, 2, 10, true),
 		MakeCombatant(2, 6, 10, false)
 	};
-	size_t idx = TurnManager::InsertByInitiative(order, MakeCombatant(3, 4, 10, false));
+	size_t idx = CombatDirector::InsertByInitiative(order, MakeCombatant(3, 4, 10, false));
 	EXPECT_EQ(idx, 1u);
 	EXPECT_EQ(Ids(order), (std::vector<ieDword> { 1, 3, 2 }));
 
-	idx = TurnManager::InsertByInitiative(order, MakeCombatant(4, 10, 10, false));
+	idx = CombatDirector::InsertByInitiative(order, MakeCombatant(4, 10, 10, false));
 	EXPECT_EQ(idx, 3u);
 }
 
-TEST(TurnManagerTest, ResetBudgetRestoresTheTurn)
+TEST(CombatDirectorTest, ResetBudgetRestoresTheTurn)
 {
 	Combatant combatant = MakeCombatant(1, 1, 10, true);
 	combatant.mainActionUsed = true;
@@ -80,7 +80,7 @@ TEST(TurnManagerTest, ResetBudgetRestoresTheTurn)
 	combatant.freeWeaponSwapUsed = true;
 	combatant.attacking = true;
 	combatant.movePx = 3;
-	TurnManager::ResetBudget(combatant, 320);
+	CombatDirector::ResetBudget(combatant, 320);
 	EXPECT_FALSE(combatant.mainActionUsed);
 	EXPECT_FALSE(combatant.ran);
 	EXPECT_FALSE(combatant.freeWeaponSwapUsed);
@@ -109,6 +109,32 @@ TEST(TurnMovementTest, PathCostAndTruncation)
 	EXPECT_EQ(PathFinder::PointAlongPath(start, path, 150), Point(100, 38));
 	// affording it all ends at the destination
 	EXPECT_EQ(PathFinder::PointAlongPath(start, path, 999), Point(100, 75));
+}
+
+TEST(CombatDirectorTest, ClipPathStopsWhereTheBudgetEnds)
+{
+	Path path;
+	path.nodes.push_back(PathNode { Point(100, 0), S });
+	path.nodes.push_back(PathNode { Point(100, 75), S });
+	const Point start(0, 0);
+
+	// the whole path is affordable
+	Path all = CombatDirector::ClipPath(start, path, 500);
+	ASSERT_EQ(all.Size(), 2u);
+	EXPECT_EQ(all.GetLastStep().point, Point(100, 75));
+
+	// the budget runs out half way down the second leg
+	Path half = CombatDirector::ClipPath(start, path, 150);
+	ASSERT_EQ(half.Size(), 2u);
+	EXPECT_EQ(half.GetLastStep().point, Point(100, 37));
+	EXPECT_LE(PathFinder::PathCost(start, half), 150);
+
+	// exactly the first leg
+	Path first = CombatDirector::ClipPath(start, path, 100);
+	ASSERT_EQ(first.Size(), 1u);
+	EXPECT_EQ(first.GetLastStep().point, Point(100, 0));
+
+	EXPECT_TRUE(CombatDirector::ClipPath(start, path, 0).Empty());
 }
 
 TEST(TurnMovementTest, ReachStopsAtWalls)
