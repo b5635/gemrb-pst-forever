@@ -381,6 +381,9 @@ public:
 	void UpdateScripts();
 	bool UpdateTraversabilityCache();
 	TraversabilityCache::Data_t& GetTraversabilityCacheData();
+	/** The cache brought up to date with every actor first: for synchronous paths (turn based
+	 *  walks and their preview), which don't go through the scheduler that refreshes it. */
+	const TraversabilityCache::Data_t& GetFreshTraversabilityCacheData();
 	ResRef ResolveTerrainSound(const ResRef& sound, const Point& pos) const;
 	void DoStepForActor(Actor* actor, ieDword time) const;
 	void UpdateEffects();

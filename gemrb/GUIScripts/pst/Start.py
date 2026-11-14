@@ -19,10 +19,19 @@ def AutoLoad():
 	Games = GemRB.GetSaveGames ()
 	if not Games:
 		return False
+	# a number is the index in GetSaveGames order (slot order, not newest first), anything else a save name
+	if idx.lstrip ("-").isdigit ():
+		Game = Games[min(int(idx), len(Games) - 1)]
+	else:
+		Named = [g for g in Games if g.GetName ().lower () == idx.lower ()]
+		if not Named:
+			print ("AutoLoad: no save named", idx)
+			return False
+		Game = Named[-1]
 	import LoadScreen
 	GemRB.SetVar ("PlayMode", 0)
 	LoadScreen.StartLoadScreen ()
-	GemRB.LoadGame (Games[min(int(idx), len(Games) - 1)])
+	GemRB.LoadGame (Game)
 	GemRB.EnterGame ()
 	return True
 

@@ -12316,6 +12316,8 @@ static PyObject* GemRB_GetTurnBudget(PyObject* /*self*/, PyObject* /*args*/)
 	PyObject* dict = PyDict_New();
 	PyDict_SetItemString(dict, "ID", DecRef(PyLong_FromLong, actor->GetGlobalID()));
 	PyDict_SetItemString(dict, "OwnTurn", DecRef(PyBool_FromLong, ownTurn));
+	PyDict_SetItemString(dict, "X", DecRef(PyLong_FromLong, actor->Pos.x));
+	PyDict_SetItemString(dict, "Y", DecRef(PyLong_FromLong, actor->Pos.y));
 	PyDict_SetItemString(dict, "Move", DecRef(PyLong_FromLong, combatant->movePx / UNITS_PER_FOOT));
 	PyDict_SetItemString(dict, "MaxMove", DecRef(PyLong_FromLong, combatant->maxMovePx / UNITS_PER_FOOT));
 	PyDict_SetItemString(dict, "MainActionUsed", DecRef(PyBool_FromLong, combatant->mainActionUsed));
@@ -12466,6 +12468,27 @@ static PyObject* GemRB_CancelTurnMove(PyObject* /*self*/, PyObject* /*args*/)
 		Py_RETURN_FALSE;
 	}
 	Py_RETURN_TRUE;
+}
+
+PyDoc_STRVAR(GemRB_TurnMoveTo__doc,
+	     "===== TurnMoveTo =====\n\
+\n\
+**Prototype:** GemRB.TurnMoveTo (x, y)\n\
+\n\
+**Description:** Moves the active party member to a map point the way a confirmed \n\
+click does, and reports what the movement preview promised (for tests).\n\
+\n\
+**Return value:** dict with HasPath, Partial, StopX, StopY, Cost");
+
+static PyObject* GemRB_TurnMoveTo(PyObject* /*self*/, PyObject* args)
+{
+	int x;
+	int y;
+	PARSE_ARGS(args, "ii", &x, &y);
+	GET_GAMECONTROL();
+	const GameControl::TurnMovePromise promise = gc->TurnBasedMoveTo(Point(x, y));
+	return Py_BuildValue("{s:i,s:i,s:i,s:i,s:i}", "HasPath", int(promise.hasPath), "Partial", int(promise.partial),
+			     "StopX", promise.stop.x, "StopY", promise.stop.y, "Cost", promise.cost);
 }
 
 PyDoc_STRVAR(GemRB_ExecuteActionAt__doc,
@@ -13477,6 +13500,7 @@ static PyMethodDef GemRBMethods[] = {
 	METHOD(ExecuteActionAt, METH_VARARGS),
 	METHOD(DelayTurn, METH_NOARGS),
 	METHOD(CancelTurnMove, METH_NOARGS),
+	METHOD(TurnMoveTo, METH_VARARGS),
 	METHOD(AnalyzeCombatScript, METH_VARARGS),
 	METHOD(GetContainer, METH_VARARGS),
 	METHOD(GetContainerItem, METH_VARARGS),

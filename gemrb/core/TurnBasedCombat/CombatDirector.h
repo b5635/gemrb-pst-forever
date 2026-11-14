@@ -193,6 +193,10 @@ public:
 	bool IsCombatant(const Actor* actor) const;
 	/** Is the active combatant in the middle of something (walking, swinging, an action)? */
 	bool IsBusy(const Actor* actor) const;
+	/** Is it still casting, or is a spell (or missile) it fired still on its way to its first hit or explosion? */
+	bool SpellInFlight(const Actor* actor) const;
+	static bool Casting(const Actor* actor);
+	bool ProjectileInFlight(const Actor* actor) const;
 
 	// action economy
 	bool CanAfford(const Actor* actor, TBAction action) const;
@@ -233,6 +237,11 @@ public:
 	void RequestAttackRound(Actor* attacker, Scriptable* target);
 	/** A path was asked for: path it now, clipped to the movement left, for our walker. */
 	void RequestPath(Actor* actor, const Point& source, const Point& destination, int minDistance, int flags);
+	/** The path a walk from where the actor stands to destination takes. The preview line and the
+	 *  walk itself both come from here, so what is drawn is what gets walked. */
+	Path PlanPath(const Actor* actor, const Point& destination, unsigned int minDistance) const;
+	/** Pin the path a walk to destination will take (the preview's, clipped to where it stops). */
+	void KeepPlan(const Actor* actor, const Point& destination, unsigned int minDistance, const Path& path) const;
 
 	/** The event feed; the GUI drains it. */
 	std::vector<CombatEvent> TakeEvents();
@@ -276,9 +285,26 @@ private:
 	// the active turn
 	Step step = Step::Begin;
 	unsigned int stallTicks = 0; // ticks its actions ran without walking, swinging or finishing
+	unsigned int flightTicks = 0; // ticks it waited for its spell to land
+	bool endRequested = false; // the player ended the turn while its spell was still flying
 	int decisions = 0; // AI script passes this turn
 	bool roundDone = false; // it finished an attack round this turn
 	bool wantedMore = false; // it asked for movement or an attack the budget didn't cover
+	// the last planned walk; the preview plans, the walk reuses it while nothing has moved
+	struct PlannedPath {
+		ieDword actorID = 0;
+		Point from;
+		Point destination;
+		unsigned int minDistance = 0;
+		Path path;
+		bool Matches(const Actor* actor, const Point& dest) const;
+	};
+	mutable PlannedPath plan;
+	// the walk the player committed to: taken whatever range the move action asks for
+	mutable PlannedPath committed;
+	// where its last walk got stuck without moving, and where that walk was headed
+	Point blockedAt { -1, -1 };
+	Point blockedDest { -1, -1 };
 	// the swing in progress
 	ieDword swingTarget = 0;
 	bool swingResolved = false;
@@ -306,6 +332,7 @@ private:
 	bool ShouldJoin(const Actor* actor, const std::vector<Actor*>& party) const;
 	Combatant MakeCombatant(Actor* actor) const;
 	void AddJoiners(bool midRound);
+	void ReactToProvocations();
 	/** Slots one creature into the order and takes it over */
 	void Join(Actor* actor, bool midRound);
 

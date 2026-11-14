@@ -303,12 +303,17 @@ private:
 
 	// time-based duration for walls, instead of tracking ExplosionCount
 	uint32_t duration = 0;
+	// turn based combat: a lingering area effect counts its caster's combat clock
+	ieDword lingerClock = 0; // the caster's clock last seen, 0 while on world time
+	ieDword lingerTicks = 0; // clock ticks still to play out
 
 public:
 	void SetCaster(ieDword t, int level);
 	ieDword GetCaster() const;
 	bool FailedIDS(const Actor* target) const;
 	bool IsWaitingForTrigger() const;
+	/** Still on its way to its first hit or explosion (what a spell's caster waits for in turn based combat) */
+	bool Resolving() const;
 	void SetState(ProjectileState newState) { state = newState; };
 	void SetTarget(ieDword t, bool fake);
 	void SetTarget(const Point& p);
@@ -424,6 +429,7 @@ private:
 	//reached end of single travel missile, explode or expire now
 	ProjectileState GetNextTravelState();
 	ProjectileState GetNextExplosionState();
+	bool HeldByCombatClock();
 	//drop a BAM or VVC on the trail path, return the length of the animation
 	int AddTrail(const ResRef& BAM, const ieByte* pal) const;
 	ProjectileState DoStep();

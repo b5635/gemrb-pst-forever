@@ -63,6 +63,8 @@ struct PathNode {
 struct Path {
 	std::vector<PathNode> nodes;
 	size_t currentStep = 0;
+	// the goal can't be reached: the path only goes to the reachable spot nearest it
+	bool partial = false;
 	using iterator = std::vector<PathNode>::iterator;
 	using const_iterator = std::vector<PathNode>::const_iterator;
 
@@ -90,6 +92,7 @@ struct Path {
 	{
 		nodes.clear();
 		currentStep = 0;
+		partial = false;
 	}
 	PathNode GetStep(const size_t idx) const
 	{
@@ -150,7 +153,9 @@ static_assert(std::is_nothrow_move_constructible<Path>::value, "Path should be n
 enum {
 	PF_SIGHT = 1,
 	PF_BACKAWAY = 2,
-	PF_ACTORS_ARE_BLOCKING = 4
+	PF_ACTORS_ARE_BLOCKING = 4,
+	// the shortest path, not the quick weighted search: turn based movement prices it to the foot
+	PF_EXACT = 8
 };
 
 // SEARCHMAP_TILE_WIDTH/HEIGHT/DIAGONAL live in Region.h, beside SearchmapPoint
@@ -328,6 +333,9 @@ public:
 		bool Empty() const { return cells.empty(); }
 	};
 	static ReachArea ReachableArea(const TileProps& tileProps, const Point& source, unsigned int circleSize, int maxCost);
+	/** The same, by turn based walking's rules: other creatures block when a cache is given. */
+	static ReachArea ReachableArea(const TraversabilityCache::Data_t* traversabilityCache, const TileProps& tileProps,
+				       const Point& source, const ActorPathContext& actorContext, int maxCost);
 	/** Searchmap cells on the edge of the area reachable from source with the given movement cost. */
 	static std::vector<SearchmapPoint> ReachableBoundary(const TileProps& tileProps, const Point& source, unsigned int circleSize, int maxCost);
 

@@ -3,7 +3,7 @@
 # director's log.
 #   tb_fight.ps1 [-Save 2] [-Ghoul 1700ghoul2] [-Turns 8]
 param(
-	[int]$Save = 2,
+	[int]$Save = 3,
 	[string]$Ghoul = "1700ghoul2",
 	[int]$Turns = 8,
 	[string]$GameDir = "D:\Games\GemRB"

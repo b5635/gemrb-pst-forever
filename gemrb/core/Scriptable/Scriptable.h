@@ -190,7 +190,9 @@ enum {
 enum {
 	// has the effect queue (if any) been processed since this trigger
 	// was added? (for fx_cast_spell_on_condition)
-	TEF_PROCESSED_EFFECTS = 1
+	TEF_PROCESSED_EFFECTS = 1,
+	// turn based combat already let the creature react to it out of its turn
+	TEF_TB_REACTED = 2
 };
 
 struct TriggerEntry {
@@ -375,6 +377,7 @@ public:
 	bool MatchTrigger(unsigned short id, ieDword param = 0) const;
 	bool MatchTriggerWithObject(short unsigned int id, const Object* obj, ieDword param = 0) const;
 	const TriggerEntry* GetMatchingTrigger(unsigned short id, unsigned int notflags = 0) const;
+	void FlagTriggers(unsigned int flags);
 	void SendTriggerToAll(TriggerEntry entry, int extraFlags = 0);
 	virtual Region DrawingRegion() const;
 	/* check if casting is allowed at all */

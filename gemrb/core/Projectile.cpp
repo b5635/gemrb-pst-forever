@@ -1718,8 +1718,24 @@ ProjectileState Projectile::GetNextExplosionState()
 		return ProjectileState::EXPIRED;
 	}
 
+	// turn based combat: between its caster's turns a lingering area effect stays as it is
+	bool combatClock = HeldByCombatClock();
+	if (combatClock && !lingerTicks) {
+		return state;
+	}
+
 	StopSound();
 	UpdateChildren();
+
+	// on the combat clock the caster's round plays out at once: the delay and the pulses it holds
+	if (combatClock && extensionDelay) {
+		ieDword skip = std::min<ieDword>(lingerTicks, ieDword(extensionDelay));
+		extensionDelay -= int(skip);
+		lingerTicks -= skip;
+		if (extensionDelay) return state;
+	} else if (combatClock) {
+		--lingerTicks;
+	}
 
 	// delay explosion, it could even be revoked with PAF_DELAYED (see skull trap)
 	if (extensionDelay) {
@@ -1793,7 +1809,7 @@ ProjectileState Projectile::GetNextExplosionState()
 
 	if (ExtFlags & PEF_WALL) {
 		extensionDelay = 5; // check more often, the limiting is done per-actor
-		if (duration < core->GetGame()->GameTime) {
+		if (duration < (lingerClock ? lingerClock : core->GetGame()->GameTime)) {
 			nextState = ProjectileState::BURNING_DOWN;
 		}
 	} else if (extensionExplosionCount) {
@@ -2110,6 +2126,53 @@ void Projectile::StaticTint(const Color& newtint)
 bool Projectile::IsWaitingForTrigger() const
 {
 	return state == ProjectileState::AWAITING_TRIGGER;
+}
+
+bool Projectile::Resolving() const
+{
+	switch (state) {
+		case ProjectileState::NEW:
+		case ProjectileState::TRAVELLING:
+		case ProjectileState::HIT:
+			return true;
+		case ProjectileState::EXPLODING:
+			// a revocable trap explosion (skull trap) waits on whoever walks in, not on the caster
+			return !(Extension && (Extension->AFlags & PAF_DELAYED));
+		default:
+			return false;
+	}
+}
+
+// In turn based combat a lingering area effect (clouds, walls, repeating explosions) of a living
+// combatant runs on its caster's combat clock, which moves a round at the start of each of the
+// caster's turns: so it pulses then, and "lasts 3 rounds" means 3 of its caster's turns.
+// Returns whether the clock is in charge; lingerTicks holds the ticks still to play out.
+bool Projectile::HeldByCombatClock()
+{
+	ieDword clock = 0;
+	if (state == ProjectileState::EXPLODING_AGAIN && area) {
+		const Actor* caster = area->GetActorByGlobalID(Caster);
+		if (caster && caster->ValidTarget(GA_NO_DEAD)) {
+			clock = core->GetGame()->combat.ClockOf(caster);
+		}
+	}
+	ieDword now = core->GetGame()->GameTime;
+	if (!clock) {
+		if (lingerClock) {
+			// back on world time (the fight ended or the caster died): rebase the wall's end
+			if (ExtFlags & PEF_WALL) duration = duration + now - lingerClock;
+			lingerClock = 0;
+			lingerTicks = 0;
+		}
+		return false;
+	}
+	if (!lingerClock) {
+		if (ExtFlags & PEF_WALL) duration = duration + clock - now;
+	} else if (clock > lingerClock) {
+		lingerTicks += clock - lingerClock;
+	}
+	lingerClock = clock;
+	return true;
 }
 
 void Projectile::Cleanup()

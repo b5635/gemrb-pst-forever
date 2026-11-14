@@ -443,6 +443,14 @@ Built, in `gemrb/core/TurnBasedCombat/CombatDirector.*` (TurnManager renamed and
   by tick, so durations, regeneration (TNO's included), poison and other periodic effects
   follow its turns and happen at turn start. Handback rebases durations onto world time.
   Banter/area comments off during a fight. Outsiders that attack a combatant join on the spot.
+- **Spells resolve in the caster's turn:** casting time is one play of the cast animation; the
+  turn then holds until every projectile the caster fired has made its first hit or explosion
+  (`CombatDirector::SpellInFlight`, at most 10 s); End Turn mid-spell ends it once the spell has
+  landed. Lingering area effects (clouds, walls, repeating explosions) of a living combatant run on
+  its caster's combat clock (`Projectile::HeldByCombatClock`): they pulse at the start of the
+  caster's turns and last that many of its turns; world time again after the fight. The casting
+  glow ends on the caster's combat clock too (it used to loop for many turns: its end was set in
+  world time, which runs ahead of the combat clock).
 - **AI (C6, partial):** one real script pass per AI turn (`ExecuteScript`), GemRB's own block
   choice; an unfinished Attack carries over (that's the chase). In a fight `Wait`,
   `WaitRandom`, `SmallWait` and `NoAction` only end the turn (no turns are skipped; the script
@@ -546,11 +554,23 @@ when neither side is a PC (since 2011). Scripts that flee from or retaliate agai
 `LastAttackerOf(Myself)` (e.g. `1700GUL7`'s flee block) therefore never resolve against the
 party, in real time as well. Changing it is a GemRB-wide behaviour change; open.
 
+Movement accuracy (2026-11-14): the preview line is the walk. `CombatDirector::PlanPath` is the one
+path source for the preview and `RequestPath`; a confirmed move pins the clipped preview path
+(`KeepPlan`), so the walk takes the drawn line. Synchronous paths read
+`Map::GetFreshTraversabilityCacheData()`: the cache only refreshed through the real-time scheduler,
+so turn based paths saw stale positions and bump states (a fighter could block itself: "no path"
+everywhere). The reach shade uses FindPath's rules (creatures block, any-angle, `PF_EXACT`
+unweighted search); `Path::partial` marks a goal that can't be reached ("Can't get there"); the
+walker finishes its clipped path and bills `PathCost`; fighters don't stop each other's walks,
+non-fighting bystanders step aside; the blocked latch only refuses the same destination.
+Check: `tools	b_move_accuracy.ps1 -Save 3` (random click moves, each must end on the promised
+pixel), `TurnMovement*` unit tests.
+
 Not done yet: hotbar hotkeys and drag-to-arrange, overlay drawing with proper primitives (U6: smooth path, reach outline,
 spell range/AoE), U7's UX pass, dry-run decide (scripts run for real once per turn), per-intent multi-turn flee
 (`ceil(t/6)` rounds; now one flee walk per turn, re-decided each turn), the rest of the UI
 revamp with PST's art (U0, U1: PST art panels, radial-menu icons), autotest cases
 for the C6/C7 "done when" scripts (0403MAGE, 0704RUN, 0700ANAM, 0702GARD, 0504ALEK: need
-saves there), area effects from combatants run on world time, modal states (bard song) on
+saves there), modal states (bard song) on
 world time. The UI attack click through a synthetic mouse event didn't register in testing
 (the GUI action itself works); worth a check by hand.

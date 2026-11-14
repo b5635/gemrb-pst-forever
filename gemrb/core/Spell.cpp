@@ -127,6 +127,9 @@ void Spell::AddCastingGlow(EffectQueue* fxqueue, ieDword duration, int gender) c
 
 	static EffectRef fx_casting_glow_ref = { "CastingGlow", -1 };
 	auto fx = EffectQueue::CreateEffect(fx_casting_glow_ref, 0, CastingGraphics, FX_DURATION_ABSOLUTE);
+	// in turn based combat the caster's effects run on its combat clock, which lags world time:
+	// a world time end would keep the glow (and its loop) going for many turns
+	CombatClockScope clock(Scriptable::As<Actor>(fxqueue->GetOwner()));
 	fx->Duration = core->GetGame()->GameTime + duration;
 	fx->InventorySlot = 0xffff;
 	fx->Projectile = 0;

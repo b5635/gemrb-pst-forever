@@ -15,6 +15,7 @@
 #include "Interface.h"
 #include "Item.h"
 #include "Map.h"
+#include "Projectile.h"
 #include "RNG.h"
 #include "ScenePolish.h"
 
@@ -37,6 +38,8 @@ static constexpr int TURN_CAMERA_SPEED = 120;
 static constexpr unsigned int GUI_REFRESH_TICKS = 8;
 // safety net: actions that neither walk, swing nor finish for this long end an AI turn
 static constexpr unsigned int STALL_TICKS = 4 * 15;
+// longest wait for a spell to land before the turn moves on anyway
+static constexpr unsigned int FLIGHT_MAX_TICKS = 10 * 15;
 // safety net: an attack animation that never reports its end
 static constexpr unsigned int SWING_MAX_TICKS = 4 * 15;
 // a player character that has nothing left to do ends its turn after this many idle ticks
@@ -82,9 +85,14 @@ static unsigned int SwingPauseTicks()
 	int speed = std::max(10, int(core->GetDictionary().Get(StringView("Turn Based Combat Speed"), 100)));
 	return unsigned(12 * 100 / speed); // 0.8 s at 15 ticks per second
 }
-// where the active combatant's last walk got stuck without moving, so it doesn't retry forever
-static Point blockedAt(-1, -1);
 static Point walkFrom;
+static Point walkDest;
+// the walk in progress: movement before it, what its whole (clipped) path costs, and the
+// unrounded ground covered so far, so the bill matches the preview's to the unit
+static int walkBudget = 0;
+static int walkCost = 0;
+static Point walkEnd;
+static float walkSpent = 0;
 
 bool CombatDirector::IsEnabled()
 {
@@ -349,7 +357,30 @@ bool CombatDirector::IsBusy(const Actor* actor) const
 	if (step == Step::Walk || step == Step::Swing || step == Step::Reaction) return true;
 	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
 	if (combatant && combatant->standTicks > 0) return true;
-	return actor->InMove() || actor->GetCurrentAction() || actor->GetNextAction();
+	return actor->InMove() || actor->GetCurrentAction() || actor->GetNextAction() || SpellInFlight(actor);
+}
+
+bool CombatDirector::SpellInFlight(const Actor* actor) const
+{
+	return Casting(actor) || (flightTicks <= FLIGHT_MAX_TICKS && ProjectileInFlight(actor));
+}
+
+bool CombatDirector::Casting(const Actor* actor)
+{
+	// SpellCore marks the action uninterruptible until the spell is released
+	return actor && actor->GetCurrentAction() && !actor->CurrentActionInterruptible;
+}
+
+bool CombatDirector::ProjectileInFlight(const Actor* actor) const
+{
+	if (!actor || !combatMap) return false;
+	proIterator iter;
+	size_t count = combatMap->GetProjectileCount(iter);
+	for (size_t i = 0; i < count; ++i, ++iter) {
+		const Projectile* pro = iter->get();
+		if (pro && pro->GetCaster() == actor->GetGlobalID() && pro->Resolving()) return true;
+	}
+	return false;
 }
 
 // ------------------------------------------------------------------------------------------
@@ -657,6 +688,9 @@ void CombatDirector::ActivateMember(size_t idx)
 	wantedMore = false;
 	playerIdleTicks = 0;
 	blockedAt = Point(-1, -1);
+	blockedDest = Point(-1, -1);
+	plan = PlannedPath();
+	committed = PlannedPath();
 
 	Combatant& combatant = order[idx];
 	activeID = combatant.globalID;
@@ -684,6 +718,8 @@ void CombatDirector::ActivateMember(size_t idx)
 
 void CombatDirector::AdvanceTurn()
 {
+	endRequested = false;
+	flightTicks = 0;
 	// a creature never leaves its turn mid-walk or mid-swing
 	Actor* previous = combatMap ? combatMap->GetActorByGlobalID(activeID) : nullptr;
 	if (previous && Owns(previous)) {
@@ -728,6 +764,11 @@ void CombatDirector::AdvanceTurn()
 void CombatDirector::EndTurn()
 {
 	if (state != State::TurnActive) return;
+	// the whole spell resolves in its caster's turn: the turn ends once it has landed
+	if (SpellInFlight(GetActiveActor())) {
+		endRequested = true;
+		return;
+	}
 	// the next party member adjacent in the order takes over (with selection and camera);
 	// after the last one the turn passes on
 	AdvanceTurn();
@@ -777,6 +818,41 @@ void CombatDirector::AddJoiners(bool midRound)
 		bool joins = actor->InParty ? IsAliveCombatant(actor) : ShouldJoin(actor, party);
 		if (!joins) continue;
 		Join(actor, midRound);
+	}
+}
+
+// in real time a creature's scripts see an attack or a call for help within a second; here they
+// would only see it on its turn, or never if it dies first. So those triggers run its scripts at
+// once: the instant part of the response (Enemy, Help, variables) happens now, the rest (attacks,
+// movement) stays queued for its turn
+void CombatDirector::ReactToProvocations()
+{
+	if (!Setting("Turn Based Immediate Reactions", 1)) return;
+	static const unsigned short provocations[] = { trigger_attackedby, trigger_hitby, trigger_help, trigger_heard };
+	for (size_t i = 0; i < order.size(); ++i) {
+		if (order[i].dead || order[i].globalID == activeID) continue;
+		Actor* actor = combatMap->GetActorByGlobalID(order[i].globalID);
+		if (!actor || actor->InParty || !IsAliveCombatant(actor)) continue;
+		bool provoked = std::any_of(std::begin(provocations), std::end(provocations), [actor](unsigned short id) {
+			return actor->GetMatchingTrigger(id, TEF_TB_REACTED) != nullptr;
+		});
+		if (!provoked) continue;
+
+		std::string why;
+		for (unsigned short id : provocations) {
+			const TriggerEntry* trigger = actor->GetMatchingTrigger(id, TEF_TB_REACTED);
+			if (!trigger) continue;
+			const Actor* from = combatMap->GetActorByGlobalID(trigger->param1);
+			why += from ? fmt::format("{:#x} from {} (EA {}) ", id, fmt::WideToChar { Name(from) }, from->GetStat(IE_EA)) : fmt::format("{:#x} ", id);
+		}
+		// only once per trigger, the ones it keeps still count on its turn
+		actor->FlagTriggers(TEF_TB_REACTED);
+		ieDword ea = actor->GetStat(IE_EA);
+		// instant actions at the head of the response already ran as the script queued them
+		actor->ExecuteScript(MAX_SCRIPTS);
+		RunInstantActions(actor);
+		Log(COMBAT, "CombatDirector", "{} reacts out of turn to {}(EA {} -> {})", fmt::WideToChar { Name(actor) }, why, ea, actor->GetStat(IE_EA));
+		NotifyGUI();
 	}
 }
 
@@ -881,6 +957,7 @@ void CombatDirector::Update()
 	}
 	// creatures that act on the fight join it right away, so they never act in real time on it
 	AddJoiners(true);
+	ReactToProvocations();
 
 	FollowGroupSelection();
 
@@ -1061,6 +1138,25 @@ void CombatDirector::ActStep(Actor* actor, Combatant& combatant)
 		return;
 	}
 
+	// the whole spell resolves in its caster's turn: nothing else happens until it has landed
+	const bool casting = Casting(actor);
+	if (!casting && flightTicks <= FLIGHT_MAX_TICKS && ProjectileInFlight(actor)) {
+		if (++flightTicks > FLIGHT_MAX_TICKS) {
+			Log(COMBAT, "CombatDirector", "{}: its spell doesn't land, going on", fmt::WideToChar { Name(actor) });
+		}
+		return;
+	}
+	if (flightTicks && flightTicks <= FLIGHT_MAX_TICKS) {
+		Log(COMBAT, "CombatDirector", "{}: its spell landed after {} ticks", fmt::WideToChar { Name(actor) }, flightTicks);
+		flightTicks = 0;
+	}
+	// the player ended the turn mid-spell: it ends now that the spell has landed
+	if (endRequested && !casting) {
+		endRequested = false;
+		step = Step::Over;
+		return;
+	}
+
 	Holder<Action> current = actor->GetCurrentAction();
 	Holder<Action> next = current ? current : actor->GetNextAction();
 
@@ -1163,7 +1259,8 @@ void CombatDirector::RequestPath(Actor* actor, const Point& source, const Point&
 		Log(COMBAT, "CombatDirector", "{} asked for a path outside its turn", fmt::WideToChar { Name(actor) });
 		return;
 	}
-	if (actor->Pos == blockedAt) {
+	if (actor->Pos == blockedAt && destination == blockedDest) {
+		// the same walk just went nowhere from here; another destination gets a fresh try
 		Log(COMBAT, "CombatDirector", "{}: the way is blocked", fmt::WideToChar { Name(actor) });
 		wantedMore = true;
 		return;
@@ -1174,11 +1271,16 @@ void CombatDirector::RequestPath(Actor* actor, const Point& source, const Point&
 		return;
 	}
 
-	Map* map = actor->GetCurrentArea();
-	const ActorPathContext context { static_cast<unsigned int>(actor->circleSize), actor->GetScriptName(), actor->ValidTarget(GA_ONLY_BUMPABLE) };
 	const unsigned int minDist = static_cast<unsigned int>(std::max(0, minDistance));
-	Path path = PathFinder::FindPath(map->GetTraversabilityCacheData(), map->tileProps, source, destination, context,
-					 minDist, PF_SIGHT | PF_ACTORS_ARE_BLOCKING | flags);
+	Path path;
+	if (source == actor->Pos) {
+		path = PlanPath(actor, destination, minDist);
+	} else {
+		Map* map = actor->GetCurrentArea();
+		const ActorPathContext context { static_cast<unsigned int>(actor->circleSize), actor->GetScriptName(), actor->ValidTarget(GA_ONLY_BUMPABLE) };
+		path = PathFinder::FindPath(map->GetFreshTraversabilityCacheData(), map->tileProps, source, destination, context,
+					    minDist, PF_SIGHT | PF_ACTORS_ARE_BLOCKING | flags);
+	}
 	if (!path) {
 		Log(COMBAT, "CombatDirector", "{}: no path from {} to {} (min distance {})", fmt::WideToChar { Name(actor) }, source, destination, minDistance);
 		actor->FailCombatPath(destination);
@@ -1192,17 +1294,47 @@ void CombatDirector::RequestPath(Actor* actor, const Point& source, const Point&
 		return;
 	}
 	ApplyMovementFlags(actor, *combatant);
+	walkBudget = combatant->movePx;
+	walkCost = PathFinder::PathCost(actor->Pos, clipped);
+	walkEnd = clipped.GetLastStep().point;
+	walkSpent = 0;
 	actor->SetCombatPath(std::move(clipped), minDistance, destination);
 	if (combatant->ran) {
 		ScenePolish::Get().SpawnSmokePuff(actor->Pos, actor->Pos);
 	}
 	walkFrom = actor->Pos;
+	walkDest = destination;
 	step = Step::Walk;
+}
+
+bool CombatDirector::PlannedPath::Matches(const Actor* actor, const Point& dest) const
+{
+	return actorID == actor->GetGlobalID() && from == actor->Pos && destination == dest;
+}
+
+Path CombatDirector::PlanPath(const Actor* actor, const Point& destination, unsigned int minDistance) const
+{
+	if (!actor) return {};
+	if (committed.Matches(actor, destination)) return committed.path;
+	if (plan.Matches(actor, destination) && plan.minDistance == minDistance) return plan.path;
+	Map* map = actor->GetCurrentArea();
+	if (!map) return {};
+	const ActorPathContext context { static_cast<unsigned int>(actor->circleSize), actor->GetScriptName(), actor->ValidTarget(GA_ONLY_BUMPABLE) };
+	Path path = PathFinder::FindPath(map->GetFreshTraversabilityCacheData(), map->tileProps, actor->Pos, destination, context,
+					 minDistance, PF_SIGHT | PF_ACTORS_ARE_BLOCKING | PF_EXACT);
+	plan = PlannedPath { actor->GetGlobalID(), actor->Pos, destination, minDistance, path };
+	return path;
+}
+
+void CombatDirector::KeepPlan(const Actor* actor, const Point& destination, unsigned int minDistance, const Path& path) const
+{
+	committed = PlannedPath { actor->GetGlobalID(), actor->Pos, destination, minDistance, path };
 }
 
 void CombatDirector::WalkStep(Actor* actor, Combatant& combatant)
 {
-	bool arrived = !actor->HasMovementInProgress() || actor->GetRandomBackoff() || combatant.movePx <= 0 ||
+	// the path is already clipped to the movement left, so it is walked to its end
+	bool arrived = !actor->HasMovementInProgress() || actor->GetRandomBackoff() ||
 		actor->GetSpeed() <= 0 || actor->Immobile();
 	if (!arrived) {
 		Point before = actor->Pos;
@@ -1210,19 +1342,28 @@ void CombatDirector::WalkStep(Actor* actor, Combatant& combatant)
 		// our walker: GemRB's stepping, driven only from here
 		actor->Movable::DoStep(actor->GetSpeed(), core->GetGame()->Ticks);
 		int spent = PathFinder::MovementCost(before, actor->Pos);
-		combatant.movePx = std::max(0, combatant.movePx - spent);
+		const float_t stepX = float_t(actor->Pos.x - before.x);
+		const float_t stepY = float_t(actor->Pos.y - before.y) * SEARCHMAP_TILE_WIDTH / SEARCHMAP_TILE_HEIGHT;
+		const float_t exactStep = std::sqrt(stepX * stepX + stepY * stepY);
+		walkSpent += exactStep;
+		combatant.movePx = std::max(0, walkBudget - int(std::lround(walkSpent)));
 		if (combatant.ran && spent > 0 && (combatant.movePx % 48) < spent) {
 			ScenePolish::Get().SpawnSmokePuff(actor->Pos, before);
 		}
 		if (CheckOpportunityAttacks(actor, threats)) {
 			// caught at the edge of their reach: back to where it stood, the step isn't paid
 			actor->MoveTo(before);
-			combatant.movePx += spent;
+			walkSpent -= exactStep;
+			combatant.movePx = std::max(0, walkBudget - int(std::lround(walkSpent)));
 			return;
 		}
-		arrived = !actor->HasMovementInProgress() || actor->GetRandomBackoff() || combatant.movePx <= 0;
+		arrived = !actor->HasMovementInProgress() || actor->GetRandomBackoff();
 	}
 	if (!arrived) return;
+	if (actor->Pos == walkEnd) {
+		// the whole planned walk: it costs what the preview said
+		combatant.movePx = std::max(0, walkBudget - walkCost);
+	}
 
 	const char* why = actor->GetRandomBackoff() ? "blocked by someone" : combatant.movePx <= 0 ? "out of movement" :
 		actor->PathAbandoned() ? "gave up near the goal" : actor->HasMovementInProgress() ? "can't move" : "arrived";
@@ -1230,6 +1371,7 @@ void CombatDirector::WalkStep(Actor* actor, Combatant& combatant)
 	    PathFinder::MovementCost(walkFrom, actor->Pos), why);
 	if (actor->Pos == walkFrom) {
 		blockedAt = actor->Pos;
+		blockedDest = walkDest;
 	}
 	ApplyMovementFlags(actor, combatant);
 	// always ends with no path left

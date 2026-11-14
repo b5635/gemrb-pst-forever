@@ -440,11 +440,24 @@ void Movable::DoStep(unsigned int walkScale, ieDword time)
 			collisionLookaheadRadius = std::min(collisionLookaheadRadius, static_cast<int>(legLeft / stepLength));
 		}
 	}
+	// A turn based walk follows a path planned around every creature in the fight, and none of
+	// them moves while it walks: it is exactly the previewed line, so only an outsider who walked
+	// into the way since can stop it. Their selection circles are wider than the ground the
+	// planner keeps clear, and a lookahead along them stopped walks the preview had promised.
+	const bool directorWalk = actor && CombatDirector::Owns(actor);
 	for (int r = collisionLookaheadRadius; r > 0; r--) {
 		auto xCollision = Pos.x + dx * r;
 		auto yCollision = Pos.y + dy * r; // NormalizeDeltas already adjusted dy for perspective
 		Point nmptCollision(xCollision, yCollision);
 		actorInTheWay = area->GetActor(nmptCollision, GA_NO_DEAD | GA_NO_UNSCHEDULED | GA_NO_SELF, this);
+		if (actorInTheWay && directorWalk) {
+			// fighters stand still and the path goes around them; anyone else only blocks when
+			// this step heads into them, not when we start out overlapping and walk away
+			if (CombatDirector::Owns(actorInTheWay) ||
+			    SquaredDistance(nmptCollision, actorInTheWay->Pos) >= SquaredDistance(Pos, actorInTheWay->Pos)) {
+				actorInTheWay = nullptr;
+			}
+		}
 		if (actorInTheWay) break;
 	}
 
@@ -485,13 +498,22 @@ void Movable::DoStep(unsigned int walkScale, ieDword time)
 			pathAbandoned = true;
 			return;
 		}
-		if (actor && actor->ValidTarget(GA_CAN_BUMP) && actorInTheWay->ValidTarget(GA_ONLY_BUMPABLE)) {
+		// a bystander who isn't in the fight (it still wanders in real time) steps aside for a
+		// turn based walk, instead of pinning a fighter in place
+		const bool bystander = directorWalk && !CombatDirector::Owns(actorInTheWay) &&
+			actorInTheWay->GetStat(IE_EA) < EA_EVILCUTOFF && !actorInTheWay->InParty;
+		if (bystander || (actor && actor->ValidTarget(GA_CAN_BUMP) && actorInTheWay->ValidTarget(GA_ONLY_BUMPABLE))) {
 			LogDebugPathfinder("Movable::DoStep", "{}: bumping {} away from {} (I'm at {}, step {}/{})",
 					   MoveTag(this), actorInTheWay->GetScriptName(), actorInTheWay->Pos,
 					   Pos, path.currentStep, path.Size());
 			actorInTheWay->BumpAway(*this, dx, dy);
 		} else {
 			Backoff();
+			if (directorWalk) {
+				Log(COMBAT, "CombatDirector", "{} walking at {}: {} at {} is in the way (owned {}, combat {})", fmt::WideToChar { actor->GetShortName() }, Pos,
+				    fmt::WideToChar { actorInTheWay->GetShortName() }, actorInTheWay->Pos, CombatDirector::Owns(actorInTheWay),
+				    bool(actorInTheWay->GetInternalFlag() & IF_COMBAT_OWNED));
+			}
 			LogDebugPathfinder("Movable::DoStep", "{}: backing off for {} ticks, {} at {} blocks me at {} (step {}/{}, dest={} "
 							      "distToDest={} requestedDist={} iCanBump={} blockerBumpable={} lastNode={} nearStep={})",
 					   MoveTag(this), randomBackoff, actorInTheWay->GetScriptName(), actorInTheWay->Pos,
@@ -513,7 +535,8 @@ void Movable::DoStep(unsigned int walkScale, ieDword time)
 	const bool insideAWall = wallFaceAt(loX, loY) && wallFaceAt(loX + 1, loY) &&
 		wallFaceAt(loX, loY + 1) && wallFaceAt(loX + 1, loY + 1);
 	const Point wallProbe(loX, loY);
-	if (blocksSearch && !core->InCutSceneMode() && insideAWall) {
+	// the planner's line of sight checks already cleared a turn based path
+	if (blocksSearch && !core->InCutSceneMode() && insideAWall && !directorWalk) {
 		LogDebugPathfinder("Movable::DoStep", "{}: WALL ABANDON at Pos={} SM={} probe={} probeFlags={} stepTarget={} "
 						      "delta=({},{}) step {}/{} dest={} bumped={} probeRadiusFlags={} posFlags={} "
 						      "distToDest={} requestedDist={} releasingActionID={}",

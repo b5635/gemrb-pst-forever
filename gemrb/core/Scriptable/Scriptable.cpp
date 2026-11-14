@@ -652,6 +652,13 @@ void Scriptable::ClearTriggers()
 	triggers.clear();
 }
 
+void Scriptable::FlagTriggers(unsigned int flags)
+{
+	for (auto& trigger : triggers) {
+		trigger.flags |= flags;
+	}
+}
+
 void Scriptable::AddTrigger(TriggerEntry trigger)
 {
 	triggers.push_back(trigger);

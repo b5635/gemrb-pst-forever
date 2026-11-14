@@ -310,6 +310,14 @@ public:
 	void CancelTurnBasedMove() { turnPreview.pending = false; }
 	/** Confirms the turn based move waiting for confirmation, if any */
 	void ConfirmTurnBasedMove();
+	/** A click-and-confirm move to p, as the player makes it; reports what the preview promised */
+	struct TurnMovePromise {
+		bool hasPath = false;
+		bool partial = false;
+		Point stop;
+		int cost = 0;
+	};
+	TurnMovePromise TurnBasedMoveTo(const Point& p);
 
 protected:
 	//Events

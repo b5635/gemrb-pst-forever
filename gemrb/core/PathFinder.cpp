@@ -393,7 +393,7 @@ Path PathFinder::FindPath(const TraversabilityCache::Data_t& traversabilityCache
 	bool reachedCloser = false;
 
 	// Weighted heuristic. Finds sub-optimal paths but should be quite a bit faster
-	constexpr float_t HEURISTIC_WEIGHT = 1.5;
+	const float_t HEURISTIC_WEIGHT = (pathfindingFlags & PF_EXACT) ? 1.0f : 1.5f;
 
 	// Both the search's edge test (the Theta* candidate and the A* fallback below) and the
 	// post-search straightening pass share this one query. It reads the searchmap and, when actors
@@ -563,7 +563,8 @@ Path PathFinder::FindPath(const TraversabilityCache::Data_t& traversabilityCache
 		}
 	}
 
-	if (!foundPath && reachedCloser) {
+	const bool partialPath = !foundPath && reachedCloser;
+	if (partialPath) {
 		LogDebugPathfinder("FindPath", "{} cannot reach {}, walking as close as ({},{})",
 				   actorContext.scriptName, destination, closestPoint.x, closestPoint.y);
 		smptDest = closestPoint;
@@ -624,6 +625,7 @@ Path PathFinder::FindPath(const TraversabilityCache::Data_t& traversabilityCache
 
 			resultPath.PrependStep(std::move(newStep));
 		}
+		resultPath.partial = partialPath;
 
 		return resultPath;
 	}
@@ -1088,7 +1090,9 @@ Point PathFinder::PointAlongPath(const Point& start, const Path& path, int cost)
 		const int leg = MovementCost(prev, next);
 		if (leg > 0 && cost < leg) {
 			const float_t t = float_t(cost) / float_t(leg);
-			return Point(prev.x + int(std::lround((next.x - prev.x) * t)), prev.y + int(std::lround((next.y - prev.y) * t)));
+			// truncated toward the start, exactly like CombatDirector::ClipPath, so the drawn stop is
+			// the pixel the walk ends on
+			return Point(prev.x + int((next.x - prev.x) * t), prev.y + int((next.y - prev.y) * t));
 		}
 		cost -= leg;
 		prev = next;
@@ -1115,39 +1119,71 @@ std::vector<SearchmapPoint> PathFinder::ReachableBoundary(const TileProps& tileP
 
 PathFinder::ReachArea PathFinder::ReachableArea(const TileProps& tileProps, const Point& source, unsigned int circleSize, int maxCost)
 {
+	const ActorPathContext context { circleSize, ieVariable(), true };
+	return ReachableArea(nullptr, tileProps, source, context, maxCost);
+}
+
+PathFinder::ReachArea PathFinder::ReachableArea(const TraversabilityCache::Data_t* traversabilityCache, const TileProps& tileProps,
+						const Point& source, const ActorPathContext& actorContext, int maxCost)
+{
 	ReachArea area;
 	if (maxCost <= 0) return area;
 
-	// a Dijkstra flood over the cells in reach; it moves on the cell lattice, so it is a bit
-	// more pessimistic than the any-angle paths actors really walk
+	// A Dijkstra flood with FindPath's rules: the same cell test (walls and, with a cache, other
+	// creatures), the same line of sight test, and Theta*'s any-angle shortcut through the parent,
+	// priced with MovementCost like the path preview. A cell it marks is one a turn based walk
+	// (PF_ACTORS_ARE_BLOCKING | PF_EXACT) reaches within maxCost.
+	const unsigned int circleSize = actorContext.circleSize;
+	const bool useBigSize = circleSize > 2;
 	const Size& mapSize = tileProps.GetSize();
 	const SearchmapPoint origin(source);
-	const int rx = maxCost / SEARCHMAP_TILE_WIDTH + 1;
-	const int ry = maxCost / SEARCHMAP_TILE_WIDTH + 1; // cost units are horizontal pixels
+	if (!mapSize.PointInside(origin)) return area;
+	const int rx = maxCost / SEARCHMAP_TILE_WIDTH + 2;
+	const int ry = maxCost / SEARCHMAP_TILE_WIDTH + 2; // cost units are horizontal pixels
 	const int w = 2 * rx + 1;
 	const int h = 2 * ry + 1;
 	constexpr int UNREACHED = std::numeric_limits<int>::max();
 	std::vector<int> cost(size_t(w * h), UNREACHED);
+	std::vector<int> parent(size_t(w * h), -1);
 	std::vector<int8_t> walkable(size_t(w * h), -1); // -1: not checked yet
 
+	const auto selfToken = actorContext.selfBumpable ? TraversabilityCache::TraversabilityCellValueActor : TraversabilityCache::TraversabilityCellValueActorNonTraversable;
+	const TraversabilityCache::ActorFootprint footprint = ComputeActorFootprint(source, static_cast<int>(circleSize), mapSize.w, mapSize.h);
 	auto localIdx = [&](const SearchmapPoint& p) {
 		int lx = p.x - origin.x + rx;
 		int ly = p.y - origin.y + ry;
 		if (lx < 0 || ly < 0 || lx >= w || ly >= h) return -1;
 		return ly * w + lx;
 	};
+	auto cellAt = [&](int idx) {
+		return SearchmapPoint(idx % w + origin.x - rx, idx / w + origin.y - ry);
+	};
 	auto isWalkable = [&](const SearchmapPoint& p, int idx) {
 		if (!mapSize.PointInside(p)) return false;
 		if (walkable[idx] == -1) {
-			// other actors don't count, the exact path preview goes around them
-			PathMapFlags flags = GetBlockedInRadiusTile(tileProps, p, uint16_t(circleSize));
-			walkable[idx] = bool(flags & (PathMapFlags::PASSABLE | PathMapFlags::ACTOR)) ? 1 : 0;
+			const PathMapFlags flags = useBigSize ? GetChildBlockedStatusForBigSize(tileProps, p, circleSize) : GetChildBlockedStatusForSmallSize(tileProps, p, circleSize);
+			bool ok = bool(flags & (PathMapFlags::PASSABLE | PathMapFlags::ACTOR));
+			if (ok && traversabilityCache) {
+				auto state = (*traversabilityCache)[size_t(p.y) * mapSize.w + p.x];
+				if (state >= TraversabilityCache::TraversabilityCellValueActor && footprint.covers(p)) {
+					state -= selfToken;
+				}
+				ok = state < TraversabilityCache::TraversabilityCellValueActor;
+			}
+			walkable[idx] = ok ? 1 : 0;
 		}
 		return walkable[idx] == 1;
 	};
+	// where a cell's cost is measured from: the actor's own pixel for the start, cell centres after
+	auto pointOf = [&](int idx) {
+		return cellAt(idx) == origin ? source : cellAt(idx).ToNavmapCenter();
+	};
+	auto lineWalkable = [&](int fromIdx, const SearchmapPoint& to) {
+		const SearchmapPoint from = cellAt(fromIdx);
+		const GridRayCast walk = from == origin ? GridRayCast { NavmapPoint(source), to.ToNavmapCenter() } : GridRayCast { from, to };
+		return IsLineWalkable(AccumulateAlongTheLine(tileProps, walk, true, static_cast<int>(circleSize)), true);
+	};
 
-	constexpr int ORTHO = SEARCHMAP_TILE_WIDTH; // 12px down costs the same as 16px across
-	const int DIAG = int(std::lround(ORTHO * std::sqrt(2.0)));
 	static const int dxs[] = { 1, -1, 0, 0, 1, 1, -1, -1 };
 	static const int dys[] = { 0, 0, 1, -1, 1, -1, 1, -1 };
 
@@ -1155,30 +1191,34 @@ PathFinder::ReachArea PathFinder::ReachableArea(const TileProps& tileProps, cons
 	std::priority_queue<Entry, std::vector<Entry>, std::greater<>> open;
 	const int startIdx = localIdx(origin);
 	cost[startIdx] = 0;
+	parent[startIdx] = startIdx;
 	open.emplace(0, startIdx);
 	while (!open.empty()) {
 		const int currentCost = open.top().first;
 		const int idx = open.top().second;
 		open.pop();
 		if (currentCost > cost[idx]) continue;
-		const SearchmapPoint current(idx % w + origin.x - rx, idx / w + origin.y - ry);
+		const SearchmapPoint current = cellAt(idx);
+		const int par = parent[idx];
 		for (int i = 0; i < 8; ++i) {
 			const SearchmapPoint next(current.x + dxs[i], current.y + dys[i]);
 			const int nextIdx = localIdx(next);
 			if (nextIdx < 0 || !isWalkable(next, nextIdx)) continue;
-			const bool diagonal = i >= 4;
-			if (diagonal) {
-				// don't cut corners
-				const SearchmapPoint sideA(current.x + dxs[i], current.y);
-				const SearchmapPoint sideB(current.x, current.y + dys[i]);
-				int idxA = localIdx(sideA);
-				int idxB = localIdx(sideB);
-				if (idxA < 0 || idxB < 0 || !isWalkable(sideA, idxA) || !isWalkable(sideB, idxB)) continue;
+			const Point nextPoint = next.ToNavmapCenter();
+			// Theta*: straight from the current cell's parent when that line is clear
+			int bestCost = UNREACHED;
+			int bestParent = -1;
+			if (par != idx && lineWalkable(par, next)) {
+				bestCost = cost[par] + MovementCost(pointOf(par), nextPoint);
+				bestParent = par;
+			} else if (i < 4 || lineWalkable(idx, next)) {
+				bestCost = currentCost + MovementCost(pointOf(idx), nextPoint);
+				bestParent = idx;
 			}
-			const int nextCost = currentCost + (diagonal ? DIAG : ORTHO);
-			if (nextCost > maxCost || nextCost >= cost[nextIdx]) continue;
-			cost[nextIdx] = nextCost;
-			open.emplace(nextCost, nextIdx);
+			if (bestParent < 0 || bestCost > maxCost || bestCost >= cost[nextIdx]) continue;
+			cost[nextIdx] = bestCost;
+			parent[nextIdx] = bestParent;
+			open.emplace(bestCost, nextIdx);
 		}
 	}
 

@@ -1,6 +1,7 @@
 # Drive the installed GemRB for testing (works with the DevConsole.py poller and the GL driver's shot hook).
 #
-#   dev.ps1 start [-Save 0]          launch the game, auto-loading save index N (newest first); -Save -1 = main menu
+#   dev.ps1 start [-Save 0]          launch the game, auto-loading a save by name (-Save wererat) or by index in
+#                                    slot order (0 = Auto-Save, not the newest); -Save -1 = main menu
 #   dev.ps1 py "print(here())"       run Python inside the game, print its output (helpers: here, act, goto, pc)
 #   dev.ps1 pyfile script.py         same, from a file
 #   dev.ps1 click X Y [-Right]       click at game-window client pixel X,Y (posted to the window, no focus needed)
@@ -15,7 +16,7 @@ param(
 	[Parameter(Position = 0)][string]$Cmd = "status",
 	[Parameter(Position = 1)][string]$Arg1 = "",
 	[Parameter(Position = 2)][string]$Arg2 = "",
-	[int]$Save = 0,
+	[string]$Save = "0",
 	[int]$Lines = 40,
 	[int]$Timeout = 15,
 	[switch]$Right,
@@ -67,7 +68,7 @@ switch ($Cmd) {
 	"start" {
 		$old = Get-Game
 		if ($old) { Stop-Process -Id $old.Id -Force; Start-Sleep -Milliseconds 500 }
-		if ($Save -ge 0) { $env:GEMRB_AUTOLOAD = "$Save" } else { Remove-Item Env:GEMRB_AUTOLOAD -ErrorAction SilentlyContinue }
+		if ($Save -ne "-1") { $env:GEMRB_AUTOLOAD = "$Save" } else { Remove-Item Env:GEMRB_AUTOLOAD -ErrorAction SilentlyContinue }
 		$p = Start-Process -FilePath (Join-Path $GameDir "gemrb.exe") -WorkingDirectory $GameDir -PassThru -WindowStyle Normal
 		Set-Content $pidFile $p.Id
 		Write-Output "started pid $($p.Id)"

@@ -117,7 +117,8 @@ public:
 	 *         moved. Every later call in the same frame returns false whether or not the cache
 	 *         changed.
 	 */
-	bool Update();
+	// force: refresh even if it already did this frame (callers that path synchronously)
+	bool Update(bool force = false);
 
 	TraversabilityCache(const TraversabilityCache& other) = delete;
 	TraversabilityCache(TraversabilityCache&& other) = delete;

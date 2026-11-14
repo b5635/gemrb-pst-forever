@@ -156,7 +156,7 @@ TEST(TurnMovementTest, PathCostAndTruncation)
 	EXPECT_EQ(PathFinder::PathCost(start, path), 200);
 	EXPECT_EQ(PathFinder::PointAlongPath(start, path, 50), Point(50, 0));
 	// half way down the second leg: 100 cost units are 75px down
-	EXPECT_EQ(PathFinder::PointAlongPath(start, path, 150), Point(100, 38));
+	EXPECT_EQ(PathFinder::PointAlongPath(start, path, 150), Point(100, 37));
 	// affording it all ends at the destination
 	EXPECT_EQ(PathFinder::PointAlongPath(start, path, 999), Point(100, 75));
 }
@@ -212,6 +212,102 @@ TEST(TurnMovementTest, NoMovementNoReach)
 		"..."
 	};
 	EXPECT_TRUE(PathFinder::ReachableBoundary(map.Props(), Point(8, 6), 0, 0).empty());
+}
+
+
+// The preview draws its stop with PointAlongPath and the walk ends where ClipPath does
+TEST(TurnMovementTest, PreviewStopIsTheWalksStop)
+{
+	Path path;
+	path.nodes.push_back(PathNode { Point(37, 11), S });
+	path.nodes.push_back(PathNode { Point(90, 70), S });
+	path.nodes.push_back(PathNode { Point(20, 133), S });
+	const Point start(3, 5);
+	for (int budget = 1; budget < PathFinder::PathCost(start, path) + 20; ++budget) {
+		const Path clipped = CombatDirector::ClipPath(start, path, budget);
+		const Point walkEnd = clipped ? clipped.GetLastStep().point : start;
+		EXPECT_EQ(PathFinder::PointAlongPath(start, path, budget), walkEnd) << "budget " << budget;
+	}
+}
+
+// a goal behind a wall still gets a path, to the nearest spot, and says so
+TEST(TurnMovementTest, UnreachableGoalGivesAPartialPath)
+{
+	const TestSearchMap map {
+		"..........",
+		"..........",
+		"##########",
+		".........."
+	};
+	const test::TestTraversability traversability { map };
+	const Point from = TestSearchMap::Nav(1, 0);
+	const Path blocked = test::CallFindPath(map, traversability, from, TestSearchMap::Nav(5, 3), nullptr, 1, PF_SIGHT | PF_ACTORS_ARE_BLOCKING | PF_EXACT);
+	ASSERT_FALSE(blocked.Empty());
+	EXPECT_TRUE(blocked.partial);
+	const Path open = test::CallFindPath(map, traversability, from, TestSearchMap::Nav(8, 1), nullptr, 1, PF_SIGHT | PF_ACTORS_ARE_BLOCKING | PF_EXACT);
+	ASSERT_FALSE(open.Empty());
+	EXPECT_FALSE(open.partial);
+}
+
+// the shaded reach doesn't promise a way through creatures that block the walk
+TEST(TurnMovementTest, ReachStopsAtCreatures)
+{
+	const TestSearchMap map {
+		"###############",
+		"#.......a.....#",
+		"###############"
+	};
+	const test::TestTraversability traversability { map, false };
+	const Point source = TestSearchMap::Nav(1, 1);
+	const ActorPathContext context { 1, ieVariable(), true };
+	const int budget = 12 * SEARCHMAP_TILE_WIDTH;
+	const auto withCreatures = PathFinder::ReachableArea(&traversability.Data(), map.Props(), source, context, budget);
+	const auto wallsOnly = PathFinder::ReachableArea(map.Props(), source, 1, budget);
+	EXPECT_TRUE(wallsOnly.Contains(11, 1));
+	EXPECT_FALSE(withCreatures.Contains(11, 1)) << "the corridor is shut by the creature";
+	EXPECT_TRUE(withCreatures.Contains(5, 1));
+}
+
+// every cell the shade calls reachable the walk reaches within budget, and the other way round
+TEST(TurnMovementTest, ReachAgreesWithThePath)
+{
+	const TestSearchMap map {
+		"....................",
+		"....................",
+		"......####..........",
+		"......#.............",
+		"......#....a........",
+		"..####..............",
+		"....................",
+		"....................",
+		"...........#####....",
+		"...................."
+	};
+	const test::TestTraversability traversability { map, false };
+	const Point source = TestSearchMap::Nav(2, 3);
+	const ActorPathContext context { 1, ieVariable(), true };
+	const int budget = 10 * SEARCHMAP_TILE_WIDTH;
+	const auto reach = PathFinder::ReachableArea(&traversability.Data(), map.Props(), source, context, budget);
+	// lattice and path differ by a fraction of a tile at most
+	constexpr int slack = SEARCHMAP_TILE_WIDTH / 2;
+	int checked = 0;
+	for (int y = 0; y < 10; ++y) {
+		for (int x = 0; x < 20; ++x) {
+			if (SearchmapPoint(x, y) == SearchmapPoint(source)) continue;
+			const Point to = TestSearchMap::Nav(x, y);
+			const Path path = test::CallFindPath(map, traversability, source, to, nullptr, 1, PF_SIGHT | PF_ACTORS_ARE_BLOCKING | PF_EXACT);
+			const bool walks = path && !path.partial && SearchmapPoint(path.GetLastStep().point) == SearchmapPoint(x, y);
+			const int cost = walks ? PathFinder::PathCost(source, path) : -1;
+			if (reach.Contains(x, y)) {
+				EXPECT_TRUE(walks) << "shaded but unwalkable: " << x << "," << y;
+				if (walks) EXPECT_LE(cost, budget + slack) << "shaded but too far: " << x << "," << y;
+				++checked;
+			} else if (walks) {
+				EXPECT_GT(cost, budget - slack) << "walkable within budget but not shaded: " << x << "," << y;
+			}
+		}
+	}
+	EXPECT_GT(checked, 20);
 }
 
 }

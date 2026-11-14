@@ -710,6 +710,12 @@ TraversabilityCache::Data_t& Map::GetTraversabilityCacheData()
 	return traversabilityCache.GetData();
 }
 
+const TraversabilityCache::Data_t& Map::GetFreshTraversabilityCacheData()
+{
+	traversabilityCache.Update(true);
+	return traversabilityCache.GetData();
+}
+
 void Map::BlockSearchMapFor(const Movable* actor)
 {
 	PathFinder::BlockSearchMapFor(actor, tileProps);

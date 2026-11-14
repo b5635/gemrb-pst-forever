@@ -138,10 +138,10 @@ void TraversabilityCache::CachedActorsState::UpdateNewState(const size_t i)
 	erase(newActorStateIdx);
 }
 
-bool TraversabilityCache::Update()
+bool TraversabilityCache::Update(bool force)
 {
 	// this cache is updated once per frame and only if any path was requested
-	if (hasBeenUpdatedThisFrame) {
+	if (hasBeenUpdatedThisFrame && !force) {
 		return false;
 	}
 	hasBeenUpdatedThisFrame = true;

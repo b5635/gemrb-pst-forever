@@ -877,7 +877,9 @@ void GameControl::UpdateTurnPreview()
 	Map* area = actor->GetCurrentArea();
 	int budget = game->combat.GetRemainingMovement(actor);
 	if (preview.actorPos != actor->Pos || preview.budget != budget) {
-		preview.reach = PathFinder::ReachableArea(area->tileProps, actor->Pos, actor->circleSize, budget);
+		// the walk's own rules: walls, other creatures, any-angle lines, priced by MovementCost
+		const ActorPathContext reachContext { static_cast<unsigned int>(actor->circleSize), actor->GetScriptName(), actor->ValidTarget(GA_ONLY_BUMPABLE) };
+		preview.reach = PathFinder::ReachableArea(&area->GetFreshTraversabilityCacheData(), area->tileProps, actor->Pos, reachContext, budget);
 		preview.shade = BuildReachShade(preview.reach);
 		preview.outline = BuildReachOutline(preview.reach);
 		preview.actorPos = actor->Pos;
@@ -940,12 +942,12 @@ void GameControl::UpdateTurnPreview()
 		minDistance = static_cast<unsigned int>(Feet2Pixels(range, AngleFromPoints(actor->Pos, target)));
 	}
 
-	const ActorPathContext context { static_cast<unsigned int>(actor->circleSize), actor->GetScriptName(), actor->ValidTarget(GA_ONLY_BUMPABLE) };
-	preview.path = PathFinder::FindPath(area->GetTraversabilityCacheData(), area->tileProps, actor->Pos, target, context, minDistance, PF_SIGHT | PF_ACTORS_ARE_BLOCKING);
+	// the very path the walk will take (the director keeps it for the commit)
+	preview.path = game->combat.PlanPath(actor, target, minDistance);
 	preview.pathCost = PathFinder::PathCost(actor->Pos, preview.path);
 	preview.moveNeededFt = attack && preview.path ? preview.pathCost / SEARCHMAP_TILE_WIDTH : 0;
 	if (attack) {
-		preview.attackReachable = preview.path && preview.pathCost <= budget && game->combat.CanAfford(actor, TBAction::Attack);
+		preview.attackReachable = preview.path && !preview.path.partial && preview.pathCost <= budget && game->combat.CanAfford(actor, TBAction::Attack);
 	}
 }
 
@@ -1045,11 +1047,18 @@ void GameControl::DrawTurnPreview() const
 		thickLine(beyond, outOfReach);
 
 		// exactly where the actor would stop
-		const Color& stopColor = preview.pending ? pendingColor : (preview.pathCost <= budget ? inReach : outOfReach);
+		const bool getsThere = !preview.path.partial && preview.pathCost <= budget;
+		const Color& stopColor = preview.pending ? pendingColor : (getsThere ? inReach : outOfReach);
 		DrawTargetReticle(actor->CircleSize2Radius(), stopColor, stop - origin);
+		if (preview.path.partial && !preview.attackPreview) {
+			// and where it was asked to go, which it can't reach
+			const Point wanted = preview.pending ? preview.pendingDest : GameMousePos();
+			DrawTargetReticle(actor->CircleSize2Radius(), outOfReach, wanted - origin);
+		}
 	}
 
 	String label;
+	bool refused = false;
 	Point labelPos = (preview.pending ? preview.pendingDest : GameMousePos()) - origin + Point(12, -24);
 	constexpr int UNITS_PER_FOOT = SEARCHMAP_TILE_WIDTH;
 	if (preview.attackPreview) {
@@ -1059,19 +1068,30 @@ void GameControl::DrawTurnPreview() const
 		}
 		// the numbers are in the hit panel beside the target
 		label = preview.attackReachable ? String() : String(u"Out of reach");
+	} else if (budget <= 0) {
+		label = u"No movement left";
+		refused = true;
 	} else if (preview.path) {
 		int cost = std::min(preview.pathCost, budget) / UNITS_PER_FOOT;
-		label = fmt::format(u"{} ft / {} ft left", preview.pathCost / UNITS_PER_FOOT, budget / UNITS_PER_FOOT);
-		if (preview.pathCost > budget) {
+		if (preview.path.partial) {
+			label = fmt::format(u"Can't get there: stops after {} ft", cost);
+			refused = true;
+		} else if (preview.pathCost > budget) {
 			label = fmt::format(u"Too far: stops after {} ft", cost);
+		} else {
+			label = fmt::format(u"{} ft / {} ft left", preview.pathCost / UNITS_PER_FOOT, budget / UNITS_PER_FOOT);
 		}
+	} else if (SearchmapPoint(preview.pending ? preview.pendingDest : GameMousePos()) != SearchmapPoint(actor->Pos)) {
+		label = u"Can't move there";
+		refused = true;
 	} else {
 		label = fmt::format(u"{} ft left", budget / UNITS_PER_FOOT);
 	}
 	if (preview.pending) {
 		label += u" - click again to move";
 	}
-	Font::PrintColors colors = { preview.attackReachable || (preview.path && preview.pathCost <= budget) ? inReach : ColorWhite, ColorBlack };
+	const bool reachable = preview.attackReachable || (preview.path && !preview.path.partial && preview.pathCost <= budget);
+	Font::PrintColors colors = { reachable ? inReach : (refused ? outOfReach : ColorWhite), ColorBlack };
 	CombatHud::HudFont()->Print(Region(labelPos, Size(560, 20)), label, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP, colors);
 }
 
@@ -1103,11 +1123,32 @@ void GameControl::HandleTurnBasedMove(const Point& p, bool commit)
 	if (!preview.path || preview.budget <= 0) return;
 
 	// incremental: go as far as the budget allows, the rest of the turn can move again
-	Point stop = PathFinder::PointAlongPath(actor->Pos, preview.path, preview.budget);
+	const Path walk = CombatDirector::ClipPath(actor->Pos, preview.path, preview.budget);
+	if (!walk) return;
+	const Point stop = walk.GetLastStep().point;
 	if (stop == actor->Pos) return;
+	// the walk to stop takes exactly the drawn line
+	core->GetGame()->combat.KeepPlan(actor, stop, 0, walk);
 	actor->ClearPath(true);
 	CreateMovement(actor, stop, false, false);
 	preview.targetCell = SearchmapPoint(-1, -1);
+}
+
+GameControl::TurnMovePromise GameControl::TurnBasedMoveTo(const Point& p)
+{
+	TurnMovePromise promise;
+	const Actor* actor = GetTurnBasedActor();
+	if (!actor || IsTurnBasedBusy(actor)) return promise;
+	turnPreview.pending = true;
+	turnPreview.pendingDest = p;
+	turnPreview.targetCell = SearchmapPoint(-1, -1);
+	UpdateTurnPreview();
+	promise.hasPath = bool(turnPreview.path);
+	promise.partial = turnPreview.path.partial;
+	promise.cost = std::min(turnPreview.pathCost, std::max(0, turnPreview.budget));
+	promise.stop = turnPreview.path ? PathFinder::PointAlongPath(actor->Pos, turnPreview.path, turnPreview.budget) : actor->Pos;
+	HandleTurnBasedMove(p, true);
+	return promise;
 }
 
 void GameControl::ConfirmTurnBasedMove()

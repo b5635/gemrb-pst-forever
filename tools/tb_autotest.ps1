@@ -18,11 +18,11 @@ $log = Join-Path $GameDir "gemrb.log"
 
 $AllCases = @{
 	# one ghoul next to the party at the Mortuary save
-	"mortuary" = @{ Save = 2; Hostile = @('"1700ghoul2"'); Jump = @() }
+	"mortuary" = @{ Save = 3; Hostile = @('"1700ghoul2"'); Jump = @() }
 	# a fight-then-flee ghoul jumped next to the party
-	"ghouls" = @{ Save = 2; Hostile = @(10068); Jump = @(@(10068, "[420.640]")) }
+	"ghouls" = @{ Save = 3; Hostile = @(10068); Jump = @(@(10068, "[420.640]")) }
 	# the mortuary ghoul against a full party of 8 (MaxPartySize=8: the Nameless One + all seven)
-	"party8" = @{ Save = 2; Hostile = @('"1700ghoul2"'); Jump = @(); FullParty = $true }
+	"party8" = @{ Save = 3; Hostile = @('"1700ghoul2"'); Jump = @(); FullParty = $true }
 }
 
 # spawns the companions the save's party lacks next to the Nameless One, then joins them
