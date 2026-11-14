@@ -7,13 +7,18 @@
 #include "damages.h"
 #include "ie_stats.h"
 
+#include "CharAnimations.h"
+#include "DataFileMgr.h"
 #include "Game.h"
+#include "GameData.h"
 #include "GlobalTimer.h"
+#include "TableMgr.h"
 #include "Interface.h"
 #include "Map.h"
 
 #include "Scriptable/Actor.h"
 #include "Scriptable/Selectable.h"
+#include "Strings/CString.h"
 #include "Video/Video.h"
 
 #include <algorithm>
@@ -47,7 +52,9 @@ namespace {
 		return uint8_t(std::max(0.0f, std::min(255.0f, v * 255.0f + 0.5f)));
 	}
 
-	constexpr size_t MaxParticles = 1500;
+	constexpr size_t MaxParticles = 2500;
+	constexpr size_t MaxDecals = 400;
+	constexpr float Gravity = 520.0f;
 }
 
 ScenePolish& ScenePolish::Get()
@@ -79,6 +86,7 @@ void ScenePolish::BeginFrame(const Map* map, const Region& viewport)
 		area = map;
 		dt = 0.0f;
 	}
+	critTarget = nullptr;
 	Simulate(dt);
 	SpawnAmbient(map, viewport, dt);
 	emitters.clear();
@@ -100,6 +108,33 @@ void ScenePolish::Simulate(float dt)
 				p.vx *= 1.0f - 2.5f * dt;
 				p.vy *= 1.0f - 2.5f * dt;
 				break;
+			case Kind::Blood:
+			case Kind::Chip:
+				p.vz -= Gravity * dt;
+				p.vx *= 1.0f - 0.8f * dt;
+				p.vy *= 1.0f - 0.8f * dt;
+				break;
+			case Kind::Dust:
+				p.vx *= 1.0f - 3.0f * dt;
+				p.vy *= 1.0f - 3.0f * dt;
+				p.vz *= 1.0f - 1.5f * dt;
+				p.size += 3.5f * dt;
+				break;
+			case Kind::Smoke:
+				p.vx *= 1.0f - 2.0f * dt;
+				p.vy *= 1.0f - 2.0f * dt;
+				p.vx += Rand(-20.0f, 20.0f) * dt;
+				p.size += 4.0f * dt;
+				break;
+			case Kind::Wisp:
+				p.vx *= 1.0f - 1.5f * dt;
+				p.vy *= 1.0f - 1.5f * dt;
+				p.vx += Rand(-30.0f, 30.0f) * dt;
+				p.vz += 20.0f * dt;
+				break;
+			case Kind::Stain:
+			case Kind::Debris:
+				continue; // lying still on the floor (age counted above)
 			case Kind::Ember:
 				// rise, slow down, wander
 				p.vz *= 1.0f - 0.6f * dt;
@@ -119,8 +154,11 @@ void ScenePolish::Simulate(float dt)
 			p.z = 0.0f;
 			p.vz = -p.vz * 0.3f;
 			p.a *= 0.6f;
+		} else if ((p.kind == Kind::Blood || p.kind == Kind::Chip) && p.z <= 0.0f) {
+			Land(p);
 		}
 	}
+	TrimDecals();
 	particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& p) { return p.age >= p.life; }), particles.end());
 	for (auto& f : flashes) f.age += dt;
 	flashes.erase(std::remove_if(flashes.begin(), flashes.end(), [](const Flash& f) { return f.age >= f.life; }), flashes.end());
@@ -197,8 +235,56 @@ void ScenePolish::SpawnAmbient(const Map* map, const Region& vp, float dt)
 				}),
 				particles.end());
 	} else {
-		particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& p) { return p.kind != Kind::Spark; }), particles.end());
+		particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& p) { return p.kind == Kind::Ember || p.kind == Kind::Mote; }), particles.end());
 	}
+}
+
+bool ScenePolish::Room() const
+{
+	return particles.size() < MaxParticles;
+}
+
+void ScenePolish::Land(Particle& p) const
+{
+	float linger = float(std::max(2, std::min(600, Setting("BloodLinger", 30))));
+	if (p.kind == Kind::Blood) {
+		// splat: a flat stain, a little bigger than the drop, that dries darker
+		p.kind = Kind::Stain;
+		p.size *= Rand(1.3f, 2.4f);
+		p.r *= 0.8f;
+		p.a = Rand(0.6f, 0.85f);
+	} else if (!p.landed) {
+		// chips bounce once
+		p.landed = true;
+		p.z = 0.0f;
+		p.vz = -p.vz * 0.3f;
+		p.vx *= 0.45f;
+		p.vy *= 0.45f;
+		return;
+	} else {
+		p.kind = Kind::Debris;
+	}
+	p.z = 0.0f;
+	p.vx = p.vy = p.vz = 0.0f;
+	p.age = 0.0f;
+	p.life = linger * Rand(0.85f, 1.15f);
+}
+
+void ScenePolish::TrimDecals()
+{
+	size_t decals = 0;
+	for (const auto& p : particles) decals += p.kind == Kind::Stain || p.kind == Kind::Debris;
+	if (decals <= MaxDecals) return;
+	// oldest first (they were pushed earlier)
+	size_t drop = decals - MaxDecals;
+	particles.erase(std::remove_if(particles.begin(), particles.end(), [&drop](const Particle& p) {
+				if (drop && (p.kind == Kind::Stain || p.kind == Kind::Debris)) {
+					--drop;
+					return true;
+				}
+				return false;
+			}),
+			particles.end());
 }
 
 void ScenePolish::AddLights(SceneLighting& out, const Region& vp) const
@@ -223,20 +309,40 @@ void ScenePolish::AddLights(SceneLighting& out, const Region& vp) const
 void ScenePolish::DrawParticles(const Region& vp) const
 {
 	if (!Enabled() || particles.empty()) return;
-	std::vector<SoftShape> shapes;
-	shapes.reserve(particles.size());
+	std::vector<SoftShape> blended, added;
+	blended.reserve(particles.size());
+	added.reserve(particles.size());
 	for (const auto& p : particles) {
+		if (p.kind == Kind::Stain || p.kind == Kind::Debris) continue; // DrawGroundDecals
 		float t = p.age / p.life;
 		float fade;
+		bool additive = false;
 		switch (p.kind) {
 			case Kind::Mote:
 				fade = std::sin(t * 3.14159265f);
+				additive = true;
 				break;
 			case Kind::Ember:
 				fade = (1.0f - t) * (0.75f + 0.25f * std::sin(p.age * 23.0f + p.x));
+				additive = true;
 				break;
-			default:
+			case Kind::Wisp:
+				fade = std::sin(t * 3.14159265f);
+				additive = true;
+				break;
+			case Kind::Spark:
 				fade = 1.0f - t * t;
+				additive = true;
+				break;
+			case Kind::Blood:
+			case Kind::Chip:
+				fade = 1.0f;
+				break;
+			case Kind::Dust:
+				fade = (1.0f - t) * std::min(1.0f, t * 8.0f + 0.3f);
+				break;
+			default: // Smoke
+				fade = std::sin(t * 3.14159265f);
 				break;
 		}
 		SoftShape s;
@@ -246,10 +352,45 @@ void ScenePolish::DrawParticles(const Region& vp) const
 		float size = p.kind == Kind::Spark ? p.size * (1.0f - 0.5f * t) : p.size;
 		s.rx = size * 1.6f;
 		s.ry = size * 1.6f;
+		if (p.kind == Kind::Blood || p.kind == Kind::Chip) {
+			s.profile = SoftShape::Profile::Disc;
+			s.rx = size;
+			s.ry = size;
+		}
 		s.color = Color(ToByte(p.r), ToByte(p.g), ToByte(p.b), ToByte(p.a * fade));
+		(additive ? added : blended).push_back(s);
+	}
+	if (!blended.empty()) VideoDriver->DrawSoftShapes(blended, BlitFlags::NONE);
+	if (!added.empty()) VideoDriver->DrawSoftShapes(added, BlitFlags::ADD);
+}
+
+void ScenePolish::DrawGroundDecals(const Region& vp) const
+{
+	if (!Enabled() || particles.empty()) return;
+	std::vector<SoftShape> shapes;
+	for (const auto& p : particles) {
+		if (p.kind != Kind::Stain && p.kind != Kind::Debris) continue;
+		float t = p.age / p.life;
+		float fade = t < 0.75f ? 1.0f : (1.0f - t) / 0.25f;
+		SoftShape s;
+		s.profile = SoftShape::Profile::Disc;
+		s.x = p.x - float(vp.x);
+		s.y = p.y - float(vp.y);
+		if (p.kind == Kind::Stain) {
+			// spreads a touch as it soaks in, dries darker
+			float spread = 1.0f + 0.25f * std::min(1.0f, p.age * 2.0f);
+			s.rx = p.size * 1.5f * spread;
+			s.ry = s.rx * 0.5f;
+			float dry = 1.0f - 0.35f * std::min(1.0f, p.age / 6.0f);
+			s.color = Color(ToByte(p.r * dry), ToByte(p.g * dry), ToByte(p.b * dry), ToByte(p.a * fade));
+		} else {
+			s.rx = p.size;
+			s.ry = p.size * 0.6f;
+			s.color = Color(ToByte(p.r), ToByte(p.g), ToByte(p.b), ToByte(p.a * fade));
+		}
 		shapes.push_back(s);
 	}
-	VideoDriver->DrawSoftShapes(shapes, BlitFlags::ADD);
+	if (!shapes.empty()) VideoDriver->DrawSoftShapes(shapes, BlitFlags::NONE);
 }
 
 void ScenePolish::DrawShadows(const std::vector<ShadowPart>& parts, const Point& feet, float lfx, float lfy,
@@ -393,6 +534,7 @@ void ScenePolish::BuildPost(const Map* map, ScenePost& post) const
 
 void ScenePolish::OnDamage(const Actor* target, int damage, int damagetype, bool critical)
 {
+	critTarget = critical ? target : nullptr;
 	if (!target || damage <= 0 || !VideoDriver || !VideoDriver->SupportsSceneTransform()) return;
 	const Game* game = core->GetGame();
 	if (!game || target->GetCurrentArea() != game->GetCurrentArea()) return;
@@ -418,10 +560,10 @@ void ScenePolish::OnDamage(const Actor* target, int damage, int damagetype, bool
 	float height = std::max(20.0f, std::min(90.0f, float(target->Pos.y - box.y) * 0.55f));
 	float gx = float(target->Pos.x), gy = float(target->Pos.y);
 
-	if (Setting("HitParticles", 1)) {
+	// physical hits: the material effects (OnPhysicalHit) replace the old warm sparks
+	if (Setting("HitParticles", 1) && !physical) {
 		int n = std::max(6, std::min(22, 5 + damage / 2));
 		if (critical) n = n * 3 / 2;
-		if (physical) n = n * 2 / 3;
 		for (int i = 0; i < n && particles.size() < MaxParticles; ++i) {
 			Particle p {};
 			p.kind = Kind::Spark;
@@ -446,8 +588,7 @@ void ScenePolish::OnDamage(const Actor* target, int damage, int damagetype, bool
 		f.y = gy;
 		f.z = height;
 		f.radius = std::min(150.0f, 70.0f + float(damage) * 3.0f);
-		float k = physical ? 0.35f : 0.8f;
-		if (critical) k += 0.3f;
+		float k = critical ? 1.1f : 0.8f;
 		f.r = r * k;
 		f.g = g * k;
 		f.b = b * k;
@@ -464,6 +605,249 @@ void ScenePolish::OnDamage(const Actor* target, int damage, int damagetype, bool
 		}
 		if (critical) t += 0.25f;
 		if (t > 0.0f) AddTrauma(t);
+	}
+}
+
+// ---------------------------------------------------------------- materials
+
+ScenePolish::HitMaterial ScenePolish::MaterialForArmor(int armor)
+{
+	// PST resdata.ini "armor": the HIT_0<type><A+armor> sound set
+	switch (armor) {
+		case 1: return HitMaterial::Leather; // thugs, Dakkon, githzerai
+		case 2: return HitMaterial::Armored; // guards, Mercykillers, Harmonium
+		case 3: return HitMaterial::Stone; // golem, statues
+		case 4: return HitMaterial::Bone; // Morte, skeletons
+		case 6: return HitMaterial::Spirit; // Deionarra, Transcendent One
+		case 7: return HitMaterial::Metal; // modrons, Nordom
+		case 9: return HitMaterial::Shadow;
+		case 10: return HitMaterial::Fire; // Ignus
+		default: return HitMaterial::Flesh; // 0 townies, 5 fiends / zombies, 8 the Nameless One
+	}
+}
+
+bool ScenePolish::MaterialFromName(const std::string& name, HitMaterial& out)
+{
+	static const struct {
+		const char* name;
+		HitMaterial m;
+	} names[] = {
+		{ "FLESH", HitMaterial::Flesh }, { "LEATHER", HitMaterial::Leather }, { "ARMORED", HitMaterial::Armored },
+		{ "ARMORED_BONE", HitMaterial::ArmoredBone }, { "HOLLOW", HitMaterial::Hollow }, { "STONE", HitMaterial::Stone },
+		{ "BONE", HitMaterial::Bone }, { "SPIRIT", HitMaterial::Spirit }, { "METAL", HitMaterial::Metal },
+		{ "SHADOW", HitMaterial::Shadow }, { "FIRE", HitMaterial::Fire }
+	};
+	for (const auto& n : names) {
+		if (stricmp(name.c_str(), n.name) == 0) {
+			out = n.m;
+			return true;
+		}
+	}
+	return false;
+}
+
+ScenePolish::HitMaterial ScenePolish::MaterialOf(const Actor* actor)
+{
+	if (!actor) return HitMaterial::Flesh;
+	unsigned int animID = actor->GetBase(IE_ANIMATION_ID);
+	if (core->HasFeature(GFFlags::ONE_BYTE_ANIMID)) animID &= 0xff;
+
+	// hitmat.2da: ANIM<id> rows refine single creatures (who is really inside the armour),
+	// ARMOR<n> rows remap whole sound sets
+	AutoTable table = gamedata->LoadTable("hitmat", true);
+	HitMaterial m;
+	auto fromTable = [&table, &m](const std::string& row) {
+		if (!table) return false;
+		TableMgr::index_t idx = table->GetRowIndex(row);
+		return idx != TableMgr::npos && MaterialFromName(table->QueryField(idx, 0), m);
+	};
+	if (fromTable(fmt::format("ANIM{}", animID))) return m;
+
+	if (const DataFileMgr* resdata = core->GetResDataINI()) {
+		int armor = resdata->GetKeyAsInt(fmt::format("{}", animID), "armor", -1);
+		if (armor >= 0) {
+			if (fromTable(fmt::format("ARMOR{}", armor))) return m;
+			return MaterialForArmor(armor);
+		}
+	}
+	// other games: the armour animation level
+	ieDword level = actor->GetStat(IE_ARMOR_TYPE);
+	if (level == IE_ANI_MEDIUM_ARMOR || level == IE_ANI_HEAVY_ARMOR) return HitMaterial::Armored;
+	return HitMaterial::Flesh;
+}
+
+bool ScenePolish::CustomBlood()
+{
+	return VideoDriver && VideoDriver->SupportsSceneTransform() && Setting("CustomBlood", 1) != 0;
+}
+
+void ScenePolish::OnPhysicalHit(const Actor* target, int severity)
+{
+	if (!target || !CustomBlood()) return;
+	const Game* game = core->GetGame();
+	if (!game || target->GetCurrentArea() != game->GetCurrentArea()) return;
+
+	const HitMaterial mat = MaterialOf(target);
+	const bool gore = severity <= 0;
+	// crits are exaggerated: everything as if far more damage, plus a second spray
+	const bool crit = critTarget == target;
+	critTarget = nullptr;
+	const float sev = (gore ? 4.0f : float(std::min(3, severity))) + (crit ? 3.0f : 0.0f);
+	const float big = crit ? 0.5f : 0.0f; // extra particle size
+	Region box = target->DrawingRegion();
+	const float height = std::max(20.0f, std::min(90.0f, float(target->Pos.y - box.y) * 0.55f));
+	const float gx = float(target->Pos.x), gy = float(target->Pos.y);
+	float dir = Rand(0.0f, 6.2831853f); // main spray direction
+
+	auto spawn = [&](Kind kind, float spreadAng, float speedLo, float speedHi, float vzLo, float vzHi) {
+		Particle p {};
+		p.kind = kind;
+		// crits: a third of everything goes out the other side
+		float ang = (crit && Rand(0.0f, 1.0f) < 0.33f ? dir + 2.6f : dir) + Rand(-spreadAng, spreadAng);
+		float speed = Rand(speedLo, speedHi);
+		p.x = gx + Rand(-3.0f, 3.0f);
+		p.y = gy + Rand(-2.0f, 2.0f);
+		p.z = height + Rand(-8.0f, 8.0f);
+		p.vx = std::cos(ang) * speed;
+		p.vy = std::sin(ang) * speed * 0.6f;
+		p.vz = Rand(vzLo, vzHi);
+		p.life = 4.0f; // until it lands
+		return p;
+	};
+
+	if (Bleeds(mat)) {
+		// a directional spray, a few drips straight down, a quick red mist
+		int n = int(6.0f + sev * 7.0f);
+		for (int i = 0; i < n && Room(); ++i) {
+			// most drops land close together (a splatter), a few fly further
+			bool flung = Rand(0.0f, 1.0f) < 0.25f;
+			Particle p = flung ? spawn(Kind::Blood, 0.7f, 50.0f, 90.0f + sev * 15.0f, 20.0f, 110.0f)
+					   : spawn(Kind::Blood, 0.9f, 8.0f, 40.0f + sev * 6.0f, -20.0f, 60.0f);
+			p.size = (flung ? Rand(0.5f, 0.9f) : Rand(0.8f, 1.6f) + (gore ? 0.5f : 0.0f)) + big;
+			p.r = Rand(0.42f, 0.6f);
+			p.g = Rand(0.0f, 0.04f);
+			p.b = Rand(0.01f, 0.04f);
+			p.a = 0.95f;
+			particles.push_back(p);
+		}
+		for (int i = 0; i < int(sev * 2.0f) && Room(); ++i) {
+			Particle p = spawn(Kind::Blood, 3.2f, 0.0f, 18.0f, -10.0f, 15.0f);
+			p.size = Rand(0.8f, 1.5f);
+			p.r = Rand(0.4f, 0.55f);
+			p.g = 0.02f;
+			p.b = 0.02f;
+			p.a = 0.95f;
+			particles.push_back(p);
+		}
+		for (int i = 0; i < (crit ? 7 : 3) && Room(); ++i) {
+			Particle p = spawn(Kind::Dust, 1.2f, 10.0f, 35.0f, -5.0f, 10.0f);
+			p.life = Rand(0.25f, 0.45f) * (crit ? 1.6f : 1.0f);
+			p.size = Rand(2.5f, 4.0f) + sev * 0.4f;
+			p.r = 0.5f;
+			p.g = 0.03f;
+			p.b = 0.03f;
+			p.a = 0.4f;
+			particles.push_back(p);
+		}
+	}
+
+	if (Sparks(mat)) {
+		int n = int(5.0f + sev * 3.0f);
+		for (int i = 0; i < n && Room(); ++i) {
+			Particle p = spawn(Kind::Spark, 1.4f, 90.0f, 230.0f, 30.0f, 170.0f);
+			p.life = Rand(0.15f, 0.4f);
+			p.size = Rand(0.6f, 1.1f) + big * 0.5f;
+			p.r = 1.0f;
+			p.g = Rand(0.75f, 0.95f);
+			p.b = Rand(0.35f, 0.6f);
+			p.a = Rand(0.8f, 1.0f);
+			particles.push_back(p);
+		}
+		Flash f {};
+		f.x = gx;
+		f.y = gy;
+		f.z = height;
+		f.radius = 55.0f + sev * 10.0f;
+		float k = crit ? 1.6f : 1.0f;
+		f.r = 0.5f * k;
+		f.g = 0.4f * k;
+		f.b = 0.22f * k;
+		f.life = crit ? 0.22f : 0.12f;
+		flashes.push_back(f);
+	}
+
+	// dust and chips that fall off and stay on the floor
+	auto crumble = [&](float r, float g, float b, int chips, int puffs) {
+		for (int i = 0; i < puffs && Room(); ++i) {
+			Particle p = spawn(Kind::Dust, 3.2f, 8.0f, 30.0f, 3.0f, 22.0f);
+			p.life = Rand(0.8f, 1.6f);
+			p.size = Rand(2.5f, 4.5f);
+			p.r = r * 0.9f;
+			p.g = g * 0.9f;
+			p.b = b * 0.9f;
+			p.a = 0.32f;
+			particles.push_back(p);
+		}
+		for (int i = 0; i < chips && Room(); ++i) {
+			Particle p = spawn(Kind::Chip, 1.6f, 30.0f, 100.0f + big * 80.0f, 30.0f, 120.0f + big * 60.0f);
+			p.size = Rand(0.5f, 1.2f) + big * 0.6f;
+			float k = Rand(0.82f, 1.0f);
+			p.r = r * k;
+			p.g = g * k;
+			p.b = b * k;
+			p.a = 0.95f;
+			particles.push_back(p);
+		}
+	};
+	switch (mat) {
+		case HitMaterial::Bone:
+		case HitMaterial::ArmoredBone:
+			crumble(0.9f, 0.86f, 0.74f, int(2.0f + sev * 3.0f), int(2.0f + sev));
+			break;
+		case HitMaterial::Stone:
+			crumble(0.55f, 0.53f, 0.5f, int(2.0f + sev * 3.0f), int(2.0f + sev));
+			break;
+		case HitMaterial::Metal:
+			crumble(0.36f, 0.38f, 0.42f, int(sev * 2.0f), 0);
+			break;
+		case HitMaterial::Spirit:
+			for (int i = 0; i < int(6.0f + sev * 3.0f) && Room(); ++i) {
+				Particle p = spawn(Kind::Wisp, 3.2f, 10.0f, 50.0f, 15.0f, 50.0f);
+				p.life = Rand(0.8f, 1.5f);
+				p.size = Rand(1.5f, 3.0f);
+				p.r = 0.6f;
+				p.g = 0.8f;
+				p.b = 1.0f;
+				p.a = 0.5f;
+				particles.push_back(p);
+			}
+			break;
+		case HitMaterial::Shadow:
+			for (int i = 0; i < int(5.0f + sev * 2.0f) && Room(); ++i) {
+				Particle p = spawn(Kind::Smoke, 3.2f, 10.0f, 40.0f, 10.0f, 30.0f);
+				p.life = Rand(0.9f, 1.6f);
+				p.size = Rand(3.0f, 6.0f);
+				p.r = 0.03f;
+				p.g = 0.02f;
+				p.b = 0.05f;
+				p.a = 0.45f;
+				particles.push_back(p);
+			}
+			break;
+		case HitMaterial::Fire:
+			for (int i = 0; i < int(8.0f + sev * 4.0f) && Room(); ++i) {
+				Particle p = spawn(Kind::Ember, 3.2f, 20.0f, 90.0f, 30.0f, 90.0f);
+				p.life = Rand(0.5f, 1.2f);
+				p.size = Rand(0.7f, 1.4f);
+				p.r = 1.0f;
+				p.g = Rand(0.45f, 0.7f);
+				p.b = 0.15f;
+				p.a = Rand(0.7f, 1.0f);
+				particles.push_back(p);
+			}
+			break;
+		default:
+			break;
 	}
 }
 

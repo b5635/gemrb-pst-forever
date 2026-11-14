@@ -226,8 +226,15 @@ quad, per-corner colour) and `DrawScenePost`. Presentation only: own RNG, never 
   thicker + glow, hovered = pulsing glow. Off = PST's bitmap circles.
 - **Hover outline** (`HoverOutline`): outline pass in the sprite shader (12-direction alpha dilation in texels,
   grown quad under the sprite), wall-stencilled like the sprite. `Video::SetObjectOutline`.
-- **Hits** (`HitParticles`): `Actor::Damage` → sparks coloured by damage type (bounce once), plus a short impact
-  light (flash) fed into the lighting pass. Crits are bigger.
+- **Hits** (`HitParticles`): `Actor::Damage` → elemental damage gets sparks coloured by damage type (bounce once),
+  plus a short impact light (flash) fed into the lighting pass. Crits are bigger. Physical hits no longer spark.
+- **Material hits** (`CustomBlood`, `BloodLinger` seconds, default 30): replace the original blood BAMs
+  (`Actor::PlayDamageAnimation` blood cases, incl. the generic gory death; PST personal crits stay).
+  Material = PST resdata.ini `armor` (the hit sound set) via `unhardcoded/pst/hitmat.2da` (`ARMOR<n>` rows,
+  `ANIM<id>` overrides): flesh/leather → blood spray that lands as floor stains (drawn before actors, dry
+  darker, fade out), armoured → blood + sparks, armoured skeleton → sparks + bone, hollow armour (Vhailor) →
+  sparks, bone → dust + chips that bounce and stay, stone → grit + chips, spirit → wisps, construct → sparks +
+  metal bits, shadow → dark smoke, fire (Ignus) → embers. Other games: medium/heavy armour level = armoured.
 - **Ambience** (`AmbientParticles`): floating dust (indoors, warm) / ash (outdoors, grey) at a fixed density over
   the view; embers rising from warm glowing area animations (needs `DynamicLights`).
 - **Shake**: `SmoothShake=1` stops script shakes from jittering the logical viewport; the shown camera gets smooth

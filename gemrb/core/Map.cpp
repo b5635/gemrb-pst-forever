@@ -1045,6 +1045,9 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 		DrawHighlightables(viewport);
 	}
 
+	// blood stains and debris lie under everyone
+	if (sceneActive) polish.DrawGroundDecals(viewport);
+
 	//drawing queues 1 and 0
 	//starting with lower priority
 	//so displayed, but inactive actors (dead) will be drawn over

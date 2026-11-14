@@ -2459,6 +2459,11 @@ void Actor::PlayDamageAnimation(int type, bool hit)
 		case 1:
 		case 2:
 		case 3: //blood
+			// our material effects (blood, sparks, bone dust, ...) replace the blood animations
+			if (ScenePolish::CustomBlood()) {
+				if (hit) ScenePolish::Get().OnPhysicalHit(this, type & 255);
+				return;
+			}
 			gradientType = anims->GetBloodColor();
 			if (!gradientType) gradientType = damageGradients[type];
 			fx = fxqueue.HasEffectWithParam(fx_animation_override_data_ref, 2);
