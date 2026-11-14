@@ -6379,6 +6379,11 @@ bool Actor::ValidTarget(int ga_flags, const Scriptable* checker) const
 	return true;
 }
 
+bool Actor::IsPathBumpable() const
+{
+	return ValidTarget(GA_ONLY_BUMPABLE);
+}
+
 //returns true if it won't be destroyed with an area
 //in this case it shouldn't be saved with the area either
 //it will be saved in the savegame

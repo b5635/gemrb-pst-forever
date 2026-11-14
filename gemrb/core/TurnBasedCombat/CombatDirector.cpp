@@ -27,8 +27,8 @@
 
 namespace GemRB {
 
-// camera pan speed on turn change, same as dialog uses
-static constexpr int TURN_CAMERA_SPEED = 30;
+// camera pan speed on turn change (map pixels per tick); faster than dialog's 75
+static constexpr int TURN_CAMERA_SPEED = 120;
 // how often the combat gui gets refreshed even without a turn change
 static constexpr unsigned int GUI_REFRESH_TICKS = 8;
 // safety net: actions that neither walk, swing nor finish for this long end an AI turn
@@ -1101,10 +1101,6 @@ void CombatDirector::RequestPath(Actor* actor, const Point& source, const Point&
 	const unsigned int minDist = static_cast<unsigned int>(std::max(0, minDistance));
 	Path path = PathFinder::FindPath(map->GetTraversabilityCacheData(), map->tileProps, source, destination, context,
 					 minDist, PF_SIGHT | PF_ACTORS_ARE_BLOCKING | flags);
-	if (!path) {
-		// boxed in by other creatures: take the open floor path, the walker stops at the first one in the way
-		path = PathFinder::FindPath(map->GetTraversabilityCacheData(), map->tileProps, source, destination, context, minDist, PF_SIGHT | flags);
-	}
 	if (!path) {
 		Log(COMBAT, "CombatDirector", "{}: no path from {} to {} (min distance {})", fmt::WideToChar { Name(actor) }, source, destination, minDistance);
 		actor->FailCombatPath(destination);

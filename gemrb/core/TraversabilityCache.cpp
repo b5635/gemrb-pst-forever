@@ -77,7 +77,7 @@ size_t TraversabilityCache::CachedActorsState::AddCachedActorState(Actor* inActo
 	pos.push_back(inActor->Pos);
 	sizeCategory.push_back(inActor->getSizeCategory());
 	flags.push_back(0);
-	SetIsBumpable(newIdx, inActor->ValidTarget(GA_ONLY_BUMPABLE));
+	SetIsBumpable(newIdx, inActor->IsPathBumpable());
 	SetIsAlive(newIdx, inActor->ValidTarget(GA_NO_DEAD | GA_NO_UNSCHEDULED));
 
 	return newIdx;
@@ -180,7 +180,7 @@ bool TraversabilityCache::Update()
 		const size_t cachedActorIdx = foundCachedActor - cachedActorsState.actor.begin();
 		if (cachedActorsState.pos[cachedActorIdx] != currentActor->Pos ||
 		    cachedActorsState.GetIsAlive(cachedActorIdx) != currentActor->ValidTarget(GA_NO_DEAD | GA_NO_UNSCHEDULED) ||
-		    cachedActorsState.GetIsBumpable(cachedActorIdx) != currentActor->ValidTarget(GA_ONLY_BUMPABLE) ||
+		    cachedActorsState.GetIsBumpable(cachedActorIdx) != currentActor->IsPathBumpable() ||
 		    cachedActorsState.sizeCategory[cachedActorIdx] != currentActor->getSizeCategory()) {
 			actorsUpdated.push_back(cachedActorIdx);
 		}
@@ -235,7 +235,7 @@ bool TraversabilityCache::Update()
 		}
 
 		// if our actor did change its bumpable state
-		if (cachedActorsState.GetIsBumpable(updatedCachedIdx) != cachedActorsState.actor[updatedCachedIdx]->ValidTarget(GA_ONLY_BUMPABLE)) {
+		if (cachedActorsState.GetIsBumpable(updatedCachedIdx) != cachedActorsState.actor[updatedCachedIdx]->IsPathBumpable()) {
 			// clear old cells and mark new cells
 			cachedActorsState.ClearOldPosition(updatedCachedIdx, traversabilityData, map->tileProps.GetSize().w);
 			cachedActorsState.MarkNewPosition(updatedCachedIdx, traversabilityData, map->tileProps.GetSize().w, true);

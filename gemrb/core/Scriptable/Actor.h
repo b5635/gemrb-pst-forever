@@ -653,6 +653,8 @@ public:
 	int GetProficiency(ieByte proftype) const;
 	/** Returns true if the actor is targetable */
 	bool ValidTarget(int ga_flags, const Scriptable* checker = NULL) const;
+	/** True when a path may treat this actor as shoveable (token 1), not a wall (token 15). */
+	bool IsPathBumpable() const;
 	/** Clamps a stat value to the valid range for the respective stat */
 	stat_t ClampStat(unsigned int StatIndex, stat_t Value) const;
 	/** Returns a Stat value */

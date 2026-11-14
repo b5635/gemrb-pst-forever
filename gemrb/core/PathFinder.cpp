@@ -386,6 +386,11 @@ Path PathFinder::FindPath(const TraversabilityCache::Data_t& traversabilityCache
 
 	bool foundPath = false;
 	unsigned int squaredMinDist = minDistance * minDistance;
+	// If the goal itself is unreachable, still walk to the visited cell nearest the click
+	// instead of giving up: a wall, a closed door, or a body in a corridor.
+	SearchmapPoint closestPoint = smptSource;
+	unsigned int closestToDest = SquaredDistance(nmptSource, destination);
+	bool reachedCloser = false;
 
 	// Weighted heuristic. Finds sub-optimal paths but should be quite a bit faster
 	constexpr float_t HEURISTIC_WEIGHT = 1.5;
@@ -454,6 +459,15 @@ Path PathFinder::FindPath(const TraversabilityCache::Data_t& traversabilityCache
 		if (smptCurrent == smptDest) {
 			foundPath = true;
 			break;
+		}
+
+		if (smptCurrent != smptSource) {
+			const unsigned int d = SquaredDistance(smptCurrent.ToNavmapCenter(), destination);
+			if (!reachedCloser || d < closestToDest) {
+				closestPoint = smptCurrent;
+				closestToDest = d;
+				reachedCloser = true;
+			}
 		}
 
 		if (minDistance &&
@@ -547,6 +561,13 @@ Path PathFinder::FindPath(const TraversabilityCache::Data_t& traversabilityCache
 			// either queues the child or moves the entry it already has down to the new cost.
 			open.Push(smptChild, uint32_t(smptChildIdx), newCost);
 		}
+	}
+
+	if (!foundPath && reachedCloser) {
+		LogDebugPathfinder("FindPath", "{} cannot reach {}, walking as close as ({},{})",
+				   actorContext.scriptName, destination, closestPoint.x, closestPoint.y);
+		smptDest = closestPoint;
+		foundPath = true;
 	}
 
 	if (foundPath) {
@@ -963,8 +984,12 @@ void PathFinder::AdjustPositionDirected(const TileProps& tileProps, NavmapPoint&
 	}
 
 	std::map<unsigned int, SearchmapPoint, std::greater<>> candidates;
-	int radius = startingRadius - 1;
-	while (radius < 2 * startingRadius) { // reduce this search radius if needed
+	// Circle size 1 only used to look one tile out, so a click into a wall two tiles thick
+	// found nothing and fell through to the undirected scan, which can settle on the far side.
+	int radius = 0;
+	const int minScan = std::max(2 * std::max(1, startingRadius), 8);
+	constexpr int maxScan = 16;
+	while (radius < minScan || (candidates.empty() && radius < maxScan)) {
 		for (auto& offset : baseOffsets) {
 			SearchmapPoint candidate = smptGoal + offset * radius;
 			if (bool(GetBlockedTile(tileProps, candidate, startingRadius) & PathMapFlags::PASSABLE)) {

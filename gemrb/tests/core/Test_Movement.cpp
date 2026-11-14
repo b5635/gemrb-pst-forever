@@ -672,7 +672,9 @@ TEST_F(TraversabilityLiveTest, LiveCacheLetsAnActorIgnoreItsOwnTile)
 	EXPECT_FALSE(FindPathOnLive(live, from, to, actor, 2, actorsBlock).Empty())
 		<< "an actor must be able to walk out of its own footprint";
 	const Point strangerFrom = SearchmapPoint(1, 1).ToNavmapCenter();
-	EXPECT_TRUE(FindPathOnLive(live, strangerFrom, to, nullptr, 2, actorsBlock).Empty())
+	const Path stranger = FindPathOnLive(live, strangerFrom, to, nullptr, 2, actorsBlock);
+	ASSERT_FALSE(stranger.Empty()) << "walk up to the footprint instead of standing still";
+	EXPECT_NE(SearchmapPoint(stranger.GetLastStep().point), SearchmapPoint(to))
 		<< "the very same footprint has to stop anyone else in a one tile corridor";
 }
 

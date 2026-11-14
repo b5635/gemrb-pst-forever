@@ -441,10 +441,10 @@ void GameControl::WillDraw(const Region& /*drawFrame*/, const Region& /*clip*/)
 		if (active && active->InMove() && active->GetCurrentArea() == CurrentArea() && CurrentArea()->IsVisible(active->Pos)) {
 			Point center = viewport.origin + Point(viewport.w / 2, viewport.h / 2);
 			// only once it strays from the middle, so short steps don't make it swim
-			if (Distance(center, active->Pos) > viewport.h / 4) {
+			if (Distance(center, active->Pos) > viewport.h / 8) {
 				Point step = active->Pos - center;
-				step.x /= 8;
-				step.y /= 8;
+				step.x /= 4;
+				step.y /= 4;
 				MoveViewportTo(viewport.origin + step, false);
 			}
 		}
@@ -942,10 +942,6 @@ void GameControl::UpdateTurnPreview()
 
 	const ActorPathContext context { static_cast<unsigned int>(actor->circleSize), actor->GetScriptName(), actor->ValidTarget(GA_ONLY_BUMPABLE) };
 	preview.path = PathFinder::FindPath(area->GetTraversabilityCacheData(), area->tileProps, actor->Pos, target, context, minDistance, PF_SIGHT | PF_ACTORS_ARE_BLOCKING);
-	if (!preview.path) {
-		// boxed in by other creatures: the director's walker then takes the open floor path too
-		preview.path = PathFinder::FindPath(area->GetTraversabilityCacheData(), area->tileProps, actor->Pos, target, context, minDistance, PF_SIGHT);
-	}
 	preview.pathCost = PathFinder::PathCost(actor->Pos, preview.path);
 	preview.moveNeededFt = attack && preview.path ? preview.pathCost / SEARCHMAP_TILE_WIDTH : 0;
 	if (attack) {
@@ -2516,8 +2512,10 @@ void GameControl::UpdateCamera()
 		return;
 	}
 
-	float kPan = 1.0f - std::exp(-dt / 60.0f);
-	float kZoom = 1.0f - std::exp(-dt / 80.0f);
+	const Game* game = core->GetGame();
+	const bool combat = game && game->combat.IsRunning();
+	float kPan = 1.0f - std::exp(-dt / (combat ? 35.0f : 60.0f));
+	float kZoom = 1.0f - std::exp(-dt / (combat ? 50.0f : 80.0f));
 	// zoom eases in log space, so in and out feel the same
 	float ls = std::log(camera.scale);
 	camera.scale = std::exp(ls + (std::log(ts) - ls) * kZoom);

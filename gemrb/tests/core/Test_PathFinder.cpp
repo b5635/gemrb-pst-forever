@@ -593,11 +593,12 @@ TEST(TraversabilityTest, BumpableActorsBlockOnlyWhenActorsAreBlocking)
 		EXPECT_FALSE(test::CallFindPath(map, traversability, from, to, self, 1, PF_SIGHT).Empty())
 			<< "a bumpable actor must not stop a route that would bump it";
 
-		// treating actors as solid: there is no way past in a one tile corridor
-		EXPECT_TRUE(test::CallFindPath(map, traversability, from, to, self, 1,
-					       PF_SIGHT | PF_ACTORS_ARE_BLOCKING)
-				    .Empty())
-			<< "a blocking actor plugs the only corridor, so there is no route";
+		// treating actors as solid: there is no way past in a one tile corridor, so walk up to them
+		const Path blocked = test::CallFindPath(map, traversability, from, to, self, 1,
+							PF_SIGHT | PF_ACTORS_ARE_BLOCKING);
+		ASSERT_FALSE(blocked.Empty()) << "walk up to the body instead of standing still";
+		EXPECT_NE(SearchmapPoint(blocked.GetLastStep().point), SearchmapPoint(to))
+			<< "a blocking actor plugs the only corridor, so the route must not pass it";
 	}
 }
 
@@ -618,10 +619,13 @@ TEST(TraversabilityTest, UnbumpableActorAlwaysBlocks)
 	const Point from = map.Start();
 	const Point to = map.End();
 
-	EXPECT_TRUE(test::CallFindPath(map, traversability, from, to, self, 1, PF_SIGHT).Empty());
-	EXPECT_TRUE(test::CallFindPath(map, traversability, from, to, self, 1,
-				       PF_SIGHT | PF_ACTORS_ARE_BLOCKING)
-			    .Empty());
+	const Path open = test::CallFindPath(map, traversability, from, to, self, 1, PF_SIGHT);
+	const Path blocked = test::CallFindPath(map, traversability, from, to, self, 1,
+						PF_SIGHT | PF_ACTORS_ARE_BLOCKING);
+	ASSERT_FALSE(open.Empty());
+	ASSERT_FALSE(blocked.Empty());
+	EXPECT_NE(SearchmapPoint(open.GetLastStep().point), SearchmapPoint(to));
+	EXPECT_NE(SearchmapPoint(blocked.GetLastStep().point), SearchmapPoint(to));
 }
 
 // An actor must not be stopped by the record of itself standing where it starts.
@@ -649,7 +653,9 @@ TEST(TraversabilityTest, ActorIgnoresItsOwnCell)
 	const Path stranger = test::CallFindPath(map, traversability, map.Start(), to,
 						 test::MakeActorIdentity(strangerTag), 1,
 						 PF_SIGHT | PF_ACTORS_ARE_BLOCKING);
-	EXPECT_TRUE(stranger.Empty()) << "another actor must still be blocked by that footprint";
+	ASSERT_FALSE(stranger.Empty()) << "walk up to the footprint instead of standing still";
+	EXPECT_NE(SearchmapPoint(stranger.GetLastStep().point), SearchmapPoint(to))
+		<< "another actor must still be blocked by that footprint";
 }
 
 
@@ -721,7 +727,10 @@ TEST(FindPathTest, WillNotEnterASealedRoom)
 	const test::TestTraversability traversability { map };
 	const Path path = test::CallFindPath(map, traversability, from, map.End());
 
-	ASSERT_TRUE(path.Empty());
+	ASSERT_FALSE(path.Empty()) << "walk up to the wall instead of standing still";
+	EXPECT_TRUE(test::PathAvoidsWalls(map, from, path));
+	EXPECT_LT(SearchmapPoint(path.GetLastStep().point).x, 5)
+		<< "must not enter the sealed room";
 }
 
 // A bigger actor cannot use a gap a small one fits through. Both walkers are drawn, so their
@@ -762,7 +771,10 @@ TEST(FindPathTest, RespectsActorSize)
 
 	// the big one needs two clear tiles to either side of itself, which the slit cannot give
 	const Path large = test::PathDrawnActor(map, traversability, bigActor, to);
-	EXPECT_TRUE(large.Empty()) << "a wide actor must not squeeze through a one tile slit";
+	ASSERT_FALSE(large.Empty()) << "walk as close to the slit as the actor fits";
+	EXPECT_NE(SearchmapPoint(large.GetLastStep().point), SearchmapPoint(to))
+		<< "a wide actor must not squeeze through a one tile slit";
+	EXPECT_TRUE(test::PathIsSane(map, map.ActorPosOf(bigActor), large, map.ActorCircleSizeOf(bigActor)));
 
 	// ... and it is the slit that stopped it, not its own size: the same actor walks fine as
 	// long as it stays in the open hall it started in
@@ -1081,7 +1093,7 @@ TEST(FindPathTest, ClickIntoAThinWallLandsOnTheCallersSide)
 // The lookback distance could always be increased, but it's also true that in bg1 one can get arbitrarily big parties,
 // so formation rotation can result in goals very deep in walls.
 // Doing our best (like the test expects) even for inaccessible areas seems like the most obvious thing to do.
-TEST(FindPathTest, DISABLED_ClickIntoAThickWallStopsAgainstTheNearFace)
+TEST(FindPathTest, ClickIntoAThickWallStopsAgainstTheNearFace)
 {
 	const TestSearchMap map {
 		"###########",
@@ -1100,8 +1112,8 @@ TEST(FindPathTest, DISABLED_ClickIntoAThickWallStopsAgainstTheNearFace)
 
 	const Path fromEast = test::CallFindPath(map, traversability, map.End(), rock);
 	ASSERT_FALSE(fromEast.Empty()) << "the east caller has a face of its own to walk up to";
-	EXPECT_EQ(SearchmapPoint(fromEast.GetLastStep().point), SearchmapPoint(6, 2))
-		<< "and it is the east one, not the west";
+	EXPECT_EQ(SearchmapPoint(fromEast.GetLastStep().point), SearchmapPoint(7, 2))
+		<< "the east walkable face, not the west one";
 }
 
 // When the relocated goal is the tile, the caller is already standing on, there is nothing to walk.
@@ -1239,7 +1251,8 @@ TEST(FindPathTest, ShutDoorBlocksTheOnlyCorridorUntilItOpens)
 
 		const test::TestTraversability traversability { map };
 		const Path closed = test::CallFindPath(map, traversability, map.Start(), map.End());
-		EXPECT_TRUE(closed.Empty())
+		ASSERT_FALSE(closed.Empty()) << "walk up to the door instead of standing still";
+		EXPECT_NE(SearchmapPoint(closed.GetLastStep().point), SearchmapPoint(map.End()))
 			<< "there is no way round a door filling a one tile corridor";
 
 		map.SetTile(4, 1, Glyph::Floor);
@@ -2524,7 +2537,9 @@ TEST(FindPathTest, TheSlitTakesTheSizesWhoseStandingFootprintFits)
 	ASSERT_FALSE(one.Empty());
 	EXPECT_TRUE(test::PathIsSane(map, from, one));
 	EXPECT_EQ(one, two) << "the same standing footprint is the same request";
-	EXPECT_TRUE(three.Empty()) << "a size 3 actor stands on 3x3 and the slit is one tile wide";
+	ASSERT_FALSE(three.Empty()) << "walk as close to the slit as a size 3 actor fits";
+	EXPECT_NE(SearchmapPoint(three.GetLastStep().point), SearchmapPoint(map.End()))
+		<< "a size 3 actor stands on 3x3 and the slit is one tile wide";
 }
 
 // The smallest shape the originals walk and a 4-connected search does not: two tiles touching
