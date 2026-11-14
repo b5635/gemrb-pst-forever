@@ -7,6 +7,7 @@ setlocal
 set BUILD_DIR=%~dp0build
 set GAME_DIR=D:\Games\GemRB
 
+rem Never delete or copy D:\Games\GemRB\upscaled (hi-res art, UPSCALE_PLAN.md).
 rem the install step overwrites GemRB.cfg with the default sample, so keep the real one safe
 set CFG_BACKUP=%TEMP%\GemRB.cfg.keep
 if exist "%GAME_DIR%\GemRB.cfg" copy /y "%GAME_DIR%\GemRB.cfg" "%CFG_BACKUP%" >nul

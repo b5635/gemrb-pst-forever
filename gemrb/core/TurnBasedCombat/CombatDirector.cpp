@@ -72,7 +72,14 @@ static bool PlayerControlled(const Actor* actor)
 	return actor->InParty && !Setting("Turn Based Party AI", 0);
 }
 
-// "Turn Based Combat Speed" in percent: 100 is normal, 200 twice as fast
+// "Turn Based Combat Speed" in percent: 100 is normal, 200 twice as fast.
+// ticks are at that normal speed; the game steps at 15 per second.
+static unsigned int AtCombatSpeed(unsigned int ticks)
+{
+	int speed = std::max(10, int(core->GetDictionary().Get(StringView("Turn Based Combat Speed"), 100)));
+	return ticks * 100u / unsigned(speed);
+}
+
 // the frame of an attack animation the blow lands on: halfway through
 static int SwingHitFrame(int frames)
 {
@@ -80,10 +87,16 @@ static int SwingHitFrame(int frames)
 	return frames / 2;
 }
 
+// standing ready between two swings of a round: 6 ticks is 0.4 s
 static unsigned int SwingPauseTicks()
 {
-	int speed = std::max(10, int(core->GetDictionary().Get(StringView("Turn Based Combat Speed"), 100)));
-	return unsigned(12 * 100 / speed); // 0.8 s at 15 ticks per second
+	return AtCombatSpeed(6);
+}
+
+// squaring up before the swing animation: 9 ticks is 0.6 s; a takedown takes 24 (1.6 s)
+static unsigned int SwingWindupTicks(bool takedown)
+{
+	return AtCombatSpeed(takedown ? 24 : 9);
 }
 static Point walkFrom;
 static Point walkDest;
@@ -1448,14 +1461,14 @@ void CombatDirector::StartSwing(Actor* actor, Actor* target)
 	Combatant* combatant = FindCombatant(actor->GetGlobalID());
 	if (combatant && combatant->takedown != TakedownKind::None) {
 		combatant->toHitMod = TakedownPenalty(combatant->takedown);
-		swingWindup = SwingPauseTicks() * 2; // a slow wind-up, then a snappy blow
+		swingWindup = SwingWindupTicks(true); // a slow wind-up, then a snappy blow
 		const bool trip = combatant->takedown == TakedownKind::Trip;
 		static const Color tripColor(220, 180, 80, 255);
 		static const Color knockdownColor(220, 140, 80, 255);
 		ShowFloater(actor, trip ? u"Trip!" : u"Knockdown!", trip ? tripColor : knockdownColor);
 	} else {
 		if (combatant) combatant->toHitMod = 0;
-		swingWindup = SwingPauseTicks() * 3 / 4;
+		swingWindup = SwingWindupTicks(false);
 	}
 
 	// the dice panel starts rolling now and lands when the swing resolves

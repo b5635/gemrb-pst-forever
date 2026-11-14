@@ -40,3 +40,8 @@ build_debug/
 
 # local screenshot dumps from the in-game harness
 /shots/
+
+# upscale pipeline (models and the venv stay on this machine)
+tools/upscale/.venv/
+tools/upscale/models/
+tools/upscale/work/

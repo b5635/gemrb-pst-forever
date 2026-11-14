@@ -3,7 +3,7 @@
 Safe to run any time, as often as you like: each run makes the game match what
 VVE_Builder has generated right now.
 
-  * Reads <vve>/pst_overlay/plan.csv (strref -> sound resref) and takes the audio from
+  * Reads <vve>/pst_revoice/plan.csv (strref -> sound resref) and takes the audio from
     the first audio folder that has it (default: audio_omnivoice, then audio).
   * Copies new/changed WAVs into <game>/override; removes ones it put there earlier
     that are no longer generated.
@@ -23,6 +23,7 @@ Usage:
 import argparse
 import csv
 import difflib
+import filecmp
 import json
 import os
 import re
@@ -137,10 +138,18 @@ def uninstall(game):
 	print(f"Uninstalled: restored {', '.join(TLKS)}, removed {removed} voice files")
 
 
+def vve_dir(vve):
+	"""VVE_Builder output folder: pst_revoice (current name), else the old pst_overlay."""
+	for name in ("pst_revoice", "pst_overlay"):
+		if os.path.isdir(os.path.join(vve, name)):
+			return os.path.join(vve, name)
+	return os.path.join(vve, "pst_revoice")
+
+
 def read_plan(vve):
-	path = os.path.join(vve, "pst_overlay", "plan.csv")
+	path = os.path.join(vve_dir(vve), "plan.csv")
 	if not os.path.exists(path):
-		raise SystemExit(f"No plan at {path}: run 'python pst_overlay.py plan' in VVE_Builder first")
+		raise SystemExit(f"No plan at {path}: run 'python pst_revoice.py plan' in VVE_Builder first")
 	with open(path, encoding="utf-8-sig", newline="") as f:
 		return list(csv.DictReader(f))
 
@@ -150,7 +159,7 @@ def main():
 	ap.add_argument("--vve", default=r"D:\VVE_Builder-main")
 	ap.add_argument("--game", default=r"C:\Program Files (x86)\Black Isle\Torment")
 	ap.add_argument("--audio-dir", action="append",
-	                help="audio folder under <vve>/pst_overlay, in priority order (default: audio_omnivoice, audio)")
+	                help="audio folder under <vve>/pst_revoice, in priority order (default: audio_omnivoice, audio)")
 	ap.add_argument("--min-match", type=float, default=0.75, help="text similarity needed to voice a line")
 	ap.add_argument("--dry-run", action="store_true", help="report what would change, touch nothing")
 	ap.add_argument("--uninstall", action="store_true")
@@ -160,7 +169,7 @@ def main():
 	if args.uninstall:
 		return uninstall(game)
 
-	audio_dirs = [os.path.join(args.vve, "pst_overlay", d) for d in (args.audio_dir or ["audio_omnivoice", "audio"])]
+	audio_dirs = [os.path.join(vve_dir(args.vve), d) for d in (args.audio_dir or ["audio_omnivoice", "audio"])]
 	audio_dirs = [d for d in audio_dirs if os.path.isdir(d)]
 	available = {}
 	for d in reversed(audio_dirs):  # earlier folders win
@@ -213,10 +222,14 @@ def main():
 
 	override = os.path.join(game, "override")
 	to_copy = []
+	identical = []  # already in override byte for byte: just record them
 	for name, src in files.items():
 		dst = os.path.join(override, name)
 		st = os.stat(src)
 		if name in ours and state["files"][name] == [st.st_size, int(st.st_mtime)] and os.path.exists(dst):
+			continue
+		if os.path.exists(dst) and os.path.getsize(dst) == st.st_size and filecmp.cmp(src, dst, shallow=False):
+			identical.append((name, st))
 			continue
 		to_copy.append((name, src, st))
 	to_remove = sorted(ours - set(files))
@@ -227,7 +240,7 @@ def main():
 	print(f"VVE plan: {stats['generated']} lines with audio, {stats['restored']} restore rows, "
 	      f"{stats['no_audio']} not generated yet, {stats['voiced']} already voiced (kept), "
 	      f"{stats['text']} text mismatch, {stats['oob']} out of range")
-	print(f"Changes: copy {len(to_copy)} files, remove {len(to_remove)}, update {len(changed_refs)} strings")
+	print(f"Changes: copy {len(to_copy)} files ({len(identical)} identical skipped), remove {len(to_remove)}, update {len(changed_refs)} strings")
 	for ref, a, b in mismatches[:5]:
 		print(f"  text mismatch {ref}: game={a[:60]!r} plan={b[:60]!r}")
 	if args.dry_run:
@@ -238,6 +251,8 @@ def main():
 		os.makedirs(os.path.join(sdir, "override"), exist_ok=True)
 		for n in clashes:
 			shutil.copy2(os.path.join(override, n), os.path.join(sdir, "override", n))
+	for name, st in identical:
+		state["files"][name] = [st.st_size, int(st.st_mtime)]
 	for name, src, st in to_copy:
 		shutil.copyfile(src, os.path.join(override, name))
 		state["files"][name] = [st.st_size, int(st.st_mtime)]
@@ -266,4 +281,18 @@ def main():
 
 
 if __name__ == "__main__":
-	sys.exit(main())
+	pause = "--pause" in sys.argv
+	if pause:
+		sys.argv.remove("--pause")  # set by the .bat when it relaunches elevated
+	try:
+		code = main()
+	except BaseException:
+		import traceback
+		traceback.print_exc()
+		code = 1
+	if pause:
+		try:
+			input("Press Enter to close...")
+		except EOFError:
+			pass
+	sys.exit(code)
