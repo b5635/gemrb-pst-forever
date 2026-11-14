@@ -842,6 +842,9 @@ void GameControl::DrawTurnPreview() const
 		VideoDriver->DrawRect(Region(p - Point(1, 1), Size(2, 2)), reachColor, true, BlitFlags::BLENDED);
 	}
 
+	// aiming a spell, item, talk ...: the click goes to that, not to a walk, so no path
+	if (!preview.pending && targetMode != TargetMode::None && targetMode != TargetMode::Attack) return;
+
 	const int budget = preview.budget;
 	if (preview.path) {
 		// the dotted path: green where we can afford it, red beyond
@@ -2867,7 +2870,8 @@ bool GameControl::OnMouseDown(const MouseEvent& me, unsigned short Mod)
 
 	switch (me.button) {
 		case GEM_MB_MENU: //right click.
-			if (core->HasFeature(GFFlags::HAS_FLOAT_MENU) && !Mod) {
+			// pst's radial menu; the hotbar ("Hotbar" setting) replaces it, right click then only cancels
+			if (core->HasFeature(GFFlags::HAS_FLOAT_MENU) && !Mod && !core->GetDictionary().Get("Hotbar", 1)) {
 				core->GetGUIScriptEngine()->RunFunction("GUICommon", "OpenFloatMenuWindow", p, false);
 			} else {
 				TryDefaultTalk();
@@ -2958,7 +2962,7 @@ bool GameControl::OnMouseUp(const MouseEvent& me, unsigned short Mod)
 		ieDword actionLevel = core->GetDictionary().Get("ActionLevel", 0);
 
 		if (targetMode != TargetMode::None || actionLevel) {
-			if (!core->HasFeature(GFFlags::HAS_FLOAT_MENU)) {
+			if (!core->HasFeature(GFFlags::HAS_FLOAT_MENU) || core->GetDictionary().Get("Hotbar", 1)) {
 				SetTargetMode(TargetMode::None);
 			}
 			// update the action bar

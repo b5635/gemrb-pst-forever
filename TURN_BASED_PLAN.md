@@ -511,6 +511,20 @@ Built, in `gemrb/core/TurnBasedCombat/CombatDirector.*` (TurnManager renamed and
   `GemRB.ExecuteActionAt(actor, action, target)` aims a script action at a global ID (target
   written `[-1]`), for these tests and the autotest.
 
+- **Hotbar (U4):** `pst/TurnOrder.py`, always up (real time too, `Hotbar` setting), just above PST's
+  portrait strip. Everything at once: Attack, Talk, Inventory; the four weapon quick slots (click =
+  take in hand and attack); the five quick items; thief skills, memorized spells and abilities
+  (10x2, paged); Run, Delay, End Turn (turn based only, hidden out of a fight). Info line: name,
+  HP/AC/THAC0, movement bar in feet, action pip, attacks; Cancel while an action is picked. Icons are
+  PST's (radial menu BAMs `AMATTCK`/`AMTLK`/`AMINVNT`, slot art `AMGENS`, item and spell icons); the
+  war2 `bar_*.png` are gone, as are the Move button (click the ground to move) and the radial menu
+  (right click now cancels the picked action or the walk). Other turns show the selected character's
+  bar greyed. The bar and the timeline never take the key focus (Escape/Space reach the game view).
+  Click-twice move confirm off by default in `dev_settings.ini`. The aiming cursor of a spell/item
+  shows no walking path.
+- **Engine fix:** `Interface::Main` iterated its timer deque by iterator while callbacks add timers
+  (push_back invalidates deque iterators): froze or crashed with self-rescheduling GUI timers. Now by index.
+
 - **Autotest (C10):** `Turn Based Party AI` lets the AI play party members' turns (their
   scripts, then the nearest enemy). `tools\tb_autotest.ps1` stages fights from saves (cases:
   `mortuary`, `ghouls`), runs them to the end and fails on a crash, a fight that never starts
@@ -526,8 +540,7 @@ when neither side is a PC (since 2011). Scripts that flee from or retaliate agai
 `LastAttackerOf(Myself)` (e.g. `1700GUL7`'s flee block) therefore never resolve against the
 party, in real time as well. Changing it is a GemRB-wide behaviour change; open.
 
-Not done yet: the character bar with hotbar (U4: portrait, HP/AC/THAC0, movement bar, action
-pips, spell hotbar), overlay drawing with proper primitives (U6: smooth path, reach outline,
+Not done yet: hotbar hotkeys and drag-to-arrange, overlay drawing with proper primitives (U6: smooth path, reach outline,
 spell range/AoE), U7's UX pass, dry-run decide (scripts run for real once per turn), per-intent multi-turn flee
 (`ceil(t/6)` rounds; now one flee walk per turn, re-decided each turn), the rest of the UI
 revamp with PST's art (U0, U1: PST art panels, radial-menu icons), autotest cases

@@ -74,7 +74,11 @@ def OnLoad():
 	MenuWindow.SetupMenuWindowControls (OptionsWindow)
 
 	UpdateControlStatus ()
-	
+
+	# the hotbar above the portraits, always up (it refreshes itself from here on)
+	import TurnOrder
+	TurnOrder.UpdateCombatBar ()
+
 def SetupClockWindowControls (Window):
 	# time button
 	Button = Window.GetControl (0)

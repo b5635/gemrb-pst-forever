@@ -1039,12 +1039,14 @@ void Interface::Main()
 	double frames = 0.0;
 
 	do {
-		for (auto it = timers.begin(); it != timers.end();) {
-			if (it->IsRunning()) {
-				it->Update(time);
-				++it;
+		// by index: a timer's callback may add timers, and push_back invalidates deque iterators
+		// (references stay valid, so the running timer itself is safe)
+		for (size_t i = 0; i < timers.size();) {
+			if (timers[i].IsRunning()) {
+				timers[i].Update(time);
+				++i;
 			} else {
-				it = timers.erase(it);
+				timers.erase(timers.begin() + i);
 			}
 		}
 
