@@ -32,6 +32,11 @@ rem switch every feature on in the installed config (tools\dev_settings.ini)
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\apply_dev_settings.ps1" -GameDir "%GAME_DIR%"
 if errorlevel 1 echo *** Could not apply tools\dev_settings.ini ***
 
+rem CMake INSTALL(DIRECTORY) has been skipping newly added override files; copy sounds ourselves
+if not exist "%GAME_DIR%\override\pst" mkdir "%GAME_DIR%\override\pst"
+copy /y "%~dp0gemrb\override\pst\*.ogg" "%GAME_DIR%\override\pst\" >nul 2>nul
+copy /y "%~dp0gemrb\override\pst\*.wav" "%GAME_DIR%\override\pst\" >nul 2>nul
+
 echo.
 echo === Done: %GAME_DIR% is up to date ===
 

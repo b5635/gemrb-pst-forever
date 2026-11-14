@@ -81,6 +81,13 @@ public:
 	// our blood / material effects replace the original blood animations (CustomBlood)
 	static bool CustomBlood();
 
+	// combat maneuvers (presentation only)
+	void SpawnDustPuff(const Point& pos); // withdraw: a ring of dust rolling out from the feet
+	// run: kicked up behind someone moving from `from`; burst = the big one when they start
+	void SpawnSmokePuff(const Point& pos, const Point& from, bool burst = false);
+	void SpawnBlockSparks(const Actor* blocker, const Actor* attacker); // where the blades meet
+	void SpawnShieldGlow(const Actor* actor); // block readied: an oval of light that fades fast
+
 	// game events
 	void OnDamage(const Actor* target, int damage, int damagetype, bool critical);
 	// a physical hit that would have shown a blood animation; severity 1-3, 0 = gory death
@@ -106,7 +113,8 @@ private:
 		Chip, // bone / stone / metal bit in the air, becomes Debris on landing
 		Debris, // on the floor, lingers
 		Smoke, // shadow wisp
-		Wisp // spirit wisp, additive
+		Wisp, // spirit wisp, additive
+		Shield // block glow, additive, snaps on and fades fast
 	};
 	struct Particle {
 		float x, y, z; // ground point (map units) and height
@@ -146,6 +154,7 @@ private:
 	void Land(Particle& p) const;
 	void TrimDecals();
 	bool Room() const;
+	Particle Burst(Kind kind, float x, float y, float z, float ang, float speed, float vz) const;
 };
 
 }

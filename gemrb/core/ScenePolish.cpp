@@ -126,6 +126,10 @@ void ScenePolish::Simulate(float dt)
 				p.vx += Rand(-20.0f, 20.0f) * dt;
 				p.size += 4.0f * dt;
 				break;
+			case Kind::Shield:
+				p.vx *= 1.0f - 4.0f * dt;
+				p.vz *= 1.0f - 4.0f * dt;
+				break;
 			case Kind::Wisp:
 				p.vx *= 1.0f - 1.5f * dt;
 				p.vy *= 1.0f - 1.5f * dt;
@@ -334,6 +338,11 @@ void ScenePolish::DrawParticles(const Region& vp) const
 				fade = 1.0f - t * t;
 				additive = true;
 				break;
+			case Kind::Shield:
+				// snaps on, then fades out fast
+				fade = std::min(1.0f, t * 12.0f) * (1.0f - t) * (1.0f - t);
+				additive = true;
+				break;
 			case Kind::Blood:
 			case Kind::Chip:
 				fade = 1.0f;
@@ -528,6 +537,181 @@ void ScenePolish::BuildPost(const Map* map, ScenePost& post) const
 		set3(post.lift, 0.020f, 0.009f, 0.0f);
 		set3(post.gain, 1.04f, 1.0f, 0.94f);
 	}
+}
+
+// ---------------------------------------------------------------- combat maneuvers
+
+ScenePolish::Particle ScenePolish::Burst(Kind kind, float x, float y, float z, float ang, float speed, float vz) const
+{
+	Particle p {};
+	p.kind = kind;
+	p.x = x;
+	p.y = y;
+	p.z = z;
+	p.vx = std::cos(ang) * speed;
+	p.vy = std::sin(ang) * speed * 0.5f; // the floor is seen at a slant
+	p.vz = vz;
+	return p;
+}
+
+static float BodyHeight(const Actor* actor)
+{
+	Region box = actor->DrawingRegion();
+	return std::max(24.0f, std::min(100.0f, float(actor->Pos.y - box.y)));
+}
+
+void ScenePolish::SpawnDustPuff(const Point& pos)
+{
+	if (!Setting("HitParticles", 1)) return;
+	const float gx = float(pos.x), gy = float(pos.y);
+	// a fast, flat ring rolling out from the feet ...
+	const int ring = 26;
+	for (int i = 0; i < ring && Room(); ++i) {
+		float ang = 6.2831853f * float(i) / float(ring) + Rand(-0.12f, 0.12f);
+		Particle p = Burst(Kind::Dust, gx, gy, Rand(0.5f, 3.0f), ang, Rand(150.0f, 210.0f), Rand(2.0f, 10.0f));
+		p.life = Rand(0.4f, 0.6f);
+		p.size = Rand(2.5f, 4.0f);
+		p.r = Rand(0.66f, 0.74f);
+		p.g = Rand(0.58f, 0.64f);
+		p.b = Rand(0.42f, 0.48f);
+		p.a = 0.5f;
+		particles.push_back(p);
+	}
+	// ... and behind it a slower, thicker cloud that settles
+	for (int i = 0; i < 8 && Room(); ++i) {
+		Particle p = Burst(Kind::Dust, gx + Rand(-4.0f, 4.0f), gy + Rand(-2.0f, 2.0f), Rand(1.0f, 4.0f),
+				   Rand(0.0f, 6.2831853f), Rand(20.0f, 60.0f), Rand(6.0f, 16.0f));
+		p.life = Rand(0.6f, 0.85f);
+		p.size = Rand(4.5f, 6.5f);
+		p.r = 0.68f;
+		p.g = 0.6f;
+		p.b = 0.45f;
+		p.a = 0.4f;
+		particles.push_back(p);
+	}
+}
+
+void ScenePolish::SpawnSmokePuff(const Point& pos, const Point& from, bool burst)
+{
+	if (!Setting("HitParticles", 1)) return;
+	const float gx = float(pos.x), gy = float(pos.y);
+	// kicked up behind the runner; all around when standing still (the first stride)
+	const float dx = float(pos.x - from.x), dy = float(pos.y - from.y) * 2.0f;
+	const bool moving = dx * dx + dy * dy > 0.5f;
+	const float back = moving ? std::atan2(-dy, -dx) : 0.0f;
+	const int n = burst ? 16 : 6;
+	for (int i = 0; i < n && Room(); ++i) {
+		float ang = moving ? back + Rand(-0.9f, 0.9f) : Rand(0.0f, 6.2831853f);
+		float speed = burst ? Rand(50.0f, 110.0f) : Rand(30.0f, 70.0f);
+		Particle p = Burst(Kind::Smoke, gx + Rand(-3.0f, 3.0f), gy + Rand(-1.5f, 1.5f), Rand(1.0f, 4.0f), ang, speed,
+				   Rand(12.0f, 30.0f));
+		p.life = Rand(0.45f, 0.75f);
+		p.size = burst ? Rand(3.5f, 5.5f) : Rand(2.5f, 4.0f);
+		float shade = Rand(0.62f, 0.72f);
+		p.r = shade;
+		p.g = shade * 0.97f;
+		p.b = shade * 0.92f;
+		p.a = burst ? 0.5f : 0.38f;
+		particles.push_back(p);
+	}
+}
+
+void ScenePolish::SpawnBlockSparks(const Actor* blocker, const Actor* attacker)
+{
+	if (!blocker || !Setting("HitParticles", 1)) return;
+	// where the blades meet: a third of the way toward the attacker, at weapon height
+	const Point& b = blocker->Pos;
+	const Point& a = attacker ? attacker->Pos : b;
+	const float gx = float(b.x) + float(a.x - b.x) * 0.35f;
+	const float gy = float(b.y) + float(a.y - b.y) * 0.35f;
+	const float z = BodyHeight(blocker) * 0.6f;
+	const float toward = a == b ? Rand(0.0f, 6.2831853f) : std::atan2(float(a.y - b.y) * 2.0f, float(a.x - b.x));
+	// two fans glancing off to either side of the line between them, a few back at the attacker
+	for (int i = 0; i < 22 && Room(); ++i) {
+		float side = (i & 1) ? 1.5708f : -1.5708f;
+		float ang = i < 18 ? toward + side + Rand(-0.6f, 0.6f) : toward + Rand(-0.4f, 0.4f);
+		Particle p = Burst(Kind::Spark, gx, gy, z + Rand(-4.0f, 4.0f), ang, Rand(110.0f, 260.0f), Rand(20.0f, 150.0f));
+		p.life = Rand(0.2f, 0.5f);
+		p.size = Rand(0.6f, 1.2f);
+		p.r = 1.0f;
+		p.g = Rand(0.82f, 1.0f);
+		p.b = Rand(0.45f, 0.75f);
+		p.a = 1.0f;
+		particles.push_back(p);
+	}
+	// the white-hot point of contact
+	if (Room()) {
+		Particle p = Burst(Kind::Spark, gx, gy, z, 0.0f, 0.0f, 0.0f);
+		p.life = 0.1f;
+		p.size = 5.0f;
+		p.r = 1.0f;
+		p.g = 0.97f;
+		p.b = 0.85f;
+		p.a = 1.0f;
+		particles.push_back(p);
+	}
+	Flash f {};
+	f.x = gx;
+	f.y = gy;
+	f.z = z;
+	f.radius = 80.0f;
+	f.r = 0.9f;
+	f.g = 0.8f;
+	f.b = 0.45f;
+	f.life = 0.16f;
+	flashes.push_back(f);
+}
+
+void ScenePolish::SpawnShieldGlow(const Actor* actor)
+{
+	if (!actor || !Setting("HitParticles", 1)) return;
+	const float gx = float(actor->Pos.x), gy = float(actor->Pos.y);
+	const float h = BodyHeight(actor);
+	// an upright oval of light around the body that swells a little as it fades
+	const float rx = std::max(16.0f, h * 0.38f), rz = h * 0.58f, cz = h * 0.52f;
+	const int rim = 34;
+	for (int i = 0; i < rim && Room(); ++i) {
+		float t = 6.2831853f * float(i) / float(rim);
+		Particle p {};
+		p.kind = Kind::Shield;
+		p.x = gx + std::cos(t) * rx;
+		p.y = gy + 2.0f; // just in front of the feet
+		p.z = cz + std::sin(t) * rz;
+		p.vx = std::cos(t) * 14.0f;
+		p.vz = std::sin(t) * 14.0f;
+		p.life = Rand(0.42f, 0.5f);
+		p.size = Rand(1.8f, 2.4f);
+		p.r = 0.6f;
+		p.g = 0.82f;
+		p.b = 1.0f;
+		p.a = 0.85f;
+		particles.push_back(p);
+	}
+	// a faint wash over the middle
+	for (int i = 0; i < 3 && Room(); ++i) {
+		Particle p {};
+		p.kind = Kind::Shield;
+		p.x = gx + Rand(-3.0f, 3.0f);
+		p.y = gy + 2.0f;
+		p.z = cz + (float(i) - 1.0f) * rz * 0.5f;
+		p.life = 0.4f;
+		p.size = rx * 0.45f;
+		p.r = 0.45f;
+		p.g = 0.65f;
+		p.b = 1.0f;
+		p.a = 0.22f;
+		particles.push_back(p);
+	}
+	Flash f {};
+	f.x = gx;
+	f.y = gy;
+	f.z = cz;
+	f.radius = 85.0f;
+	f.r = 0.45f;
+	f.g = 0.65f;
+	f.b = 1.0f;
+	f.life = 0.4f;
+	flashes.push_back(f);
 }
 
 // ---------------------------------------------------------------- events

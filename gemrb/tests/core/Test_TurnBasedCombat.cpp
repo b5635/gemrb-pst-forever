@@ -77,16 +77,66 @@ TEST(CombatDirectorTest, ResetBudgetRestoresTheTurn)
 	Combatant combatant = MakeCombatant(1, 1, 10, true);
 	combatant.mainActionUsed = true;
 	combatant.ran = true;
+	combatant.withdrawn = true;
 	combatant.freeWeaponSwapUsed = true;
 	combatant.attacking = true;
+	combatant.blockStacks = 2;
+	combatant.takedown = TakedownKind::Trip;
 	combatant.movePx = 3;
 	CombatDirector::ResetBudget(combatant, 320);
 	EXPECT_FALSE(combatant.mainActionUsed);
 	EXPECT_FALSE(combatant.ran);
+	EXPECT_FALSE(combatant.withdrawn);
 	EXPECT_FALSE(combatant.freeWeaponSwapUsed);
 	EXPECT_FALSE(combatant.attacking);
+	EXPECT_EQ(combatant.blockStacks, 0);
+	EXPECT_EQ(combatant.takedown, TakedownKind::None);
 	EXPECT_EQ(combatant.movePx, 320);
 	EXPECT_EQ(combatant.maxMovePx, 320);
+}
+
+TEST(CombatDirectorTest, RunAddsMaxMovementWithoutRaisingTheCap)
+{
+	Combatant combatant = MakeCombatant(1, 1, 10, true);
+	CombatDirector::ResetBudget(combatant, 31);
+	combatant.movePx = 15;
+	CombatDirector::ApplyRun(combatant);
+	EXPECT_TRUE(combatant.ran);
+	EXPECT_TRUE(combatant.mainActionUsed);
+	EXPECT_EQ(combatant.movePx, 46);
+	EXPECT_EQ(combatant.maxMovePx, 31);
+}
+
+TEST(CombatDirectorTest, WithdrawHalvesRemainingMovement)
+{
+	Combatant combatant = MakeCombatant(1, 1, 10, true);
+	CombatDirector::ResetBudget(combatant, 31);
+	CombatDirector::ApplyWithdraw(combatant);
+	EXPECT_TRUE(combatant.withdrawn);
+	EXPECT_TRUE(combatant.mainActionUsed);
+	EXPECT_EQ(combatant.movePx, 15);
+	EXPECT_EQ(combatant.maxMovePx, 31);
+}
+
+TEST(CombatDirectorTest, BlockSpendsAnAttackAndCannotOverdraw)
+{
+	Combatant combatant = MakeCombatant(1, 1, 10, true);
+	combatant.remainingAttacks = 2;
+	EXPECT_TRUE(CombatDirector::ApplyBlock(combatant));
+	EXPECT_EQ(combatant.remainingAttacks, 1);
+	EXPECT_EQ(combatant.blockStacks, 1);
+	EXPECT_TRUE(CombatDirector::ApplyBlock(combatant));
+	EXPECT_EQ(combatant.remainingAttacks, 0);
+	EXPECT_EQ(combatant.blockStacks, 2);
+	EXPECT_FALSE(CombatDirector::ApplyBlock(combatant));
+	EXPECT_EQ(combatant.blockStacks, 2);
+}
+
+TEST(CombatDirectorTest, TripAndKnockdownShareTheTakedownPenalty)
+{
+	EXPECT_EQ(CombatDirector::TakedownPenalty(TakedownKind::Trip), -2);
+	EXPECT_EQ(CombatDirector::TakedownPenalty(TakedownKind::Knockdown), 0);
+	EXPECT_EQ(CombatDirector::TakedownPenalty(TakedownKind::None), 0);
 }
 
 TEST(TurnMovementTest, CostIsTheSameAcrossAndDown)

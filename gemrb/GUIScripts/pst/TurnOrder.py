@@ -280,6 +280,7 @@ INFO_H = 18
 ROWS_Y = PAD + INFO_H + 2
 ROWS_H = SLOT_STEP + SLOT
 SIDE_W = 58 # Run / Delay
+MANEUVER_W = 62 # Withdraw / Block / Trip
 END_W = 66
 REFRESH_INTERVAL = 250 # selection, gear, spells and the cursor mode change outside of the bar
 
@@ -296,6 +297,9 @@ CID_RUN = 62
 CID_DELAY = 63
 CID_END = 64
 CID_CANCEL = 65
+CID_WITHDRAW = 66
+CID_BLOCK = 67
+CID_TRIP = 68
 CID_NAME = 70
 CID_MOVE_BACK = 71
 CID_MOVE_FILL = 72
@@ -327,7 +331,9 @@ ThiefSkills = [
 
 # what the bar does outside a fight, and on someone else's turn
 RealTimeBudget = {'Busy' : False, 'CanAttack' : True, 'CanUseItem' : True, 'CanCast' : True, 'CanEquip' : True,
-	'CanRun' : False, 'MainActionUsed' : False, 'Ran' : False, 'Move' : 0, 'MaxMove' : 0, 'Attacks' : 0}
+	'CanRun' : False, 'CanWithdraw' : False, 'CanBlock' : False, 'CanTrip' : False,
+	'MainActionUsed' : False, 'Ran' : False, 'Withdrawn' : False, 'OwnTurn' : False,
+	'Move' : 0, 'MaxMove' : 0, 'Attacks' : 0, 'BlockStacks' : 0, 'Takedown' : 'None'}
 WaitingBudget = dict (RealTimeBudget, Busy = True, CanAttack = False, CanUseItem = False, CanCast = False, CanEquip = False)
 
 SpellPage = 0
@@ -345,6 +351,7 @@ def BarLayout ():
 	lay['spells'] = x; x += SPELL_COLS * SLOT_STEP - 2 + 2
 	lay['pager'] = x; x += 28 + GROUP_GAP
 	lay['side'] = x; x += SIDE_W + 4
+	lay['maneuvers'] = x; x += MANEUVER_W * 2 + 4
 	lay['end'] = x; x += END_W + PAD
 	lay['width'] = x
 	lay['height'] = ROWS_Y + ROWS_H + PAD
@@ -441,9 +448,16 @@ def BuildBar (Window, lay):
 	Button.OnPress (lambda: TurnSpellPage (1))
 
 	MakeTextButton (Window, CID_RUN, {'x' : lay['side'], 'y' : ROWS_Y, 'w' : SIDE_W, 'h' : SLOT},
-		"Run", "Run: give up your action for twice the movement. Turn based only.", BarRun)
+		"Run", "Run: give up your action; gain movement equal to your maximum. Turn based only.", BarRun)
 	MakeTextButton (Window, CID_DELAY, {'x' : lay['side'], 'y' : ROWS_Y + SLOT_STEP, 'w' : SIDE_W, 'h' : SLOT},
 		"Delay", "Delay: act after everyone else this round. Only before moving or acting.", BarDelay)
+	mx = lay['maneuvers']
+	MakeTextButton (Window, CID_WITHDRAW, {'x' : mx, 'y' : ROWS_Y, 'w' : MANEUVER_W, 'h' : SLOT},
+		"Withdraw", "Withdraw: spend your action and half your remaining movement. Immune to attacks of opportunity until your next turn; you walk.", BarWithdraw)
+	MakeTextButton (Window, CID_BLOCK, {'x' : mx + MANEUVER_W, 'y' : ROWS_Y, 'w' : MANEUVER_W, 'h' : SLOT},
+		"Block", "Block: click once per incoming hit you want to stop. Each click spends one remaining attack. Fighters only (not Morte). No action.", BarBlock)
+	MakeTextButton (Window, CID_TRIP, {'x' : mx, 'y' : ROWS_Y + SLOT_STEP, 'w' : MANEUVER_W * 2, 'h' : SLOT},
+		"Trip", "Trip: click a target. First attack tries to knock them prone (-2 to hit, no damage); remaining attacks are normal. Fighters only.", BarTrip)
 	MakeTextButton (Window, CID_END, {'x' : lay['end'], 'y' : ROWS_Y, 'w' : END_W, 'h' : ROWS_H},
 		"End\nTurn", "End this character's turn (Space): the next party member in the order goes on.", BarEndTurn, ColorEndTurn)
 
@@ -563,6 +577,8 @@ def UpdateCombatBar ():
 	BarShown = True
 
 	if SelectedMode is not None and GemRB.GameControlGetTargetMode () == TARGET_MODE_NONE:
+		if SelectedMode == "trip":
+			GemRB.TurnBasedTrip (1) # no target picked: the trip is not kept for a later attack
 		SelectedMode = None # dropped by right click, Escape, or the action went off
 
 	fight = InFight ()
@@ -652,11 +668,20 @@ def UpdateCombatBar ():
 	Window.GetControl (CID_SPELL_NEXT).SetVisible (SpellPage < pages - 1)
 
 	# turn based only: out of a fight they are not there
-	for cid in (CID_RUN, CID_DELAY, CID_END):
+	for cid in (CID_RUN, CID_DELAY, CID_END, CID_WITHDRAW, CID_BLOCK, CID_TRIP):
 		Window.GetControl (cid).SetVisible (fight)
-	SetSlotState (Window.GetControl (CID_RUN), fight and budget['CanRun'] and not busy, False)
-	SetSlotState (Window.GetControl (CID_DELAY), fight and not busy and not budget['MainActionUsed'] and budget['Move'] == budget['MaxMove'], False)
-	SetSlotState (Window.GetControl (CID_END), fight and not busy, False)
+	ownTurn = budget.get ('OwnTurn', fight and TurnOwnerPC () != 0)
+	SetSlotState (Window.GetControl (CID_RUN), fight and budget.get ('CanRun') and not busy, False)
+	SetSlotState (Window.GetControl (CID_WITHDRAW), fight and budget.get ('CanWithdraw') and not busy, False)
+	stacks = budget.get ('BlockStacks', 0)
+	Block = Window.GetControl (CID_BLOCK)
+	Block.SetText ("Block {}".format (stacks) if stacks else "Block")
+	Block.SetTooltip ("Block: click once per incoming hit ({} ready). Each click spends one remaining attack.".format (stacks) if stacks else "Block: click once per incoming hit you want to stop. Each click spends one remaining attack. Fighters only (not Morte).")
+	SetSlotState (Block, fight and budget.get ('CanBlock') and not busy, False)
+	tripOn = budget.get ('Takedown') == 'Trip' or SelectedMode == "trip"
+	SetSlotState (Window.GetControl (CID_TRIP), fight and budget.get ('CanTrip') and not busy, tripOn)
+	SetSlotState (Window.GetControl (CID_DELAY), fight and ownTurn and not busy and not budget['MainActionUsed'] and budget['Move'] == budget['MaxMove'], False)
+	SetSlotState (Window.GetControl (CID_END), fight and ownTurn and not busy, False)
 	Window.GetControl (CID_CANCEL).SetVisible (SelectedMode is not None)
 
 	# info line
@@ -688,10 +713,21 @@ def UpdateCombatBar ():
 	Fill.SetBackground (ColorMoveRan if budget['Ran'] else ColorMoveFill)
 	Window.GetControl (CID_MOVE_TEXT).SetText ("{} / {} ft".format (budget['Move'], budget['MaxMove']))
 
-	used = budget['MainActionUsed'] or budget['Ran']
+	used = budget['MainActionUsed'] or budget['Ran'] or budget.get ('Withdrawn')
 	Window.GetControl (CID_ACTION_PIP).SetBackground (ColorPipUsed if used else ColorPipReady)
-	Window.GetControl (CID_ACTION_TEXT).SetText ("Running" if budget['Ran'] else ("Action used" if used else "Action"))
-	Window.GetControl (CID_ATTACKS).SetText ("Attacks: {}".format (budget['Attacks']))
+	if budget.get ('Withdrawn'):
+		actionText = "Withdrawn"
+	elif budget['Ran']:
+		actionText = "Running"
+	elif used:
+		actionText = "Action used"
+	else:
+		actionText = "Action"
+	Window.GetControl (CID_ACTION_TEXT).SetText (actionText)
+	attacks = "Attacks: {}".format (budget['Attacks'])
+	if budget.get ('BlockStacks', 0):
+		attacks += "  Block {}".format (budget['BlockStacks'])
+	Window.GetControl (CID_ATTACKS).SetText (attacks)
 
 def StartSync ():
 	"""Refreshes the bar a few times a second while in the game."""
@@ -791,6 +827,27 @@ def BarSpell (btn):
 def BarRun ():
 	if GemRB.TurnBasedRun ():
 		BarCancel ()
+
+def BarWithdraw ():
+	if GemRB.TurnBasedWithdraw ():
+		BarCancel ()
+
+def BarBlock ():
+	if GemRB.TurnBasedBlock ():
+		UpdateCombatBar ()
+
+def BarTrip ():
+	"""Pick a target: the first attack on it trips, the rest of the round's attacks follow."""
+	import ActionsWindow
+	if SelectedMode == "trip":
+		BarCancel () # drops the target pick, which disarms the trip
+		return
+	if (GemRB.GetTurnBudget () or {}).get ('Takedown') == 'Trip':
+		GemRB.TurnBasedTrip () # left armed with nothing picked: clear it before arming fresh
+	if not GemRB.TurnBasedTrip ():
+		return
+	ActionsWindow.ActionAttackPressed ()
+	SelectMode ("trip")
 
 def BarInventory ():
 	import GUIINV

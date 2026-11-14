@@ -12224,6 +12224,7 @@ static PyObject* GemRB_GetTurnOrder(PyObject* /*self*/, PyObject* /*args*/)
 		PyDict_SetItemString(entry, "IsPC", DecRef(PyBool_FromLong, combatant.isPC));
 		PyDict_SetItemString(entry, "Done", DecRef(PyBool_FromLong, combatant.done));
 		PyDict_SetItemString(entry, "Dead", DecRef(PyBool_FromLong, combatant.dead || !actor));
+		PyDict_SetItemString(entry, "Prone", DecRef(PyBool_FromLong, combatant.prone));
 		if (actor) {
 			PyObject* name = PyString_FromStringObj(actor->GetShortName());
 			PyDict_SetItemString(entry, "Name", name);
@@ -12236,6 +12237,7 @@ static PyObject* GemRB_GetTurnOrder(PyObject* /*self*/, PyObject* /*args*/)
 			PyDict_SetItemString(entry, "HP", DecRef(PyLong_FromLong, actor->GetStat(IE_HITPOINTS)));
 			PyDict_SetItemString(entry, "MaxHP", DecRef(PyLong_FromLong, actor->GetStat(IE_MAXHITPOINTS)));
 			PyDict_SetItemString(entry, "Hostile", DecRef(PyBool_FromLong, actor->GetStat(IE_EA) >= EA_EVILCUTOFF));
+			PyDict_SetItemString(entry, "Stance", DecRef(PyLong_FromLong, actor->GetStance()));
 			int bestiary = -1;
 			if (core->HasFeature(GFFlags::HAS_BEASTS_INI)) {
 				size_t animID = actor->BaseStats[IE_ANIMATION_ID];
@@ -12256,6 +12258,7 @@ static PyObject* GemRB_GetTurnOrder(PyObject* /*self*/, PyObject* /*args*/)
 			PyDict_SetItemString(entry, "HP", DecRef(PyLong_FromLong, 0));
 			PyDict_SetItemString(entry, "MaxHP", DecRef(PyLong_FromLong, 1));
 			PyDict_SetItemString(entry, "Hostile", DecRef(PyBool_FromLong, 0));
+			PyDict_SetItemString(entry, "Stance", DecRef(PyLong_FromLong, 0));
 			PyDict_SetItemString(entry, "Bestiary", DecRef(PyLong_FromLong, -1));
 		}
 		PyList_Append(list, entry);
@@ -12281,12 +12284,25 @@ PyDoc_STRVAR(GemRB_GetTurnBudget__doc,
 \n\
 **See also:** [GetTurnOrder](GetTurnOrder.md)");
 
+static const Actor* BudgetActor(const Game* game, const CombatDirector& turns)
+{
+	const Actor* actor = turns.GetActiveActor();
+	if (actor && actor->InParty) return actor;
+	if (game->selected.empty()) return nullptr;
+	actor = game->selected[0];
+	if (!actor || !actor->InParty || !turns.FindCombatant(actor->GetGlobalID())) return nullptr;
+	return actor;
+}
+
 static PyObject* GemRB_GetTurnBudget(PyObject* /*self*/, PyObject* /*args*/)
 {
 	GET_GAME();
 	const CombatDirector& turns = game->combat;
-	const Actor* actor = turns.GetActiveActor();
-	if (!turns.IsRunning() || !actor || !actor->InParty) {
+	if (!turns.IsRunning()) {
+		Py_RETURN_NONE;
+	}
+	const Actor* actor = BudgetActor(game, turns);
+	if (!actor) {
 		Py_RETURN_NONE;
 	}
 	const Combatant* combatant = turns.FindCombatant(actor->GetGlobalID());
@@ -12295,23 +12311,32 @@ static PyObject* GemRB_GetTurnBudget(PyObject* /*self*/, PyObject* /*args*/)
 	}
 
 	constexpr int UNITS_PER_FOOT = SEARCHMAP_TILE_WIDTH;
-	bool busy = turns.IsBusy(actor);
+	bool ownTurn = actor->GetGlobalID() == turns.GetActiveID();
+	bool busy = ownTurn && turns.IsBusy(actor);
 	PyObject* dict = PyDict_New();
 	PyDict_SetItemString(dict, "ID", DecRef(PyLong_FromLong, actor->GetGlobalID()));
+	PyDict_SetItemString(dict, "OwnTurn", DecRef(PyBool_FromLong, ownTurn));
 	PyDict_SetItemString(dict, "Move", DecRef(PyLong_FromLong, combatant->movePx / UNITS_PER_FOOT));
 	PyDict_SetItemString(dict, "MaxMove", DecRef(PyLong_FromLong, combatant->maxMovePx / UNITS_PER_FOOT));
 	PyDict_SetItemString(dict, "MainActionUsed", DecRef(PyBool_FromLong, combatant->mainActionUsed));
 	PyDict_SetItemString(dict, "Ran", DecRef(PyBool_FromLong, combatant->ran));
-	PyDict_SetItemString(dict, "CanAttack", DecRef(PyBool_FromLong, turns.CanAfford(actor, TBAction::Attack)));
-	PyDict_SetItemString(dict, "CanCast", DecRef(PyBool_FromLong, turns.CanAfford(actor, TBAction::CastSpell)));
-	PyDict_SetItemString(dict, "CanUseItem", DecRef(PyBool_FromLong, turns.CanAfford(actor, TBAction::UseItem)));
-	PyDict_SetItemString(dict, "CanEquip", DecRef(PyBool_FromLong, turns.CanAfford(actor, TBAction::Equip)));
-	PyDict_SetItemString(dict, "CanRun", DecRef(PyBool_FromLong, turns.CanAfford(actor, TBAction::Run)));
+	PyDict_SetItemString(dict, "Withdrawn", DecRef(PyBool_FromLong, combatant->withdrawn));
+	PyDict_SetItemString(dict, "CanAttack", DecRef(PyBool_FromLong, ownTurn && turns.CanAfford(actor, TBAction::Attack)));
+	PyDict_SetItemString(dict, "CanCast", DecRef(PyBool_FromLong, ownTurn && turns.CanAfford(actor, TBAction::CastSpell)));
+	PyDict_SetItemString(dict, "CanUseItem", DecRef(PyBool_FromLong, ownTurn && turns.CanAfford(actor, TBAction::UseItem)));
+	PyDict_SetItemString(dict, "CanEquip", DecRef(PyBool_FromLong, ownTurn && turns.CanAfford(actor, TBAction::Equip)));
+	PyDict_SetItemString(dict, "CanRun", DecRef(PyBool_FromLong, ownTurn && turns.CanAfford(actor, TBAction::Run)));
+	PyDict_SetItemString(dict, "CanWithdraw", DecRef(PyBool_FromLong, ownTurn && turns.CanAfford(actor, TBAction::Withdraw)));
+	PyDict_SetItemString(dict, "CanBlock", DecRef(PyBool_FromLong, turns.CanBlock(actor)));
+	PyDict_SetItemString(dict, "CanTrip", DecRef(PyBool_FromLong, ownTurn && turns.CanTrip(actor)));
 	PyDict_SetItemString(dict, "Busy", DecRef(PyBool_FromLong, busy));
-	// attacks left in the round being swung, or what the next round will have (3/2: 2, then 1)
-	Actor* attacker = game->GetActorByGlobalID(actor->GetGlobalID());
-	int attacks = combatant->attacking ? attacker->attackcount : (combatant->mainActionUsed ? 0 : attacker->GetAttacksNextRound());
+	int attacks = turns.GetRemainingAttacks(actor);
 	PyDict_SetItemString(dict, "Attacks", DecRef(PyLong_FromLong, attacks));
+	PyDict_SetItemString(dict, "BlockStacks", DecRef(PyLong_FromLong, combatant->blockStacks));
+	const char* takedown = "None";
+	if (combatant->takedown == TakedownKind::Trip) takedown = "Trip";
+	else if (combatant->takedown == TakedownKind::Knockdown) takedown = "Knockdown";
+	PyDict_SetItemString(dict, "Takedown", DecRef(PyString_FromString, takedown));
 	return dict;
 }
 
@@ -12536,11 +12561,95 @@ static PyObject* GemRB_TurnBasedRun(PyObject* /*self*/, PyObject* /*args*/)
 {
 	GET_GAME();
 	CombatDirector& turns = game->combat;
-	const Actor* actor = turns.GetActiveActor();
-	if (!turns.IsRunning() || !actor || !actor->InParty || !turns.CanAfford(actor, TBAction::Run)) {
+	Actor* actor = turns.GetActiveActor();
+	if (!turns.IsRunning() || !actor || !actor->InParty) {
 		Py_RETURN_FALSE;
 	}
-	turns.Spend(actor, TBAction::Run);
+	if (!turns.UseRun(actor)) {
+		Py_RETURN_FALSE;
+	}
+	Py_RETURN_TRUE;
+}
+
+PyDoc_STRVAR(GemRB_TurnBasedWithdraw__doc,
+	     "===== TurnBasedWithdraw =====\n\
+\n\
+**Prototype:** GemRB.TurnBasedWithdraw ()\n\
+\n\
+**Description:** The active party member gives up its action and half its \n\
+remaining movement to become immune to attacks of opportunity until its next turn.\n\
+\n\
+**Return value:** bool");
+
+static PyObject* GemRB_TurnBasedWithdraw(PyObject* /*self*/, PyObject* /*args*/)
+{
+	GET_GAME();
+	CombatDirector& turns = game->combat;
+	Actor* actor = turns.GetActiveActor();
+	if (!turns.IsRunning() || !actor || !actor->InParty) {
+		Py_RETURN_FALSE;
+	}
+	if (!turns.UseWithdraw(actor)) {
+		Py_RETURN_FALSE;
+	}
+	Py_RETURN_TRUE;
+}
+
+PyDoc_STRVAR(GemRB_TurnBasedBlock__doc,
+	     "===== TurnBasedBlock =====\n\
+\n\
+**Prototype:** GemRB.TurnBasedBlock ()\n\
+\n\
+**Description:** The selected fighter (except Morte) sacrifices one remaining \n\
+attack to attempt to block an incoming melee hit. Does not use the action.\n\
+\n\
+**Return value:** bool");
+
+static PyObject* GemRB_TurnBasedBlock(PyObject* /*self*/, PyObject* /*args*/)
+{
+	GET_GAME();
+	CombatDirector& turns = game->combat;
+	if (!turns.IsRunning()) {
+		Py_RETURN_FALSE;
+	}
+	const Actor* selected = BudgetActor(game, turns);
+	Actor* actor = selected ? game->GetActorByGlobalID(selected->GetGlobalID()) : nullptr;
+	if (!actor) {
+		Py_RETURN_FALSE;
+	}
+	if (!turns.UseBlock(actor)) {
+		Py_RETURN_FALSE;
+	}
+	Py_RETURN_TRUE;
+}
+
+PyDoc_STRVAR(GemRB_TurnBasedTrip__doc,
+	     "===== TurnBasedTrip =====\n\
+\n\
+**Prototype:** GemRB.TurnBasedTrip ([cancel])\n\
+\n\
+**Description:** Arms a trip for the target the player picks next: the first \n\
+attack on it attempts to trip instead of dealing damage, the remaining attacks \n\
+are normal. With cancel set, disarms a trip whose target pick was dropped.\n\
+\n\
+**Return value:** bool");
+
+static PyObject* GemRB_TurnBasedTrip(PyObject* /*self*/, PyObject* args)
+{
+	int cancel = 0;
+	PARSE_ARGS(args, "|i", &cancel);
+	GET_GAME();
+	CombatDirector& turns = game->combat;
+	Actor* actor = turns.GetActiveActor();
+	if (!turns.IsRunning() || !actor || !actor->InParty) {
+		Py_RETURN_FALSE;
+	}
+	if (cancel) {
+		return PyBool_FromLong(turns.CancelPendingTrip(actor));
+	}
+	if (!turns.UseTrip(actor)) {
+		Py_RETURN_FALSE;
+	}
 	Py_RETURN_TRUE;
 }
 
@@ -13361,6 +13470,9 @@ static PyMethodDef GemRBMethods[] = {
 	METHOD(GetTurnOrder, METH_NOARGS),
 	METHOD(EndTurn, METH_NOARGS),
 	METHOD(TurnBasedRun, METH_NOARGS),
+	METHOD(TurnBasedWithdraw, METH_NOARGS),
+	METHOD(TurnBasedBlock, METH_NOARGS),
+	METHOD(TurnBasedTrip, METH_VARARGS),
 	METHOD(GetCombatEvents, METH_NOARGS),
 	METHOD(ExecuteActionAt, METH_VARARGS),
 	METHOD(DelayTurn, METH_NOARGS),

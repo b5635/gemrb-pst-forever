@@ -4164,8 +4164,16 @@ void Actor::DialogInterrupt() const
 
 void Actor::GetHit(int damage, bool killingBlow)
 {
-	if (!Immobile() && !(InternalFlags & IF_REALLYDIED) && !killingBlow) {
+	const bool prone = core->GetGame() && core->GetGame()->combat.IsProne(this);
+	if (!Immobile() && !(InternalFlags & IF_REALLYDIED) && !killingBlow && !prone) {
 		SetStance(IE_ANI_DAMAGE);
+		static int beingHitCount = gamedata->GetVBData("BEING_HIT_COUNT");
+		if (!VerbalConstant(Verbal::Damage, beingHitCount)) {
+			ResRef sound;
+			GetSoundFromFile(sound, Verbal::Damage);
+			core->GetAudioPlayback().Play(sound, AudioPreset::Spatial, SFXChannel::Monster, Pos);
+		}
+	} else if (prone && !killingBlow) {
 		static int beingHitCount = gamedata->GetVBData("BEING_HIT_COUNT");
 		if (!VerbalConstant(Verbal::Damage, beingHitCount)) {
 			ResRef sound;
@@ -7188,6 +7196,13 @@ int Actor::GetToHit(ieDword Flags, const Actor* target)
 		}
 		generic += fxqueue.BonusAgainstCreature(fx_tohit_vs_creature_ref, target);
 
+		if (Game* game = core->GetGame()) {
+			generic += game->combat.GetToHitMod(this);
+			if (game->combat.IsProne(target)) {
+				generic += 4;
+			}
+		}
+
 		// close-quarter ranged penalties; let's say roughly max 1 foot apart
 		if (third && (Flags & WEAPON_STYLEMASK) == WEAPON_RANGED && WithinPersonalRange(target, this, 2)) {
 			generic -= 4;
@@ -7540,6 +7555,43 @@ void Actor::RestartStanceAnimation()
 	}
 }
 
+void Actor::FreezeStanceAnimation(bool freeze)
+{
+	auto apply = [freeze](std::vector<AnimationPart>& parts) {
+		for (auto& part : parts) {
+			if (part.first) part.first->frozen = freeze;
+		}
+	};
+	apply(currentStance.anim);
+	apply(currentStance.shadow);
+}
+
+void Actor::ReverseStanceAnimation()
+{
+	auto apply = [](std::vector<AnimationPart>& parts) {
+		for (auto& part : parts) {
+			if (!part.first) continue;
+			part.first->frozen = false;
+			part.first->playReversed = true;
+			part.first->endReached = false;
+		}
+	};
+	apply(currentStance.anim);
+	apply(currentStance.shadow);
+}
+
+void Actor::SetStanceAnimationSpeed(float multiplier)
+{
+	if (multiplier <= 0.0f) multiplier = 1.0f;
+	auto apply = [multiplier](std::vector<AnimationPart>& parts) {
+		for (auto& part : parts) {
+			if (part.first) part.first->fps = std::max(1.0f, part.first->fps * multiplier);
+		}
+	};
+	apply(currentStance.anim);
+	apply(currentStance.shadow);
+}
+
 int Actor::StanceAnimationTicks(unsigned char stance)
 {
 	if (!anims) return 0;
@@ -7785,6 +7837,14 @@ void Actor::PerformAttack(ieDword gameTime, bool turnBased)
 			success = false;
 		} else {
 			success = (roll + rollMod) > (ReverseToHit ? tohit : defense);
+		}
+	}
+
+	if (success && turnBased && !(wi.wflags & WEAPON_RANGED)) {
+		if (core->GetGame()->combat.TryBlockHit(this, target, roll)) {
+			success = false;
+			critical = false;
+			lastSwing.critical = false;
 		}
 	}
 

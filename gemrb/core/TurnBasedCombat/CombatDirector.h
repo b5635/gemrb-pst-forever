@@ -41,7 +41,15 @@ enum class TBAction : uint8_t {
 	CastSpell,
 	UseItem,
 	Equip, // anything but the free quick weapon swap
-	Run // forfeits the main action for double movement
+	Run, // forfeits the main action; remaining movement += max movement
+	Withdraw // forfeits the main action and half remaining movement; immune to attacks of opportunity
+};
+
+/** First-swing takedown: trip (fighters, -2) and knockdown (enemies, no penalty). */
+enum class TakedownKind : uint8_t {
+	None,
+	Trip,
+	Knockdown
 };
 
 struct GEM_EXPORT Combatant {
@@ -56,9 +64,17 @@ struct GEM_EXPORT Combatant {
 	// per turn budget
 	bool mainActionUsed = false;
 	bool ran = false;
+	bool withdrawn = false; // immune to attacks of opportunity until next turn; walks
 	bool freeWeaponSwapUsed = false;
 	int movePx = 0; // remaining movement
 	int maxMovePx = 0;
+	// attacks this round (shared with Block); allocated at round start
+	int remainingAttacks = 0;
+	int blockStacks = 0; // incoming melee attacks to attempt to block, until next turn
+	TakedownKind takedown = TakedownKind::None; // first swing of the next attack round
+	int toHitMod = 0; // applied to the current swing (trip -2)
+	bool prone = false; // knocked down until the start of its next turn
+	unsigned int standTicks = 0; // standing up at turn start
 	// the attack round in progress
 	bool attacking = false;
 
@@ -186,6 +202,31 @@ public:
 	bool CanSwapWeapon(const Actor* actor) const;
 	void SpendWeaponSwap(const Actor* actor);
 
+	// combat maneuvers (Run, Withdraw, Block, Trip, Knockdown)
+	bool UseRun(Actor* actor);
+	bool UseWithdraw(Actor* actor);
+	bool UseBlock(Actor* actor); // no action; spends one remaining attack
+	bool UseTrip(Actor* actor); // first swing of the next attack round
+	bool UseKnockdown(Actor* actor);
+	bool CancelPendingTrip(Actor* actor); // trip armed but its target pick was dropped
+	bool CanBlock(const Actor* actor) const;
+	bool CanTrip(const Actor* actor) const;
+	bool CanKnockdown(const Actor* actor) const;
+	bool IsProne(const Actor* actor) const;
+	bool IsWithdrawn(const Actor* actor) const;
+	int GetRemainingAttacks(const Actor* actor) const;
+	int GetBlockStacks(const Actor* actor) const;
+	TakedownKind GetTakedown(const Actor* actor) const;
+	int GetToHitMod(const Actor* actor) const;
+	/** An incoming melee hit: consume a block stack and maybe stop the hit. attackRoll is the d20. */
+	bool TryBlockHit(Actor* attacker, Actor* target, int attackRoll);
+
+	// pure helpers, exposed for tests
+	static void ApplyRun(Combatant& combatant);
+	static void ApplyWithdraw(Combatant& combatant);
+	static bool ApplyBlock(Combatant& combatant);
+	static int TakedownPenalty(TakedownKind kind);
+
 	// hooks from GemRB's actions, for owned actors
 	/** AttackCore has the target in reach: run (or refuse) a round of swings. */
 	void RequestAttackRound(Actor* attacker, Scriptable* target);
@@ -249,6 +290,10 @@ private:
 	// the attack of opportunity in progress
 	ieDword reactorID = 0;
 	std::vector<ieDword> pendingReactors;
+	// the defender playing a block animation against the swing in progress
+	ieDword blockerID = 0;
+	bool blockerFrozen = false;
+	bool blockSucceeded = false;
 
 	std::vector<CombatEvent> events;
 	CombatHud hud;
@@ -299,6 +344,18 @@ private:
 	void ReactionStep(Actor* mover);
 	/** Is the player's turn over by itself (auto end turn)? */
 	bool PlayerTurnOver(const Actor* actor, const Combatant& combatant) const;
+
+	void AllocateAttacks(Combatant& combatant, Actor* actor);
+	void ApplyMovementFlags(Actor* actor, const Combatant& combatant) const;
+	void ChooseAIManeuvers(Actor* actor, Combatant& combatant);
+	void CloseOnEnemy(Actor* actor, Actor* enemy);
+	void StartBlockAnimation(Actor* attacker, Actor* target);
+	void FinishBlockAnimation(const Actor* attacker, Actor* target, bool blocked);
+	void KnockProne(Actor* target, Combatant& combatant);
+	void StandUp(Actor* actor, Combatant& combatant);
+	bool ResolveTakedown(Actor* attacker, Actor* target, TakedownKind kind);
+	static bool HasFighterClass(const Actor* actor);
+	static bool IsMorte(const Actor* actor);
 };
 
 }

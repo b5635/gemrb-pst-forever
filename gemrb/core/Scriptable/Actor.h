@@ -915,6 +915,12 @@ public:
 	 * animation and only rewinds a play-once one when it ran to its end, so one cut short
 	 * (a swing, a conjure) would otherwise start midway the next time. */
 	void RestartStanceAnimation();
+	/** Hold or resume the current stance on its current frame. */
+	void FreezeStanceAnimation(bool freeze);
+	/** Play the current stance backwards from where it is (a block that held). */
+	void ReverseStanceAnimation();
+	/** Speed up (or reset) the current stance's playback; 1 is normal. */
+	void SetStanceAnimationSpeed(float multiplier);
 	/** How many game ticks one play of a stance's animation takes (facing as now), 0 without one */
 	int StanceAnimationTicks(unsigned char stance);
 	/** Has the current stance been drawn yet? Right after a SetStance the frame above is still

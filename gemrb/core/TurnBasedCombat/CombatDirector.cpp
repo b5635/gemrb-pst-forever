@@ -6,15 +6,19 @@
 #include "TurnBasedCombat/CombatAnalyzer.h"
 
 #include "ie_stats.h"
+#include "damages.h"
 
 #include "DisplayMessage.h"
 #include "Game.h"
 #include "GameData.h"
+#include "Geometry.h"
 #include "Interface.h"
 #include "Item.h"
 #include "Map.h"
 #include "RNG.h"
+#include "ScenePolish.h"
 
+#include "Audio/Playback.h"
 #include "GUI/GameControl.h"
 #include "GameScript/GSUtils.h"
 #include "GameScript/GameScript.h"
@@ -45,6 +49,18 @@ static unsigned int playerIdleTicks = 0;
 static bool Setting(const char* name, int fallback)
 {
 	return core->GetDictionary().Get(StringView(name), fallback) != 0;
+}
+
+static void PlayCombatSound(const Actor* actor, const char* resRef)
+{
+	if (!actor) return;
+	core->GetAudioPlayback().Play(StringView(resRef), AudioPreset::Spatial, SFXChannel::Actions, actor->Pos);
+}
+
+static void ShowFloater(Actor* actor, String text, const Color& color)
+{
+	if (!actor || !Setting("Turn Based Floating Text", 1)) return;
+	actor->overHead.SetText(std::move(text), true, true, color);
 }
 
 // party members are the player's, unless "Turn Based Party AI" lets the AI play them (autotest)
@@ -126,10 +142,42 @@ void CombatDirector::ResetBudget(Combatant& combatant, int movePx)
 {
 	combatant.mainActionUsed = false;
 	combatant.ran = false;
+	combatant.withdrawn = false;
 	combatant.freeWeaponSwapUsed = false;
 	combatant.attacking = false;
+	combatant.takedown = TakedownKind::None;
+	combatant.toHitMod = 0;
+	combatant.blockStacks = 0;
+	combatant.standTicks = 0;
 	combatant.movePx = movePx;
 	combatant.maxMovePx = movePx;
+}
+
+void CombatDirector::ApplyRun(Combatant& combatant)
+{
+	combatant.ran = true;
+	combatant.mainActionUsed = true;
+	combatant.movePx += combatant.maxMovePx;
+}
+
+void CombatDirector::ApplyWithdraw(Combatant& combatant)
+{
+	combatant.withdrawn = true;
+	combatant.mainActionUsed = true;
+	combatant.movePx /= 2;
+}
+
+bool CombatDirector::ApplyBlock(Combatant& combatant)
+{
+	if (combatant.remainingAttacks <= 0) return false;
+	--combatant.remainingAttacks;
+	++combatant.blockStacks;
+	return true;
+}
+
+int CombatDirector::TakedownPenalty(TakedownKind kind)
+{
+	return kind == TakedownKind::Trip ? -2 : 0;
 }
 
 Path CombatDirector::ClipPath(const Point& start, const Path& path, int budget)
@@ -299,6 +347,8 @@ bool CombatDirector::IsBusy(const Actor* actor) const
 {
 	if (!actor || !IsRunning() || actor->GetGlobalID() != activeID) return false;
 	if (step == Step::Walk || step == Step::Swing || step == Step::Reaction) return true;
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	if (combatant && combatant->standTicks > 0) return true;
 	return actor->InMove() || actor->GetCurrentAction() || actor->GetNextAction();
 }
 
@@ -430,6 +480,8 @@ void CombatDirector::HandBack(Actor* actor, Combatant* combatant)
 	actor->SetInternalFlag(IF_COMBAT_OWNED, BitOp::NAND);
 	actor->ClearPath(true);
 	actor->ResetBackoff();
+	// prone ends with the fight, or SetStance below would keep them lying there
+	if (combatant) combatant->prone = false;
 	// the dead keep their dying animation and get their last script run from GemRB
 	if (IsAliveCombatant(actor)) {
 		actor->ClearActions();
@@ -528,6 +580,10 @@ void CombatDirector::StartCombat(Map* map)
 	Log(MESSAGE, "CombatDirector", "Turn based combat starts with {} combatants", order.size());
 	state = State::TurnActive;
 	TakeOverAll();
+	for (auto& combatant : order) {
+		Actor* actor = map->GetActorByGlobalID(combatant.globalID);
+		if (actor) AllocateAttacks(combatant, actor);
+	}
 
 	CombatEvent event;
 	event.type = CombatEventType::CombatStart;
@@ -585,7 +641,7 @@ void CombatDirector::BeginTurn(size_t idx)
 		}
 	}
 	for (size_t i = groupStart; i <= groupEnd; ++i) {
-		const Actor* member = combatMap->GetActorByGlobalID(order[i].globalID);
+		Actor* member = combatMap->GetActorByGlobalID(order[i].globalID);
 		ResetBudget(order[i], member ? MovementAllowance(member) : 0);
 	}
 	ActivateMember(idx);
@@ -688,6 +744,8 @@ void CombatDirector::EndRound()
 		combatant.delayed = false;
 		combatant.surprised = false;
 		combatant.reactionUsed = false;
+		Actor* actor = combatMap->GetActorByGlobalID(combatant.globalID);
+		if (actor) AllocateAttacks(combatant, actor);
 	}
 	activeIdx = groupStart = groupEnd = 0;
 	AddJoiners(false);
@@ -735,6 +793,7 @@ void CombatDirector::Join(Actor* actor, bool midRound)
 			++groupEnd;
 		}
 		TakeOver(actor, order[idx]);
+		AllocateAttacks(order[idx], actor);
 		Log(COMBAT, "CombatDirector", "{} joins the fight", fmt::WideToChar { Name(actor) });
 		NotifyGUI();
 	}
@@ -915,6 +974,9 @@ void CombatDirector::BeginStep(Actor* actor, Combatant& combatant)
 		step = Step::Over;
 		return;
 	}
+	if (combatant.prone) {
+		StandUp(actor, combatant);
+	}
 	// held, stunned, asleep: the turn passes
 	if (actor->Immobile() || (actor->GetStat(IE_STATE_ID) & (STATE_HELPLESS | STATE_SLEEP))) {
 		Log(COMBAT, "CombatDirector", "{} can't act this turn", fmt::WideToChar { Name(actor) });
@@ -926,6 +988,7 @@ void CombatDirector::BeginStep(Actor* actor, Combatant& combatant)
 	if (PlayerControlled(actor)) return;
 
 	Decide(actor, combatant);
+	ChooseAIManeuvers(actor, combatant);
 }
 
 // the AI's decision: GemRB evaluates its scripts once, the response lands in its action queue
@@ -990,6 +1053,14 @@ bool CombatDirector::PlayerTurnOver(const Actor* actor, const Combatant& combata
 
 void CombatDirector::ActStep(Actor* actor, Combatant& combatant)
 {
+	if (combatant.standTicks > 0) {
+		--combatant.standTicks;
+		if (combatant.standTicks == 0) {
+			actor->SetStance(IE_ANI_READY);
+		}
+		return;
+	}
+
 	Holder<Action> current = actor->GetCurrentAction();
 	Holder<Action> next = current ? current : actor->GetNextAction();
 
@@ -1052,6 +1123,13 @@ void CombatDirector::ActStep(Actor* actor, Combatant& combatant)
 			displaymsg->DisplayString(combatant.mainActionUsed ? u"No action left this turn" : u"Can't get there this turn", GUIColors::WHITE, nullptr);
 			actor->ClearActions();
 			actor->SetStance(IE_ANI_READY);
+		} else if (combatant.ran && combatant.movePx > 0) {
+			// spent the action on Run: still use the extra movement to close
+			wantedMore = false;
+			Actor* enemy = NearestEnemy(actor, combatMap, order);
+			CloseOnEnemy(actor, enemy);
+			if (step == Step::Walk) return;
+			step = Step::Over;
 		} else {
 			// the AI keeps its action for the next turn
 			step = Step::Over;
@@ -1113,7 +1191,11 @@ void CombatDirector::RequestPath(Actor* actor, const Point& source, const Point&
 		wantedMore = true;
 		return;
 	}
+	ApplyMovementFlags(actor, *combatant);
 	actor->SetCombatPath(std::move(clipped), minDistance, destination);
+	if (combatant->ran) {
+		ScenePolish::Get().SpawnSmokePuff(actor->Pos, actor->Pos);
+	}
 	walkFrom = actor->Pos;
 	step = Step::Walk;
 }
@@ -1129,6 +1211,9 @@ void CombatDirector::WalkStep(Actor* actor, Combatant& combatant)
 		actor->Movable::DoStep(actor->GetSpeed(), core->GetGame()->Ticks);
 		int spent = PathFinder::MovementCost(before, actor->Pos);
 		combatant.movePx = std::max(0, combatant.movePx - spent);
+		if (combatant.ran && spent > 0 && (combatant.movePx % 48) < spent) {
+			ScenePolish::Get().SpawnSmokePuff(actor->Pos, before);
+		}
 		if (CheckOpportunityAttacks(actor, threats)) {
 			// caught at the edge of their reach: back to where it stood, the step isn't paid
 			actor->MoveTo(before);
@@ -1146,6 +1231,7 @@ void CombatDirector::WalkStep(Actor* actor, Combatant& combatant)
 	if (actor->Pos == walkFrom) {
 		blockedAt = actor->Pos;
 	}
+	ApplyMovementFlags(actor, combatant);
 	// always ends with no path left
 	actor->ClearPath(true);
 	actor->ResetBackoff();
@@ -1181,8 +1267,10 @@ void CombatDirector::RequestAttackRound(Actor* attacker, Scriptable* target)
 		Log(COMBAT, "CombatDirector", "{} tried to attack outside its turn", fmt::WideToChar { Name(attacker) });
 		return;
 	}
-	if (!CanAfford(attacker, TBAction::Attack)) {
+	if (!CanAfford(attacker, TBAction::Attack) || combatant->remainingAttacks <= 0) {
 		Log(COMBAT, "CombatDirector", "{}: no action left to attack", fmt::WideToChar { Name(attacker) });
+		// Run already spent the action: AttackCore thought they were in reach. If they still
+		// have movement, ActStep will close instead of stalling in place.
 		wantedMore = true;
 		return;
 	}
@@ -1192,6 +1280,9 @@ void CombatDirector::RequestAttackRound(Actor* attacker, Scriptable* target)
 	Spend(attacker, TBAction::Attack);
 	combatant->attacking = true;
 	attacker->InitRound(core->GetGame()->GameTime);
+	if (attacker->attackcount > combatant->remainingAttacks) {
+		attacker->attackcount = combatant->remainingAttacks;
+	}
 	if (attacker->attackcount <= 0) {
 		FinishRound(attacker, *combatant);
 		return;
@@ -1205,9 +1296,25 @@ void CombatDirector::StartSwing(Actor* actor, Actor* target)
 	swingResolved = false;
 	swingTicks = 0;
 	swingPausing = false;
+	blockerID = 0;
+	blockerFrozen = false;
+	blockSucceeded = false;
 	actor->objects.LastTarget = swingTarget;
 	actor->objects.LastTargetPersistent = swingTarget;
 	actor->FaceTarget(target);
+
+	Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	if (combatant && combatant->takedown != TakedownKind::None) {
+		combatant->toHitMod = TakedownPenalty(combatant->takedown);
+		swingWindup = SwingPauseTicks() * 2; // a slow wind-up, then a snappy blow
+		const bool trip = combatant->takedown == TakedownKind::Trip;
+		static const Color tripColor(220, 180, 80, 255);
+		static const Color knockdownColor(220, 140, 80, 255);
+		ShowFloater(actor, trip ? u"Trip!" : u"Knockdown!", trip ? tripColor : knockdownColor);
+	} else {
+		if (combatant) combatant->toHitMod = 0;
+		swingWindup = SwingPauseTicks() * 3 / 4;
+	}
 
 	// the dice panel starts rolling now and lands when the swing resolves
 	const Actor::HitPrediction hit = actor->PredictHit(target);
@@ -1224,8 +1331,6 @@ void CombatDirector::StartSwing(Actor* actor, Actor* target)
 	bool leftOrRight = false;
 	const ITMExtHeader* header = actor->GetWeapon(leftOrRight);
 	swingRanged = header && (header->AttackType == ITEM_AT_BOW || header->AttackType == ITEM_AT_PROJECTILE);
-	// a wind-up first: it squares up to the target while the dice roll
-	swingWindup = SwingPauseTicks() * 3 / 4;
 	actor->SetStance(IE_ANI_READY);
 	step = Step::Swing;
 }
@@ -1242,6 +1347,15 @@ void CombatDirector::BeginSwingAnimation(Actor* actor)
 	}
 	// the cached animation may still be where an earlier swing was cut off: play it from the top
 	actor->RestartStanceAnimation();
+	Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	if (combatant && combatant->takedown != TakedownKind::None) {
+		actor->SetStanceAnimationSpeed(2.2f); // the punch after the wind-up is quick
+		PlayCombatSound(actor, "trip");
+	}
+	if (!swingRanged) {
+		Actor* target = combatMap->GetActorByGlobalID(swingTarget);
+		StartBlockAnimation(actor, target);
+	}
 	// the frame shown is still the old stance's until the next draw, so don't trust it yet
 	swingLastFrame = -1;
 }
@@ -1276,6 +1390,17 @@ void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
 	const bool attackStance = actor->GetStance() == IE_ANI_ATTACK || actor->GetStance() == IE_ANI_ATTACK_JAB ||
 		actor->GetStance() == IE_ANI_ATTACK_SLASH || actor->GetStance() == IE_ANI_ATTACK_BACKSLASH || actor->GetStance() == IE_ANI_SHOOT;
 
+	if (blockerID && !blockerFrozen) {
+		Actor* blocker = combatMap->GetActorByGlobalID(blockerID);
+		if (blocker) {
+			const int blockHit = SwingHitFrame(blocker->GetStanceFrameCount());
+			if (blocker->GetStanceFrame() >= blockHit || swingTicks > SWING_MAX_TICKS / 2) {
+				blocker->FreezeStanceAnimation(true);
+				blockerFrozen = true;
+			}
+		}
+	}
+
 	if (!swingResolved) {
 		// melee lands halfway into the swing
 		const int hitFrame = SwingHitFrame(frames);
@@ -1284,14 +1409,25 @@ void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
 			Log(COMBAT, "CombatDirector", "swing lands on frame {}/{} after {} ticks", frame, frames, swingTicks);
 			if (IsAliveCombatant(target) && WithinPersonalRange(actor, target, actor->GetWeaponRange(false))) {
 				actor->objects.LastTarget = swingTarget;
-				if (!actor->ResolveSwing()) {
+				const TakedownKind takedown = combatant.takedown;
+				if (takedown != TakedownKind::None) {
+					if (!ResolveTakedown(actor, target, takedown)) {
+						actor->attackcount = 0;
+					} else {
+						--actor->attackcount;
+					}
+					combatant.takedown = TakedownKind::None;
+					combatant.toHitMod = 0;
+				} else if (!actor->ResolveSwing()) {
 					actor->attackcount = 0; // it couldn't swing (weapon unusable ...), so the round is lost
 				}
 				// the damage rides the attack projectile, which GemRB only fires on frame 8 exactly
-				actor->FireAttackProjectile();
+				if (takedown == TakedownKind::None) actor->FireAttackProjectile();
 			} else {
 				actor->attackcount = 0;
 			}
+			combatant.remainingAttacks = std::max(0, actor->attackcount);
+			FinishBlockAnimation(actor, target, blockSucceeded);
 		}
 	}
 
@@ -1308,6 +1444,7 @@ void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
 		event.value = info.damage;
 		event.hit = info.hit;
 		event.critical = info.critical;
+		if (blockSucceeded) event.text = "blocked";
 		PushEvent(event);
 		actor->lastSwing.made = false;
 	}
@@ -1370,12 +1507,14 @@ std::vector<ieDword> CombatDirector::ThreatsTo(const Actor* mover) const
 	std::vector<ieDword> threats;
 	if (!Setting("Turn Based Opportunity Attacks", 0)) return threats;
 	const Combatant* moving = FindCombatant(mover->GetGlobalID());
-	if (!moving) return threats;
+	if (!moving || moving->withdrawn) return threats;
 	for (const Combatant& other : order) {
 		if (other.dead || other.reactionUsed || other.globalID == mover->GetGlobalID()) continue;
 		const Actor* reactor = combatMap->GetActorByGlobalID(other.globalID);
 		if (!IsAliveCombatant(reactor) || !Owns(reactor) || reactor->Immobile()) continue;
 		if (reactor->GetStat(IE_STATE_ID) & (STATE_HELPLESS | STATE_SLEEP | STATE_PANIC)) continue;
+		const Combatant* otherC = FindCombatant(other.globalID);
+		if (otherC && otherC->prone) continue;
 		if (!AreEnemies(reactor, other.provoked, mover, moving->provoked) || !HasMeleeWeapon(reactor)) continue;
 		if (WithinPersonalRange(reactor, mover, reactor->GetWeaponRange(false))) {
 			threats.push_back(other.globalID);
@@ -1430,6 +1569,8 @@ void CombatDirector::ReactionStep(Actor* mover)
 			return;
 		}
 		Log(COMBAT, "CombatDirector", "{} gets an attack of opportunity on {}", fmt::WideToChar { Name(reactor) }, fmt::WideToChar { Name(mover) });
+		static const Color aooColor(255, 180, 60, 255);
+		ShowFloater(reactor, u"Attack of Opportunity!", aooColor);
 		CombatEvent event;
 		event.type = CombatEventType::Reaction;
 		event.actor = reactorID;
@@ -1540,12 +1681,14 @@ bool CombatDirector::CanAfford(const Actor* actor, TBAction action) const
 	if (actor->GetGlobalID() != activeID) return false;
 
 	switch (action) {
-		case TBAction::Run:
 		case TBAction::Attack:
+			return !combatant->mainActionUsed && !combatant->ran && !combatant->withdrawn && combatant->remainingAttacks > 0;
+		case TBAction::Run:
+		case TBAction::Withdraw:
 		case TBAction::CastSpell:
 		case TBAction::UseItem:
 		case TBAction::Equip:
-			return !combatant->mainActionUsed && !combatant->ran;
+			return !combatant->mainActionUsed && !combatant->ran && !combatant->withdrawn;
 	}
 	return false;
 }
@@ -1557,11 +1700,12 @@ void CombatDirector::Spend(const Actor* actor, TBAction action)
 	if (!combatant) return;
 
 	if (action == TBAction::Run) {
-		combatant->ran = true;
-		combatant->movePx += combatant->maxMovePx;
-		combatant->maxMovePx *= 2;
+		ApplyRun(*combatant);
+	} else if (action == TBAction::Withdraw) {
+		ApplyWithdraw(*combatant);
+	} else {
+		combatant->mainActionUsed = true;
 	}
-	combatant->mainActionUsed = true;
 	NotifyGUI();
 }
 
@@ -1595,6 +1739,404 @@ int CombatDirector::GetRemainingMovement(const Actor* actor) const
 }
 
 // ------------------------------------------------------------------------------------------
+// combat maneuvers
+
+void CombatDirector::AllocateAttacks(Combatant& combatant, Actor* actor)
+{
+	if (!actor) return;
+	combatant.remainingAttacks = actor->GetAttacksNextRound();
+}
+
+void CombatDirector::ApplyMovementFlags(Actor* actor, const Combatant& combatant) const
+{
+	if (!actor) return;
+	if (combatant.withdrawn) {
+		actor->SetInternalFlag(IF_RUNNING, BitOp::NAND);
+	} else if (combatant.ran) {
+		actor->SetInternalFlag(IF_RUNNING, BitOp::OR);
+	}
+}
+
+bool CombatDirector::HasFighterClass(const Actor* actor)
+{
+	if (!actor) return false;
+	// TNO is never a fighter for block/trip: as a fake multiclass he always holds fighter levels
+	if (core->HasFeature(GFFlags::PST_STATE_FLAGS) && actor->GetBase(IE_SPECIFIC) == 2) return false;
+	if (actor->GetFighterLevel() > 0) return true;
+	if (actor->IsWarrior()) return true;
+	switch (actor->GetStat(IE_CLASS)) {
+		case 2: // FIGHTER
+		case 7: // FIGHTER_MAGE
+		case 8: // FIGHTER_CLERIC
+		case 9: // FIGHTER_THIEF
+		case 10: // FIGHTER_MAGE_THIEF
+			return true;
+		default:
+			return false;
+	}
+}
+
+bool CombatDirector::IsMorte(const Actor* actor)
+{
+	return actor && actor->GetBase(IE_SPECIFIC) == 9;
+}
+
+bool CombatDirector::IsProne(const Actor* actor) const
+{
+	if (!actor) return false;
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	return combatant && combatant->prone;
+}
+
+bool CombatDirector::IsWithdrawn(const Actor* actor) const
+{
+	if (!actor) return false;
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	return combatant && combatant->withdrawn;
+}
+
+int CombatDirector::GetRemainingAttacks(const Actor* actor) const
+{
+	if (!actor) return 0;
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	if (!combatant) return 0;
+	if (combatant->attacking) {
+		Actor* live = combatMap ? combatMap->GetActorByGlobalID(actor->GetGlobalID()) : nullptr;
+		return live ? live->attackcount : combatant->remainingAttacks;
+	}
+	return combatant->remainingAttacks;
+}
+
+int CombatDirector::GetBlockStacks(const Actor* actor) const
+{
+	if (!actor) return 0;
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	return combatant ? combatant->blockStacks : 0;
+}
+
+TakedownKind CombatDirector::GetTakedown(const Actor* actor) const
+{
+	if (!actor) return TakedownKind::None;
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	return combatant ? combatant->takedown : TakedownKind::None;
+}
+
+int CombatDirector::GetToHitMod(const Actor* actor) const
+{
+	if (!actor) return 0;
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	return combatant ? combatant->toHitMod : 0;
+}
+
+bool CombatDirector::UseRun(Actor* actor)
+{
+	if (!actor || !CanAfford(actor, TBAction::Run)) return false;
+	Spend(actor, TBAction::Run);
+	ApplyMovementFlags(actor, *FindCombatant(actor->GetGlobalID()));
+	PlayCombatSound(actor, "sprint");
+	ScenePolish::Get().SpawnSmokePuff(actor->Pos, actor->Pos, true);
+	static const Color runColor(180, 220, 120, 255);
+	ShowFloater(actor, u"Run!", runColor);
+	Log(COMBAT, "CombatDirector", "{} runs", fmt::WideToChar { Name(actor) });
+	return true;
+}
+
+bool CombatDirector::UseWithdraw(Actor* actor)
+{
+	if (!actor || !CanAfford(actor, TBAction::Withdraw)) return false;
+	Spend(actor, TBAction::Withdraw);
+	ApplyMovementFlags(actor, *FindCombatant(actor->GetGlobalID()));
+	PlayCombatSound(actor, "withdraw");
+	ScenePolish::Get().SpawnDustPuff(actor->Pos);
+	static const Color dust(210, 190, 140, 255);
+	ShowFloater(actor, u"Withdraw!", dust);
+	Log(COMBAT, "CombatDirector", "{} withdraws", fmt::WideToChar { Name(actor) });
+	return true;
+}
+
+bool CombatDirector::CanBlock(const Actor* actor) const
+{
+	if (!IsRunning() || !actor || !HasFighterClass(actor) || IsMorte(actor)) return false;
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	return combatant && !combatant->dead && !combatant->prone && combatant->remainingAttacks > 0;
+}
+
+bool CombatDirector::UseBlock(Actor* actor)
+{
+	if (!CanBlock(actor)) return false;
+	Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	if (!combatant || !ApplyBlock(*combatant)) return false;
+	PlayCombatSound(actor, "block");
+	ScenePolish::Get().SpawnShieldGlow(actor);
+	static const Color shield(140, 190, 255, 255);
+	ShowFloater(actor, u"Block!", shield);
+	Log(COMBAT, "CombatDirector", "{} prepares to block ({} stacks, {} attacks left)", fmt::WideToChar { Name(actor) },
+	    combatant->blockStacks, combatant->remainingAttacks);
+	NotifyGUI();
+	return true;
+}
+
+bool CombatDirector::CanTrip(const Actor* actor) const
+{
+	if (!IsRunning() || !actor || actor->GetGlobalID() != activeID || !HasFighterClass(actor)) return false;
+	if (!HasMeleeWeapon(actor)) return false;
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	if (!combatant || combatant->dead || combatant->prone) return false;
+	if (combatant->takedown == TakedownKind::Trip) return true; // click again to cancel
+	return CanAfford(actor, TBAction::Attack) && combatant->takedown == TakedownKind::None;
+}
+
+bool CombatDirector::CanKnockdown(const Actor* actor) const
+{
+	if (!IsRunning() || !actor || actor->GetGlobalID() != activeID || actor->InParty) return false;
+	if (!HasMeleeWeapon(actor) || actor->GetStat(IE_TOHIT) > 15) return false;
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	return combatant && CanAfford(actor, TBAction::Attack) && combatant->takedown == TakedownKind::None;
+}
+
+bool CombatDirector::UseTrip(Actor* actor)
+{
+	if (!CanTrip(actor)) return false;
+	Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	if (combatant->takedown == TakedownKind::Trip) {
+		combatant->takedown = TakedownKind::None;
+		combatant->toHitMod = 0;
+		Log(COMBAT, "CombatDirector", "{} cancels trip", fmt::WideToChar { Name(actor) });
+		NotifyGUI();
+		return true;
+	}
+	combatant->takedown = TakedownKind::Trip;
+	Log(COMBAT, "CombatDirector", "{} will trip with the first attack", fmt::WideToChar { Name(actor) });
+	NotifyGUI();
+	return true;
+}
+
+bool CombatDirector::CancelPendingTrip(Actor* actor)
+{
+	if (!actor) return false;
+	Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	if (!combatant || combatant->takedown != TakedownKind::Trip || combatant->attacking) return false;
+	if (actor->GetCurrentAction() || actor->GetNextAction()) return false; // the attack is on its way
+	combatant->takedown = TakedownKind::None;
+	combatant->toHitMod = 0;
+	Log(COMBAT, "CombatDirector", "{}: trip targeting cancelled", fmt::WideToChar { Name(actor) });
+	NotifyGUI();
+	return true;
+}
+
+bool CombatDirector::UseKnockdown(Actor* actor)
+{
+	if (!CanKnockdown(actor)) return false;
+	Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	combatant->takedown = TakedownKind::Knockdown;
+	Log(COMBAT, "CombatDirector", "{} will knockdown with the first attack", fmt::WideToChar { Name(actor) });
+	NotifyGUI();
+	return true;
+}
+
+void CombatDirector::StartBlockAnimation(Actor* attacker, Actor* target)
+{
+	if (!attacker || !target) return;
+	Combatant* defender = FindCombatant(target->GetGlobalID());
+	if (!defender || defender->blockStacks <= 0 || !HasMeleeWeapon(attacker)) return;
+	--defender->blockStacks;
+	NotifyGUI();
+	blockerID = target->GetGlobalID();
+	blockerFrozen = false;
+	blockSucceeded = false;
+	target->FaceTarget(attacker);
+	target->SetStance(target->GetAttackStance());
+	target->RestartStanceAnimation();
+}
+
+void CombatDirector::FinishBlockAnimation(const Actor* attacker, Actor* target, bool blocked)
+{
+	if (!target || !blockerID) {
+		blockerID = 0;
+		blockerFrozen = false;
+		return;
+	}
+	target->FreezeStanceAnimation(false);
+	if (blocked) {
+		target->ReverseStanceAnimation();
+		ScenePolish::Get().SpawnBlockSparks(target, attacker);
+		PlayCombatSound(target, "parry");
+		static const Color parry(255, 230, 120, 255);
+		ShowFloater(target, u"Blocked!", parry);
+	}
+	blockerID = 0;
+	blockerFrozen = false;
+}
+
+bool CombatDirector::TryBlockHit(Actor* attacker, Actor* target, int attackRoll)
+{
+	blockSucceeded = false;
+	if (!attacker || !target || !HasMeleeWeapon(attacker)) return false;
+	Combatant* defender = FindCombatant(target->GetGlobalID());
+	if (!defender) return false;
+	const bool spentThisSwing = blockerID == target->GetGlobalID();
+	if (!spentThisSwing) {
+		if (defender->blockStacks <= 0) return false;
+		--defender->blockStacks;
+		NotifyGUI();
+	}
+
+	static int sides = gamedata->GetMiscRule("ATTACK_ROLL_DICE_SIDES");
+	if (!sides) sides = 20;
+	int tohit = 0;
+	int damageBonus = 0, speed = 0, criticalBonus = 0, style = 0;
+	if (!target->GetCombatDetails(tohit, false, damageBonus, speed, criticalBonus, style, attacker)) {
+		return false;
+	}
+	int blockRoll = target->LuckyRoll(1, sides, 0, LR_CRITICAL);
+	constexpr int blockAC = 4;
+	bool blockHit = false;
+	if (blockRoll == 1) {
+		blockHit = false;
+	} else if (blockRoll == sides) {
+		blockHit = true;
+	} else if (Actor::IsReverseToHit()) {
+		blockHit = (blockRoll + blockAC) > tohit;
+	} else {
+		blockHit = (blockRoll + tohit) > blockAC;
+	}
+	Log(COMBAT, "CombatDirector", "{} blocks with {} vs AC 4 (THAC0 {}); attacker rolled {}",
+	    fmt::WideToChar { Name(target) }, blockRoll, tohit, attackRoll);
+	if (!blockHit || blockRoll >= attackRoll) return false;
+	blockSucceeded = true;
+	return true;
+}
+
+bool CombatDirector::ResolveTakedown(Actor* attacker, Actor* target, TakedownKind kind)
+{
+	if (!attacker || !target) return false;
+
+	int tohit = 0;
+	int damageBonus = 0, speed = 0, criticalBonus = 0, style = 0;
+	if (!attacker->GetCombatDetails(tohit, false, damageBonus, speed, criticalBonus, style, target)) {
+		return false;
+	}
+	static int sides = gamedata->GetMiscRule("ATTACK_ROLL_DICE_SIDES");
+	if (!sides) sides = 20;
+	int roll = attacker->LuckyRoll(1, sides, 0, LR_CRITICAL);
+	int defense = target->GetDefense(0, WEAPON_MELEE, attacker);
+	int rollMod = Actor::IsReverseToHit() ? defense : tohit;
+	bool hit = roll != 1 && ((roll == sides) || (roll + rollMod) > (Actor::IsReverseToHit() ? tohit : defense));
+	if (target->Immobile() || (target->GetStat(IE_STATE_ID) & STATE_SLEEP) || IsProne(target)) {
+		hit = roll != 1;
+	}
+
+	attacker->lastSwing = Actor::SwingInfo();
+	attacker->lastSwing.made = true;
+	attacker->lastSwing.target = target->GetGlobalID();
+	attacker->lastSwing.roll = roll;
+	attacker->lastSwing.bonus = rollMod;
+	attacker->lastSwing.defense = Actor::IsReverseToHit() ? tohit : defense;
+	attacker->lastSwing.hit = hit;
+	attacker->PlaySwingSound(attacker->weaponInfo[0]);
+
+	if (hit && TryBlockHit(attacker, target, roll)) {
+		hit = false;
+		attacker->lastSwing.hit = false;
+	}
+
+	static const Color tripColor(220, 180, 80, 255);
+	Log(COMBAT, "CombatDirector", "{} takedown roll {} vs {} -> {}", fmt::WideToChar { Name(attacker) },
+	    roll, attacker->lastSwing.defense, hit ? "hit" : "miss");
+	if (!hit) {
+		ShowFloater(target, kind == TakedownKind::Trip ? u"Trip missed" : u"Knockdown missed", tripColor);
+		Log(COMBAT, "CombatDirector", "{}: takedown missed", fmt::WideToChar { Name(attacker) });
+		return true;
+	}
+
+	// a hit with no damage and no bleeding: the pain of being caught off-balance
+	target->PlayHitSound(core->GetResDataINI(), DAMAGE_CRUSHING, false);
+	target->GetHit(0);
+	ShowFloater(target, u"Hit", tripColor);
+
+	target->SetInternalFlag(IF_USEDSAVE, BitOp::OR);
+	target->RollSaves();
+	const bool saved = target->GetSavingThrow(2, 0); // vs death
+	if (saved) {
+		ShowFloater(target, u"Kept footing", tripColor);
+		Log(COMBAT, "CombatDirector", "{}: takedown hit, {} kept footing", fmt::WideToChar { Name(attacker) }, fmt::WideToChar { Name(target) });
+		return true;
+	}
+
+	Combatant* victim = FindCombatant(target->GetGlobalID());
+	if (victim) KnockProne(target, *victim);
+	ShowFloater(target, kind == TakedownKind::Trip ? u"Tripped!" : u"Knocked down!", tripColor);
+	return true;
+}
+
+void CombatDirector::KnockProne(Actor* target, Combatant& combatant)
+{
+	combatant.prone = true;
+	target->SetStance(IE_ANI_DIE);
+	Log(COMBAT, "CombatDirector", "{} is knocked prone", fmt::WideToChar { Name(target) });
+}
+
+void CombatDirector::CloseOnEnemy(Actor* actor, Actor* enemy)
+{
+	if (!actor || !enemy || step != Step::Act) return;
+	unsigned int range = actor->GetWeaponRange(false);
+	if (WithinPersonalRange(actor, enemy, range)) return;
+	float_t angle = AngleFromPoints(actor->Pos, enemy->Pos);
+	RequestPath(actor, actor->Pos, enemy->Pos, int(Feet2Pixels(int(range), angle)), 0);
+}
+
+void CombatDirector::StandUp(Actor* actor, Combatant& combatant)
+{
+	combatant.prone = false;
+	combatant.mainActionUsed = true;
+	combatant.remainingAttacks = 0;
+	actor->SetStance(IE_ANI_EMERGE);
+	int ticks = actor->StanceAnimationTicks(IE_ANI_EMERGE);
+	if (ticks <= 0) ticks = actor->StanceAnimationTicks(IE_ANI_GET_UP);
+	combatant.standTicks = unsigned(std::max(6, ticks));
+	Log(COMBAT, "CombatDirector", "{} stands up and loses an action", fmt::WideToChar { Name(actor) });
+}
+
+void CombatDirector::ChooseAIManeuvers(Actor* actor, Combatant& combatant)
+{
+	if (!actor || PlayerControlled(actor)) return;
+	// the maneuvers serve what the script chose: Run and Withdraw cost the action, so they
+	// only go with a melee attack that can't reach, or a retreat out of someone's reach
+	const Action* intent = actor->GetCurrentAction().get();
+	if (!intent) intent = actor->GetNextAction().get();
+	const std::string& intentName = ActionName(intent);
+	const bool attacking = intentName.rfind("attack", 0) == 0 || intentName == "groupattack";
+	const bool retreating = intentName.rfind("runawayfrom", 0) == 0 || intentName == "panic";
+	const bool melee = attacking && HasMeleeWeapon(actor);
+
+	Actor* enemy = NearestEnemy(actor, combatMap, order);
+	const bool inMelee = enemy && melee && WithinPersonalRange(actor, enemy, actor->GetWeaponRange(false));
+
+	// Run when this turn's walk would not get them into reach
+	if (melee && enemy && !inMelee && CanAfford(actor, TBAction::Run)) {
+		const unsigned int reach = unsigned(Feet2Pixels(int(actor->GetWeaponRange(false)), AngleFromPoints(actor->Pos, enemy->Pos)));
+		const unsigned int dist = Distance(actor->Pos, enemy->Pos);
+		if (dist > unsigned(combatant.movePx) + reach) UseRun(actor);
+	}
+
+	// Withdraw before backing out of someone's reach, so the retreat draws no free swings
+	if (retreating && CanAfford(actor, TBAction::Withdraw) && !ThreatsTo(actor).empty() && RAND(1, 100) <= 60) {
+		UseWithdraw(actor);
+	}
+
+	// Fighters (not Morte) sometimes put an extra attack into Block
+	if (melee && CanBlock(actor) && combatant.remainingAttacks > 1 && RAND(1, 100) <= 25) {
+		UseBlock(actor);
+	}
+
+	// First swing: trip (fighters) or knockdown (THAC0 15-) at random when already in melee
+	if (inMelee && combatant.takedown == TakedownKind::None && RAND(1, 100) <= 20) {
+		if (CanKnockdown(actor)) UseKnockdown(actor);
+		else if (CanTrip(actor)) UseTrip(actor);
+	}
+}
+
+// ------------------------------------------------------------------------------------------
 // events
 
 // floating combat text over whoever was swung at: the roll's outcome and the damage
@@ -1610,7 +2152,7 @@ static void ShowSwingFloater(const CombatEvent& event)
 	// PST shows damage and hit messages itself; only a miss would otherwise go unseen
 	(void) hitColor;
 	(void) critColor;
-	if (event.hit) return;
+	if (event.hit || event.text == "blocked") return;
 	String text = event.roll == 1 ? u"Fumble" : u"Miss";
 	target->overHead.SetText(std::move(text), true, false, missColor);
 }

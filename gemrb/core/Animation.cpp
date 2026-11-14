@@ -101,7 +101,7 @@ Animation::frame_t Animation::NextFrame(void)
 
 	//it could be that we skip more than one frame in case of slow rendering
 	//large, composite animations (dragons, multi-part area anims) require synchronisation
-	if (time - starttime >= delta) {
+	if (!frozen && time - starttime >= delta) {
 		tick_t inc = (time - starttime) / delta;
 		frameIdx += inc;
 		starttime = time;

@@ -39,6 +39,7 @@ public:
 	Point pos;
 	float fps = ANI_DEFAULT_FRAMERATE;
 	bool playReversed = false;
+	bool frozen = false; // hold the current frame (block wind-up)
 	bool gameAnimation = false; // is it affected by pausing?
 	bool paused = false;
 	Region animArea;
