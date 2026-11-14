@@ -41,6 +41,7 @@
 #include "fmt/ranges.h"
 
 #include <array>
+#include <cmath>
 
 namespace GemRB {
 
@@ -727,6 +728,133 @@ static bool IsTurnBasedBusy(const Actor* actor)
 	return core->GetGame()->combat.IsBusy(actor);
 }
 
+// how many cells the dimming outside the reach takes to fade in
+static constexpr int SHADE_STEPS = 4;
+
+// distance (in cells, capped) of every cell around the reach to the nearest reachable one
+static PathFinder::ReachArea BuildReachShade(const PathFinder::ReachArea& reach)
+{
+	PathFinder::ReachArea shade;
+	if (reach.Empty()) return shade;
+	shade.corner = SearchmapPoint(reach.corner.x - SHADE_STEPS, reach.corner.y - SHADE_STEPS);
+	shade.w = reach.w + 2 * SHADE_STEPS;
+	shade.h = reach.h + 2 * SHADE_STEPS;
+	shade.cells.assign(size_t(shade.w * shade.h), uint8_t(SHADE_STEPS));
+	std::vector<int> frontier;
+	for (int ly = 0; ly < shade.h; ++ly) {
+		for (int lx = 0; lx < shade.w; ++lx) {
+			if (reach.Contains(shade.corner.x + lx, shade.corner.y + ly)) {
+				shade.cells[size_t(ly * shade.w + lx)] = 0;
+				frontier.push_back(ly * shade.w + lx);
+			}
+		}
+	}
+	for (uint8_t level = 1; level < SHADE_STEPS && !frontier.empty(); ++level) {
+		std::vector<int> next;
+		for (int idx : frontier) {
+			const int fx = idx % shade.w;
+			const int fy = idx / shade.w;
+			for (int dy = -1; dy <= 1; ++dy) {
+				for (int dx = -1; dx <= 1; ++dx) {
+					const int nx = fx + dx;
+					const int ny = fy + dy;
+					if (nx < 0 || ny < 0 || nx >= shade.w || ny >= shade.h) continue;
+					uint8_t& cell = shade.cells[size_t(ny * shade.w + nx)];
+					if (cell > level) {
+						cell = level;
+						next.push_back(ny * shade.w + nx);
+					}
+				}
+			}
+		}
+		frontier.swap(next);
+	}
+	return shade;
+}
+
+// the reach's edge as closed curves: the cell edges between reachable and unreachable cells,
+// chained into loops, cut down to their corners and rounded off (Chaikin)
+static std::vector<std::vector<Point>> BuildReachOutline(const PathFinder::ReachArea& reach)
+{
+	std::vector<std::vector<Point>> loops;
+	if (reach.Empty()) return loops;
+	// directed lattice edges, inside on the same side everywhere, so they chain head to tail
+	std::multimap<std::pair<int, int>, std::pair<int, int>> edges;
+	for (int ly = 0; ly < reach.h; ++ly) {
+		for (int lx = 0; lx < reach.w; ++lx) {
+			const int x = reach.corner.x + lx;
+			const int y = reach.corner.y + ly;
+			if (!reach.Contains(x, y)) continue;
+			if (!reach.Contains(x, y - 1)) edges.emplace(std::make_pair(x, y), std::make_pair(x + 1, y));
+			if (!reach.Contains(x + 1, y)) edges.emplace(std::make_pair(x + 1, y), std::make_pair(x + 1, y + 1));
+			if (!reach.Contains(x, y + 1)) edges.emplace(std::make_pair(x + 1, y + 1), std::make_pair(x, y + 1));
+			if (!reach.Contains(x - 1, y)) edges.emplace(std::make_pair(x, y + 1), std::make_pair(x, y));
+		}
+	}
+	while (!edges.empty()) {
+		std::vector<std::pair<int, int>> corners;
+		auto it = edges.begin();
+		const std::pair<int, int> start = it->first;
+		std::pair<int, int> at = start;
+		while (it != edges.end()) {
+			corners.push_back(at);
+			at = it->second;
+			edges.erase(it);
+			if (at == start) break;
+			it = edges.find(at);
+		}
+		if (corners.size() < 3) continue;
+		// keep only the turns: straight runs would otherwise stay straight after rounding
+		std::vector<std::pair<float, float>> pts;
+		const size_t n = corners.size();
+		for (size_t i = 0; i < n; ++i) {
+			const auto& prev = corners[(i + n - 1) % n];
+			const auto& cur = corners[i];
+			const auto& next = corners[(i + 1) % n];
+			const bool straight = (cur.first - prev.first) * (next.second - cur.second) == (cur.second - prev.second) * (next.first - cur.first);
+			if (!straight) pts.emplace_back(float(cur.first * SEARCHMAP_TILE_WIDTH), float(cur.second * SEARCHMAP_TILE_HEIGHT));
+		}
+		if (pts.size() < 3) continue;
+		// staircases along diagonals: drop corners that sit close to the line through their
+		// neighbours, so the rounding gives a smooth slope instead of a wiggle
+		constexpr float TOLERANCE = 7.0f;
+		for (bool changed = true; changed && pts.size() > 4;) {
+			changed = false;
+			for (size_t i = 0; i < pts.size() && pts.size() > 4; ++i) {
+				const auto& a = pts[(i + pts.size() - 1) % pts.size()];
+				const auto& p = pts[i];
+				const auto& b = pts[(i + 1) % pts.size()];
+				const float dx = b.first - a.first;
+				const float dy = b.second - a.second;
+				const float len = std::sqrt(dx * dx + dy * dy);
+				if (len <= 0.0f) continue;
+				const float dist = std::abs(dx * (a.second - p.second) - dy * (a.first - p.first)) / len;
+				if (dist < TOLERANCE) {
+					pts.erase(pts.begin() + std::ptrdiff_t(i));
+					changed = true;
+				}
+			}
+		}
+		for (int pass = 0; pass < 3; ++pass) {
+			std::vector<std::pair<float, float>> smooth;
+			smooth.reserve(pts.size() * 2);
+			for (size_t i = 0; i < pts.size(); ++i) {
+				const auto& a = pts[i];
+				const auto& b = pts[(i + 1) % pts.size()];
+				smooth.emplace_back(a.first * 0.75f + b.first * 0.25f, a.second * 0.75f + b.second * 0.25f);
+				smooth.emplace_back(a.first * 0.25f + b.first * 0.75f, a.second * 0.25f + b.second * 0.75f);
+			}
+			pts.swap(smooth);
+		}
+		std::vector<Point> loop;
+		loop.reserve(pts.size() + 1);
+		for (const auto& p : pts) loop.emplace_back(int(std::lround(p.first)), int(std::lround(p.second)));
+		loop.push_back(loop.front());
+		loops.push_back(std::move(loop));
+	}
+	return loops;
+}
+
 void GameControl::UpdateTurnPreview()
 {
 	TurnPreview& preview = turnPreview;
@@ -749,7 +877,9 @@ void GameControl::UpdateTurnPreview()
 	Map* area = actor->GetCurrentArea();
 	int budget = game->combat.GetRemainingMovement(actor);
 	if (preview.actorPos != actor->Pos || preview.budget != budget) {
-		preview.reach = PathFinder::ReachableBoundary(area->tileProps, actor->Pos, actor->circleSize, budget);
+		preview.reach = PathFinder::ReachableArea(area->tileProps, actor->Pos, actor->circleSize, budget);
+		preview.shade = BuildReachShade(preview.reach);
+		preview.outline = BuildReachOutline(preview.reach);
 		preview.actorPos = actor->Pos;
 		preview.budget = budget;
 		preview.targetCell = SearchmapPoint(-1, -1);
@@ -829,17 +959,55 @@ void GameControl::DrawTurnPreview() const
 	const Actor* actor = GetTurnBasedActor();
 	if (!actor || IsTurnBasedBusy(actor) || preview.budget < 0) return;
 
-	static const Color reachColor(255, 255, 255, 110);
+	static const Color reachColor(255, 255, 255, 120);
+	static const Color shadeColor(0, 0, 0, 64);
 	static const Color inReach(90, 230, 90, 230);
 	static const Color outOfReach(230, 60, 60, 230);
 	static const Color pendingColor(250, 220, 80, 255);
-	constexpr int DOT_SPACING = 16; // a foot's worth of movement cost each
 	const Point& origin = viewport.origin;
+	constexpr int TW = SEARCHMAP_TILE_WIDTH;
+	constexpr int TH = SEARCHMAP_TILE_HEIGHT;
 
-	// the edge of how far this turn's movement goes
-	for (const auto& cell : preview.reach) {
-		const Point p = cell.ToNavmapCenter() - origin;
-		VideoDriver->DrawRect(Region(p - Point(1, 1), Size(2, 2)), reachColor, true, BlitFlags::BLENDED);
+	// how far this turn's movement goes: what lies beyond fades darker over a few cells, and a
+	// soft rounded line runs along the edge
+	const PathFinder::ReachArea& shade = preview.shade;
+	const auto shadeLevel = [&shade](int x, int y) {
+		const int lx = x - shade.corner.x;
+		const int ly = y - shade.corner.y;
+		if (lx < 0 || ly < 0 || lx >= shade.w || ly >= shade.h) return SHADE_STEPS;
+		return int(shade.cells[size_t(ly * shade.w + lx)]);
+	};
+	const int firstCol = origin.x / TW - 1;
+	const int lastCol = (origin.x + viewport.w) / TW + 1;
+	const int firstRow = origin.y / TH - 1;
+	const int lastRow = (origin.y + viewport.h) / TH + 1;
+	for (int y = firstRow; y <= lastRow; ++y) {
+		int runStart = firstCol;
+		int runLevel = shadeLevel(firstCol, y);
+		for (int x = firstCol + 1; x <= lastCol + 1; ++x) {
+			const int level = x <= lastCol ? shadeLevel(x, y) : -1;
+			if (level == runLevel) continue;
+			if (runLevel > 0) {
+				Color c = shadeColor;
+				c.a = uint8_t(shadeColor.a * runLevel / SHADE_STEPS);
+				const Region r(Point(runStart * TW, y * TH) - origin, Size((x - runStart) * TW, TH));
+				VideoDriver->DrawRect(r, c, true, BlitFlags::BLENDED);
+			}
+			runStart = x;
+			runLevel = level;
+		}
+	}
+	static const Color glowColor(255, 255, 255, 28);
+	const bool outline = core->GetDictionary().Get("Turn Based Reach Outline", 0) != 0;
+	for (const auto& loop : outline ? preview.outline : std::vector<std::vector<Point>>()) {
+		std::vector<Point> shifted(loop.size());
+		// a faint halo around a thin line
+		for (const Point& offset : { Point(-1, 0), Point(1, 0), Point(0, -1), Point(0, 1), Point(-1, -1), Point(1, 1) }) {
+			for (size_t i = 0; i < loop.size(); ++i) shifted[i] = loop[i] - origin + offset;
+			VideoDriver->DrawLines(shifted, glowColor, BlitFlags::BLENDED);
+		}
+		for (size_t i = 0; i < loop.size(); ++i) shifted[i] = loop[i] - origin;
+		VideoDriver->DrawLines(shifted, reachColor, BlitFlags::BLENDED);
 	}
 
 	// aiming a spell, item, talk ...: the click goes to that, not to a walk, so no path
@@ -847,26 +1015,40 @@ void GameControl::DrawTurnPreview() const
 
 	const int budget = preview.budget;
 	if (preview.path) {
-		// the dotted path: green where we can afford it, red beyond
-		Point prev = actor->Pos;
+		// the path as a line: green as far as we can afford it, red beyond
+		const Point stop = PathFinder::PointAlongPath(actor->Pos, preview.path, budget);
+		std::vector<Point> affordable { actor->Pos - origin };
+		std::vector<Point> beyond;
 		int walked = 0;
-		int nextDot = DOT_SPACING;
+		Point prev = actor->Pos;
 		for (size_t i = 0; i < preview.path.Size(); ++i) {
 			const Point& next = preview.path.GetStep(i).point;
-			const int leg = PathFinder::MovementCost(prev, next);
-			while (leg > 0 && nextDot <= walked + leg) {
-				const float_t t = float_t(nextDot - walked) / float_t(leg);
-				const Point dot(prev.x + int((next.x - prev.x) * t), prev.y + int((next.y - prev.y) * t));
-				const Color& color = nextDot <= budget ? inReach : outOfReach;
-				VideoDriver->DrawRect(Region(dot - origin - Point(2, 2), Size(4, 4)), color, true, BlitFlags::BLENDED);
-				nextDot += DOT_SPACING;
+			walked += PathFinder::MovementCost(prev, next);
+			if (beyond.empty() && walked <= budget) {
+				affordable.push_back(next - origin);
+			} else {
+				if (beyond.empty()) {
+					affordable.push_back(stop - origin);
+					beyond.push_back(stop - origin);
+				}
+				beyond.push_back(next - origin);
 			}
-			walked += leg;
 			prev = next;
 		}
+		// a couple of pixels wide
+		const auto thickLine = [](const std::vector<Point>& points, const Color& color) {
+			if (points.size() < 2) return;
+			for (const Point& offset : { Point(0, 0), Point(1, 0), Point(0, 1), Point(1, 1) }) {
+				std::vector<Point> shifted;
+				shifted.reserve(points.size());
+				for (const Point& p : points) shifted.push_back(p + offset);
+				VideoDriver->DrawLines(shifted, color, BlitFlags::BLENDED);
+			}
+		};
+		thickLine(affordable, inReach);
+		thickLine(beyond, outOfReach);
 
 		// exactly where the actor would stop
-		const Point stop = PathFinder::PointAlongPath(actor->Pos, preview.path, budget);
 		const Color& stopColor = preview.pending ? pendingColor : (preview.pathCost <= budget ? inReach : outOfReach);
 		DrawTargetReticle(actor->CircleSize2Radius(), stopColor, stop - origin);
 	}

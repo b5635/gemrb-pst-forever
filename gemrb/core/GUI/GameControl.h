@@ -109,7 +109,11 @@ private:
 		ieDword actorID = 0;
 		Point actorPos;
 		int budget = -1;
-		std::vector<SearchmapPoint> reach;
+		PathFinder::ReachArea reach;
+		// the reach's edge as smoothed closed curves (map coordinates)
+		std::vector<std::vector<Point>> outline;
+		// how dimmed each cell around the reach is: 0 inside, up to SHADE_STEPS far outside
+		PathFinder::ReachArea shade;
 
 		SearchmapPoint targetCell { -1, -1 };
 		ieDword targetActorID = 0;

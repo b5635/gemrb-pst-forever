@@ -431,7 +431,8 @@ tick_t CombatHud::LandStart() const
 
 tick_t CombatHud::Landed() const
 {
-	return LandStart() + tick_t(200 * Scale());
+	// a quick settle: the verdict has to show while the blow is still landing on screen
+	return LandStart() + tick_t(120 * Scale());
 }
 
 static bool Special(int roll, bool critical)
@@ -441,7 +442,8 @@ static bool Special(int roll, bool critical)
 
 tick_t CombatHud::VerdictAt() const
 {
-	return Landed() + tick_t((Special(roll.roll, roll.critical) ? 150 : 550) * Scale());
+	// hit or miss reads out the moment the die lands, in step with the swing's hit frame
+	return Landed();
 }
 
 void CombatHud::Reset()

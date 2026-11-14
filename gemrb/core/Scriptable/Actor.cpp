@@ -3623,6 +3623,18 @@ bool Actor::VerbalConstant(Verbal start, int count, int flags) const
 void Actor::DisplayStringOrVerbalConstant(HCStrings str, Verbal vcStat, int vcCount) const
 {
 	ieStrRef strref = DisplayMessage::GetStringReference(str);
+	// pst voices "target is immune to weapon" once per companion, in strings rather than sound
+	// slots; the generic one is the Nameless One's, so Dak'kon would speak with his voice
+	if (str == HCStrings::WeaponIneffective && strref != ieStrRef::INVALID) {
+		AutoTable own = gamedata->LoadTable("wpimmune", true);
+		if (own) {
+			TableMgr::index_t row = own->GetRowIndex(scriptName);
+			if (row != TableMgr::npos) {
+				ieStrRef mine = own->QueryFieldAsStrRef(row, 0);
+				if (mine != ieStrRef::INVALID) strref = mine;
+			}
+		}
+	}
 	if (strref != ieStrRef::INVALID) {
 		DisplayStringCore((Scriptable*) this, strref, DS_CONSOLE | DS_CIRCLE);
 	} else {
@@ -3757,6 +3769,13 @@ static ieDword selectStreakID = 0;
 static int selectStreak = 0;
 static constexpr int ANNOYED_STREAK = 4;
 
+// giving an order or switching characters calms them down again
+void Actor::ResetSelectStreak()
+{
+	selectStreakID = 0;
+	selectStreak = 0;
+}
+
 void Actor::PlaySelectionSound(bool force, bool fresh)
 {
 	playedCommandSound = false;
@@ -3841,6 +3860,7 @@ void Actor::CommandActor(Holder<Action> action, bool clearPath)
 		ClearPath(true);
 	}
 	AddAction(std::move(action)); // now do this new thing
+	ResetSelectStreak();
 
 	// pst uses a slider in lieu of buttons, so the frequency value is off by 1
 	switch (CFGCache.commandSndFreq + pstflags) {
@@ -4237,6 +4257,7 @@ bool Actor::HandleCastingStance(const ResRef& spellResRef, bool deplete, bool in
 	}
 	if (!instant) {
 		SetStance(IE_ANI_CAST);
+		RestartStanceAnimation();
 	}
 	return false;
 }
@@ -7397,6 +7418,13 @@ bool Actor::ResolveSwing()
 	return attackcount != attacksLeft;
 }
 
+void Actor::FireAttackProjectile()
+{
+	if (!attackProjectile || !area) return;
+	area->AddProjectile(std::move(attackProjectile), Pos, objects.LastTargetPersistent, false);
+	attackProjectile = nullptr;
+}
+
 bool Actor::ResolveSingleSwing()
 {
 	int attacksLeft = attackcount;
@@ -7486,6 +7514,40 @@ int Actor::GetStanceFrameCount() const
 {
 	if (currentStance.anim.empty() || !currentStance.anim[0].first) return -1;
 	return static_cast<int>(currentStance.anim[0].first->GetFrameCount());
+}
+
+void Actor::RestartStanceAnimation()
+{
+	if (!anims) return;
+	const unsigned char stance = GetStance();
+	const orient_t face = GetNextFace();
+	const auto* parts = anims->GetAnimation(stance, face);
+	if (parts) {
+		for (const auto& part : *parts) {
+			if (part) part->SetFrame(0);
+		}
+	}
+	const auto* shadows = anims->GetShadowAnimation(stance, face);
+	if (shadows) {
+		for (const auto& part : *shadows) {
+			if (part) part->SetFrame(0);
+		}
+	}
+}
+
+int Actor::StanceAnimationTicks(unsigned char stance)
+{
+	if (!anims) return 0;
+	const unsigned char current = GetStance();
+	const auto* parts = anims->GetAnimation(stance, GetNextFace());
+	int ticks = 0;
+	if (parts && !parts->empty() && (*parts)[0] && (*parts)[0]->fps > 0) {
+		const auto& first = (*parts)[0];
+		ticks = static_cast<int>(std::ceil(float(first->GetFrameCount()) * float(core->Time.ticksPerSec) / first->fps));
+	}
+	// GetAnimation sets up the stance sequencing (auto switch ...) for what it is asked about
+	if (current != stance) anims->GetAnimation(current, GetNextFace());
+	return ticks;
 }
 
 // turnBased: the combat director already started the round and decides when swings happen
@@ -7616,7 +7678,14 @@ void Actor::PerformAttack(ieDword gameTime, bool turnBased)
 		return;
 	}
 
-	SetStance(AttackStance);
+	// turn based melee is already mid-swing on the hit frame: setting the stance again would
+	// pick another random attack animation and cut the swing off
+	const unsigned char stance = GetStance();
+	const bool swinging = stance == IE_ANI_ATTACK || stance == IE_ANI_ATTACK_JAB || stance == IE_ANI_ATTACK_SLASH ||
+		stance == IE_ANI_ATTACK_BACKSLASH || stance == IE_ANI_SHOOT;
+	if (!turnBased || !swinging) {
+		SetStance(AttackStance);
+	}
 	PlaySwingSound(wi);
 
 	//figure out the time for our next attack since the old time has the initiative
@@ -7759,7 +7828,8 @@ void Actor::PerformAttack(ieDword gameTime, bool turnBased)
 		buffer.append("[Critical Miss]");
 		Log(COMBAT, "Attack", "{}", buffer);
 		if (!gc->InDialog()) {
-			displaymsg->DisplayMsgAtLocation(HCStrings::CriticalMiss, FT_COMBAT, this, this, GUIColors::WHITE);
+			// turn based: the combat HUD's dice panel already calls out the critical miss
+			if (!turnBased) displaymsg->DisplayMsgAtLocation(HCStrings::CriticalMiss, FT_COMBAT, this, this, GUIColors::WHITE);
 			VerbalConstant(Verbal::CritMiss);
 		}
 		ApplyCriticalEffect(this, target, wi, false);
@@ -8562,6 +8632,7 @@ bool Actor::AdvanceAnimations()
 	unsigned char stanceID = GetStance();
 	orient_t face = GetNextFace();
 	const auto* stanceAnim = anims->GetAnimation(stanceID, face);
+	currentStance.stance = stanceID;
 
 	if (stanceAnim == nullptr) {
 		return false;
@@ -10126,6 +10197,12 @@ void Actor::ChargeItem(ieDword slot, int header, CREItem* item, const Item* itm,
 	if (!silent) {
 		ieByte stance = gamedata->GetItemAnimation(item->ItemResRef);
 		if (!stance) stance = AttackStance;
+		// turn based: a weapon hit lands mid-swing, and restarting the stance would cut the
+		// swing off with another random attack animation
+		const unsigned char now = GetStance();
+		const bool swinging = now == IE_ANI_ATTACK || now == IE_ANI_ATTACK_JAB || now == IE_ANI_ATTACK_SLASH ||
+			now == IE_ANI_ATTACK_BACKSLASH || now == IE_ANI_SHOOT;
+		if (swinging && CombatDirector::Owns(this)) stance = 0xff;
 
 		if (stance != 0xff) {
 			SetStance(stance);

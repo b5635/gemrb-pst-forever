@@ -458,7 +458,10 @@ Path PathFinder::FindPath(const TraversabilityCache::Data_t& traversabilityCache
 
 		if (minDistance &&
 		    parents[smptCurrentIdx] != smptCurrent &&
-		    SquaredDistance(smptCurrent.ToNavmapCenter(), nmptDest) < squaredMinDist &&
+		    // measured from what the caller wants to reach: a blocked destination was already moved up
+		    // to minDistance towards us above, and measuring from that point again stopped the walk
+		    // up to twice the range short (an attacker then crept up one tile per re-path)
+		    SquaredDistance(smptCurrent.ToNavmapCenter(), destination) < squaredMinDist &&
 		    (!(pathfindingFlags & PF_SIGHT) || IsVisibleLOS(tileProps, smptCurrent, smptDest0))) { // FIXME: should probably be smptDest
 			smptDest = smptCurrent;
 			foundPath = true;
@@ -1071,7 +1074,24 @@ Point PathFinder::PointAlongPath(const Point& start, const Path& path, int cost)
 std::vector<SearchmapPoint> PathFinder::ReachableBoundary(const TileProps& tileProps, const Point& source, unsigned int circleSize, int maxCost)
 {
 	std::vector<SearchmapPoint> boundary;
-	if (maxCost <= 0) return boundary;
+	const ReachArea area = ReachableArea(tileProps, source, circleSize, maxCost);
+	for (int ly = 0; ly < area.h; ++ly) {
+		for (int lx = 0; lx < area.w; ++lx) {
+			const int x = area.corner.x + lx;
+			const int y = area.corner.y + ly;
+			if (!area.Contains(x, y)) continue;
+			if (!area.Contains(x + 1, y) || !area.Contains(x - 1, y) || !area.Contains(x, y + 1) || !area.Contains(x, y - 1)) {
+				boundary.emplace_back(x, y);
+			}
+		}
+	}
+	return boundary;
+}
+
+PathFinder::ReachArea PathFinder::ReachableArea(const TileProps& tileProps, const Point& source, unsigned int circleSize, int maxCost)
+{
+	ReachArea area;
+	if (maxCost <= 0) return area;
 
 	// a Dijkstra flood over the cells in reach; it moves on the cell lattice, so it is a bit
 	// more pessimistic than the any-angle paths actors really walk
@@ -1137,17 +1157,13 @@ std::vector<SearchmapPoint> PathFinder::ReachableBoundary(const TileProps& tileP
 		}
 	}
 
+	area.corner = SearchmapPoint(origin.x - rx, origin.y - ry);
+	area.w = w;
+	area.h = h;
+	area.cells.resize(size_t(w * h));
 	for (int idx = 0; idx < w * h; ++idx) {
-		if (cost[idx] == UNREACHED) continue;
-		const SearchmapPoint cell(idx % w + origin.x - rx, idx / w + origin.y - ry);
-		for (int i = 0; i < 4; ++i) {
-			const int nextIdx = localIdx(SearchmapPoint(cell.x + dxs[i], cell.y + dys[i]));
-			if (nextIdx < 0 || cost[nextIdx] == UNREACHED) {
-				boundary.push_back(cell);
-				break;
-			}
-		}
+		area.cells[size_t(idx)] = cost[idx] != UNREACHED;
 	}
-	return boundary;
+	return area;
 }
 }

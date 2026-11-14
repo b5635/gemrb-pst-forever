@@ -536,6 +536,7 @@ private:
 	struct {
 		std::vector<AnimationPart> anim;
 		std::vector<AnimationPart> shadow;
+		unsigned char stance = 0xff; // the stance these were picked for
 	} currentStance;
 
 	SaveInfo lastSave;
@@ -715,6 +716,8 @@ public:
 	Holder<Sprite2D> CopyPortrait(int which) const;
 
 	void ResetAttackProjectile() { attackProjectile = nullptr; }
+	/* turn based: the director decides the hit frame, so the blow lands now instead of on frame 8 */
+	void FireAttackProjectile();
 	void SetName(String str, unsigned char type);
 	void SetName(ieStrRef strref, unsigned char type);
 	/* Returns by how much movement speed should be divided to account for loot weight */
@@ -730,6 +733,8 @@ public:
 	/* call this on gui selects */
 	/** fresh: the selection came by itself (a turn passing to it), not from clicks; restarts the click streak, never annoyed */
 	void PlaySelectionSound(bool force = false, bool fresh = false);
+	/** restarts the click streak that leads to the annoyed lines */
+	static void ResetSelectStreak();
 	/* play a roar if the setting isn't disabled */
 	void PlayWarCry(int range) const;
 	/* call this when adding actions via gui */
@@ -904,6 +909,15 @@ public:
 	/** The current stance animation's frame and frame count, -1 without an animation */
 	int GetStanceFrame() const;
 	int GetStanceFrameCount() const;
+	/** Rewinds the current stance's animation to its first frame. GemRB caches every stance's
+	 * animation and only rewinds a play-once one when it ran to its end, so one cut short
+	 * (a swing, a conjure) would otherwise start midway the next time. */
+	void RestartStanceAnimation();
+	/** How many game ticks one play of a stance's animation takes (facing as now), 0 without one */
+	int StanceAnimationTicks(unsigned char stance);
+	/** Has the current stance been drawn yet? Right after a SetStance the frame above is still
+	 * the previous stance's, until the next draw picks the new animation up. */
+	bool StanceAnimationShown() const { return currentStance.stance == GetStance(); }
 	unsigned char GetAttackStance() const { return static_cast<unsigned char>(AttackStance); }
 	/* returns the adjusted weapon range, since items have odd values stored */
 	unsigned int GetWeaponRange(bool leftOrRight) const;

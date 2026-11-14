@@ -37,3 +37,6 @@ build_debug/
 
 #clangd cache dir
 .cache
+
+# local screenshot dumps from the in-game harness
+/shots/

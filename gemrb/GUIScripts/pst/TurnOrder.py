@@ -61,7 +61,8 @@ def GetOrderWindow ():
 	Window.SetFlags (WF_ALPHA_CHANNEL | WF_BORDERLESS | IE_GUI_VIEW_IGNORE_EVENTS, OP_OR) # never the key focus
 	for i in range (MAX_CARDS):
 		Button = Window.CreateButton (i, 0, 0, CARD_W, CARD_H)
-		Button.SetFlags (IE_GUI_BUTTON_PICTURE | IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_CENTER_PICTURES, OP_OR)
+		# no IE_GUI_BUTTON_NO_IMAGE: Button::Draw skips the borders (damage fill, active, done) with it
+		Button.SetFlags (IE_GUI_BUTTON_PICTURE | IE_GUI_BUTTON_CENTER_PICTURES, OP_OR)
 		Button.SetFont ("NORMAL")
 		Button.OnPress (CardPressed)
 		Button.SetVisible (False)

@@ -971,6 +971,7 @@ void Scriptable::CastSpellPointEnd(int level, bool keepStance)
 	Actor* caster = Scriptable::As<Actor>(this);
 	if (caster && !keepStance) {
 		caster->SetStance(IE_ANI_CONJURE);
+		caster->RestartStanceAnimation();
 	}
 	if (level == 0) {
 		if (caster) {
@@ -1051,6 +1052,7 @@ void Scriptable::CastSpellEnd(int level, bool keepStance)
 	Actor* caster = Scriptable::As<Actor>(this);
 	if (caster && !keepStance) {
 		caster->SetStance(IE_ANI_CONJURE);
+		caster->RestartStanceAnimation();
 	}
 	if (level == 0) {
 		if (caster) {
@@ -1415,8 +1417,11 @@ int Scriptable::SpellCast(bool instant, Scriptable* target, int level)
 	if (instant) {
 		duration = 0;
 	} else if (actor && core->GetGame()->combat.IsCombatant(actor)) {
-		// the spell resolves within the turn, so just play out the casting
-		duration = std::min<int>(duration, core->Time.round_size / 6);
+		// the spell resolves within the turn, so just play out the casting: the casting animation
+		// once through, so it neither loops nor gets cut off midway (at most a second)
+		int castTicks = actor->StanceAnimationTicks(IE_ANI_CAST);
+		int cap = core->Time.round_size / 6;
+		duration = duration > 0 ? (castTicks > 0 ? std::min(castTicks, cap) : std::min(duration, cap)) : 0;
 	}
 	if (actor) {
 		//cfb

@@ -312,6 +312,22 @@ public:
 	static int PathCost(const Point& start, const Path& path);
 	/** Where an actor walking path from start ends up after spending cost; the end if it can afford it all. */
 	static Point PointAlongPath(const Point& start, const Path& path, int cost);
+	/** The searchmap cells reachable with a movement budget, as a grid around the source */
+	struct ReachArea {
+		SearchmapPoint corner; // the grid's top left cell
+		int w = 0;
+		int h = 0;
+		std::vector<uint8_t> cells; // 1: reachable
+
+		bool Contains(int x, int y) const
+		{
+			const int lx = x - corner.x;
+			const int ly = y - corner.y;
+			return lx >= 0 && ly >= 0 && lx < w && ly < h && cells[size_t(ly * w + lx)];
+		}
+		bool Empty() const { return cells.empty(); }
+	};
+	static ReachArea ReachableArea(const TileProps& tileProps, const Point& source, unsigned int circleSize, int maxCost);
 	/** Searchmap cells on the edge of the area reachable from source with the given movement cost. */
 	static std::vector<SearchmapPoint> ReachableBoundary(const TileProps& tileProps, const Point& source, unsigned int circleSize, int maxCost);
 

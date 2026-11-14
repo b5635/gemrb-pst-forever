@@ -234,7 +234,7 @@ def OpenSaveDetailWindow ():
 
 	# PC portraits
 	from GameCheck import MAX_PARTY_SIZE
-	for j in range (MAX_PARTY_SIZE):
+	for j in range (min (6, MAX_PARTY_SIZE)): # the chu has 6 portrait slots (controls 6-11)
 		Button = Window.GetControl (6 + j)
 		if Button:
 			Button.SetFlags (IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_PICTURE, OP_SET)

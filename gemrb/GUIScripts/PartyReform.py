@@ -53,9 +53,14 @@ def UpdateReformWindow (Window, select):
 				Button.SetState (IE_GUI_BUTTON_DISABLED)
 			Button.EnableBorder (PortraitWindow.FRAME_PC_SELECTED, select == pc)
 
-		portrait = GemRB.GetPlayerPortrait (pc, 1)
 		Button.SetVisible(True)
-		Button.SetPicture (portrait["Sprite"], "NOPORTSM")
+		if GameCheck.IsPST ():
+			# pst's small portraits (AMP*) are placeholders, use the first frame of the strip's ones
+			portrait = GemRB.GetPlayerPortrait (pc, 0)
+			Button.SetPicture (GemRB.GetSprite (portrait["ResRef"], -1, 0, 0) if portrait else None)
+		else:
+			portrait = GemRB.GetPlayerPortrait (pc, 1)
+			Button.SetPicture (portrait["Sprite"], "NOPORTSM")
 
 	# if nobody can be removed, just close the window
 	if not canRemove:
@@ -110,6 +115,8 @@ def OpenReformPartyWindow ():
 	PortraitButtons = PortraitWindow.GetPortraitButtons (Window, 1, "horizontal")
 	for Button in PortraitButtons:
 		Button.SetFlags (IE_GUI_BUTTON_PICTURE | IE_GUI_BUTTON_ALIGN_BOTTOM | IE_GUI_BUTTON_ALIGN_LEFT, OP_SET)
+		if GameCheck.IsPST ():
+			Button.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_OR) # the chu art is a "PORTRAIT GEN." placeholder
 		color = {'r' : 0, 'g' : 255, 'b' : 0, 'a' : 255}
 		Button.SetBorder (PortraitWindow.FRAME_PC_SELECTED, color, 0, 0, Button.GetInsetFrame (1, 1, 2, 2))
 		Button.OnPress (lambda btn: UpdateReformWindow (Window, btn.Value))

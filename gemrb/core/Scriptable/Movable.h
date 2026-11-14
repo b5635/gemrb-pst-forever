@@ -121,6 +121,8 @@ public:
 		randomBackoff--;
 	}
 	inline void ResetBackoff() { randomBackoff = 0; }
+	/** the last walk was given up short of its end (in front of the goal, zero step) */
+	inline bool PathAbandoned() const { return pathAbandoned; }
 	/** Turn based combat: walk this ready-made path (already clipped to the movement budget) */
 	void SetCombatPath(Path&& newPath, int minDistance, const Point& dest);
 	/** Turn based combat: no path to dest, report it like an empty search result */

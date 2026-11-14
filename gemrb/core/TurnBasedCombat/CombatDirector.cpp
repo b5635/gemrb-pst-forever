@@ -54,6 +54,13 @@ static bool PlayerControlled(const Actor* actor)
 }
 
 // "Turn Based Combat Speed" in percent: 100 is normal, 200 twice as fast
+// the frame of an attack animation the blow lands on: halfway through
+static int SwingHitFrame(int frames)
+{
+	if (frames <= 1) return 0;
+	return frames / 2;
+}
+
 static unsigned int SwingPauseTicks()
 {
 	int speed = std::max(10, int(core->GetDictionary().Get(StringView("Turn Based Combat Speed"), 100)));
@@ -1136,14 +1143,28 @@ void CombatDirector::WalkStep(Actor* actor, Combatant& combatant)
 	}
 	if (!arrived) return;
 
+	const char* why = actor->GetRandomBackoff() ? "blocked by someone" : combatant.movePx <= 0 ? "out of movement" :
+		actor->PathAbandoned() ? "gave up near the goal" : actor->HasMovementInProgress() ? "can't move" : "arrived";
+	Log(COMBAT, "CombatDirector", "{} stops at {} after {} units: {}", fmt::WideToChar { Name(actor) }, actor->Pos,
+	    PathFinder::MovementCost(walkFrom, actor->Pos), why);
 	if (actor->Pos == walkFrom) {
 		blockedAt = actor->Pos;
 	}
-	// always ends standing, with no path left
+	// always ends with no path left
 	actor->ClearPath(true);
 	actor->ResetBackoff();
-	actor->SetStance(IE_ANI_READY);
 	step = Step::Act;
+	// the action that asked for the walk carries on right away (another leg, the attack ...), so
+	// it never stops for a tick between two legs
+	ActStep(actor, combatant);
+	// a finished path leaves it standing awake (ClearPath); in a fight it stands ready, and one
+	// that walks on keeps its walk going instead of flashing a standing frame between the legs
+	const unsigned char stance = actor->GetStance();
+	if (step == Step::Walk) {
+		actor->SetStance((actor->GetInternalFlag() & IF_RUNNING) ? IE_ANI_RUN : IE_ANI_WALK);
+	} else if (stance == IE_ANI_WALK || stance == IE_ANI_RUN || stance == IE_ANI_AWAKE) {
+		actor->SetStance(IE_ANI_READY);
+	}
 	NotifyGUI();
 }
 
@@ -1223,7 +1244,10 @@ void CombatDirector::BeginSwingAnimation(Actor* actor)
 	} else {
 		actor->SetStance(actor->GetAttackStance());
 	}
-	swingLastFrame = actor->GetStanceFrame();
+	// the cached animation may still be where an earlier swing was cut off: play it from the top
+	actor->RestartStanceAnimation();
+	// the frame shown is still the old stance's until the next draw, so don't trust it yet
+	swingLastFrame = -1;
 }
 
 void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
@@ -1249,21 +1273,26 @@ void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
 		return;
 	}
 	++swingTicks;
+	// until the swing has been drawn once, the frame is still the ready stance's
+	if (!actor->StanceAnimationShown() && swingTicks <= SWING_MAX_TICKS) return;
 	const int frame = actor->GetStanceFrame();
 	const int frames = actor->GetStanceFrameCount();
 	const bool attackStance = actor->GetStance() == IE_ANI_ATTACK || actor->GetStance() == IE_ANI_ATTACK_JAB ||
 		actor->GetStance() == IE_ANI_ATTACK_SLASH || actor->GetStance() == IE_ANI_ATTACK_BACKSLASH || actor->GetStance() == IE_ANI_SHOOT;
 
 	if (!swingResolved) {
-		// melee lands on the same frame GemRB fires weapon projectiles on
-		int hitFrame = frames > 8 ? 8 : frames / 2;
+		// melee lands halfway into the swing
+		const int hitFrame = SwingHitFrame(frames);
 		if (frame < 0 || !attackStance || frame >= hitFrame || swingTicks > SWING_MAX_TICKS) {
 			swingResolved = true;
+			Log(COMBAT, "CombatDirector", "swing lands on frame {}/{} after {} ticks", frame, frames, swingTicks);
 			if (IsAliveCombatant(target) && WithinPersonalRange(actor, target, actor->GetWeaponRange(false))) {
 				actor->objects.LastTarget = swingTarget;
 				if (!actor->ResolveSwing()) {
 					actor->attackcount = 0; // it couldn't swing (weapon unusable ...), so the round is lost
 				}
+				// the damage rides the attack projectile, which GemRB only fires on frame 8 exactly
+				actor->FireAttackProjectile();
 			} else {
 				actor->attackcount = 0;
 			}
@@ -1425,26 +1454,29 @@ void CombatDirector::ReactionStep(Actor* mover)
 		PushEvent(start);
 		reactor->objects.LastTarget = mover->GetGlobalID();
 		reactor->SetStance(reactor->GetAttackStance());
+		reactor->RestartStanceAnimation();
 		swingTarget = mover->GetGlobalID();
 		swingResolved = false;
 		swingTicks = 0;
-		swingLastFrame = reactor->GetStanceFrame();
+		swingLastFrame = -1;
 		return;
 	}
 
 	++swingTicks;
+	if (!reactor->StanceAnimationShown() && swingTicks <= SWING_MAX_TICKS) return;
 	const int frame = reactor->GetStanceFrame();
 	const int frames = reactor->GetStanceFrameCount();
 	const unsigned char stance = reactor->GetStance();
 	const bool attackStance = stance == IE_ANI_ATTACK || stance == IE_ANI_ATTACK_JAB || stance == IE_ANI_ATTACK_SLASH ||
 		stance == IE_ANI_ATTACK_BACKSLASH || stance == IE_ANI_SHOOT;
 	if (!swingResolved) {
-		int hitFrame = frames > 8 ? 8 : frames / 2;
+		const int hitFrame = SwingHitFrame(frames);
 		if (frame < 0 || !attackStance || frame >= hitFrame || swingTicks > SWING_MAX_TICKS) {
 			swingResolved = true;
 			// one swing, outside the reactor's own round
 			reactor->objects.LastTarget = mover->GetGlobalID();
 			reactor->ResolveSingleSwing();
+			reactor->FireAttackProjectile();
 			const Actor::SwingInfo& info = reactor->lastSwing;
 			if (info.made) {
 				CombatEvent event;

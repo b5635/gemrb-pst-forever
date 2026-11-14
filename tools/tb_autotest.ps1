@@ -21,7 +21,24 @@ $AllCases = @{
 	"mortuary" = @{ Save = 2; Hostile = @('"1700ghoul2"'); Jump = @() }
 	# a fight-then-flee ghoul jumped next to the party
 	"ghouls" = @{ Save = 2; Hostile = @(10068); Jump = @(@(10068, "[420.640]")) }
+	# the mortuary ghoul against a full party of 8 (MaxPartySize=8: the Nameless One + all seven)
+	"party8" = @{ Save = 2; Hostile = @('"1700ghoul2"'); Jump = @(); FullParty = $true }
 }
+
+# spawns the companions the save's party lacks next to the Nameless One, then joins them
+# (a second pass: the spawns need a moment before ActionOverride can find them)
+$SpawnMissing = @'
+import GemRB
+names = [GemRB.GetPlayerName(i, 1) for i in range(1, GemRB.GetPartySize() + 1)]
+for cre, name in (("morte", "Morte"), ("dakkon", "Dak'kon"), ("annah", "Annah"), ("grace", "Fall-from-Grace"), ("nordom", "Nordom"), ("ignus", "Ignus"), ("vhail", "Vhailor")):
+	if name not in names:
+		act('CreateCreatureAtFeet("%s",0)' % cre)
+'@
+$JoinAll = @'
+import GemRB
+for cre in ("morte", "dakkon", "annah", "grace", "nordom", "ignus", "vhail"):
+	act('ActionOverride("%s",JoinParty())' % cre)
+'@
 
 function Py([string]$code) { & $dev py $code }
 
@@ -34,6 +51,18 @@ foreach ($name in $Cases) {
 	Start-Sleep -Seconds 18
 	Py "import GemRB; GemRB.SetVar('Turn Based Party AI', 1); print('party ai on')" | Out-Null
 	$logStart = (Get-Content $log).Count
+	if ($case.FullParty) {
+		$tmp = Join-Path $env:TEMP "tb_party.py"
+		Set-Content -Encoding utf8 $tmp $SpawnMissing
+		& $dev pyfile $tmp | Out-Null
+		Start-Sleep -Seconds 2
+		Set-Content -Encoding utf8 $tmp $JoinAll
+		& $dev pyfile $tmp | Out-Null
+		Start-Sleep -Seconds 3
+		$size = [int]((Py "import GemRB; print(GemRB.GetPartySize())") -join "").Trim()
+		Write-Output "party size $size"
+		if ($size -ne 8) { Write-Output "FAILED: party of 8 not assembled"; $failed = $true; continue }
+	}
 	foreach ($j in $case.Jump) { Py "import GemRB; GemRB.ExecuteString('JumpToPoint($($j[1]))', $($j[0]))" | Out-Null }
 	foreach ($h in $case.Hostile) {
 		if ($h -is [int]) { Py "import GemRB; GemRB.ExecuteString('Enemy()', $h)" | Out-Null }

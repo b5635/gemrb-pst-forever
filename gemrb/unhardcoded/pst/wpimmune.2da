@@ -1,0 +1,12 @@
+2DA V1.0
+-1
+# each companion's own "target is immune to weapon" line, by script name;
+# anyone else uses WEAPONINEFFECTIVE from strings.2da (the Nameless One's)
+          STRREF
+MORTE     37088
+ANNAH     37089
+DAKKON    37090
+GRACE     37091
+NORDOM    37092
+IGNUS     37093
+VHAILOR   37094

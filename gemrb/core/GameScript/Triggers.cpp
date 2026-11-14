@@ -2979,19 +2979,32 @@ int GameScript::TargetUnreachable(Scriptable* Sender, const Trigger* /*parameter
 	return Sender->MatchTrigger(trigger_targetunreachable);
 }
 
+// The originals cap the party at 6 and their dialogs test "the party is full" with that
+// number, e.g. pst's Nordom only offers to join on PartyCountLT(6) or PartyCountEQ(6).
+// With a raised MaxPartySize the 6 in these tests means the raised limit, otherwise a
+// party of 7 could never take him on.
+static int PartyLimitParameter(int value)
+{
+	constexpr int vanillaLimit = 6;
+	if (value == vanillaLimit) {
+		return std::max(vanillaLimit, core->config.MaxPartySize);
+	}
+	return value;
+}
+
 int GameScript::PartyCountEQ(Scriptable* /*Sender*/, const Trigger* parameters)
 {
-	return core->GetGame()->GetPartySize(false) == parameters->int0Parameter;
+	return core->GetGame()->GetPartySize(false) == PartyLimitParameter(parameters->int0Parameter);
 }
 
 int GameScript::PartyCountLT(Scriptable* /*Sender*/, const Trigger* parameters)
 {
-	return core->GetGame()->GetPartySize(false) < parameters->int0Parameter;
+	return core->GetGame()->GetPartySize(false) < PartyLimitParameter(parameters->int0Parameter);
 }
 
 int GameScript::PartyCountGT(Scriptable* /*Sender*/, const Trigger* parameters)
 {
-	return core->GetGame()->GetPartySize(false) > parameters->int0Parameter;
+	return core->GetGame()->GetPartySize(false) > PartyLimitParameter(parameters->int0Parameter);
 }
 
 int GameScript::PartyCountAliveEQ(Scriptable* /*Sender*/, const Trigger* parameters)

@@ -614,6 +614,8 @@ bool Game::SelectActor(Actor* actor, bool select, unsigned flags)
 			return true;
 		}
 
+		// a newly selected character starts its click streak over
+		Actor::ResetSelectStreak();
 		actor->Select(true);
 		assert(actor->IsSelected());
 		selected.push_back(actor);

@@ -16,6 +16,7 @@
 #include "TableMgr.h"
 
 #include "GUI/GameControl.h"
+#include "Audio/Playback.h"
 #include "GUI/TextArea.h"
 #include "GameScript/GameScript.h"
 
@@ -162,6 +163,11 @@ void DialogHandler::EndDialog(bool try_to_break)
 	}
 	ds = nullptr;
 	dlg = nullptr;
+
+	// voiced dialogue (eg. the PST AI Voices mod) shouldn't keep talking once the window is gone
+	if (core->GetDictionary().Get("Stop Speech On Dialog End", 1)) {
+		core->GetAudioPlayback().StopSpeech();
+	}
 
 	core->ToggleViewsEnabled(true, "NOT_DLG");
 	// FIXME: it's not so nice having this here, but things call EndDialog directly :(
