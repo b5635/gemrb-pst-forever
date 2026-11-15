@@ -10,6 +10,7 @@
 #include "ie_stats.h"
 #include "strrefs.h"
 
+#include "AreaSceneData.h"
 #include "DisplayMessage.h"
 #include "Game.h"
 #include "GameData.h"
@@ -1362,8 +1363,8 @@ void Map::CollectSceneLights(const Region& viewport, SceneLighting& out, const W
 	const Game* game = core->GetGame();
 	const ieDword gametime = game->GameTime;
 
-	// warm light carried by the party
-	if (vars.Get("PartyLight", 1)) {
+	// optional warm light carried by the party (off unless PartyLight=1)
+	if (vars.Get("PartyLight", 0)) {
 		int n = game->GetPartySize(true);
 		float k = 0.42f / std::sqrt(float(std::max(1, n)));
 		for (int i = 0; i < n; ++i) {
@@ -1372,6 +1373,28 @@ void Map::CollectSceneLights(const Region& viewport, SceneLighting& out, const W
 			float ox = 0.0f, oy = 0.0f;
 			pc->DrawOffset(ox, oy);
 			AddLight(out, viewport, float(pc->Pos.x) + ox, float(pc->Pos.y) + oy, 45.0f, 240.0f, 1.0f * k, 0.86f * k, 0.62f * k);
+		}
+	}
+
+	if (vars.Get("BakedLights", 1)) {
+		const AreaSceneData* scene = AreaSceneData::ForArea(WEDResRef);
+		if (scene) {
+			const float ambLuma = 0.299f * out.ambient[0] + 0.587f * out.ambient[1] + 0.114f * out.ambient[2];
+			const int gainRaw = int(vars.Get("BakedLightGain", 100));
+			const float gain = std::max(0, std::min(200, gainRaw)) / 100.0f;
+			const float t = float(GetMilliseconds());
+			for (size_t i = 0; i < scene->lights.size(); ++i) {
+				const BakedLight& bl = scene->lights[i];
+				float f = 1.0f;
+				if (bl.kind == BakedLight::Kind::Fire) {
+					const float ii = float(i);
+					f = 0.88f + 0.12f * (0.5f * std::sin(t * 0.011f + ii) + 0.3f * std::sin(t * 0.023f + ii * 2.1f) + 0.2f * std::sin(t * 0.047f + ii * 3.7f));
+				} else if (bl.kind == BakedLight::Kind::Magic) {
+					f = 0.92f + 0.08f * std::sin(t * 0.0021f + float(i));
+				}
+				const float k = bl.strength * gain * f * ((1.0f - ambLuma) + 0.1f);
+				AddLight(out, viewport, bl.x, bl.y, bl.z, bl.radius, bl.r * k, bl.g * k, bl.b * k, bl.castsShadow);
+			}
 		}
 	}
 

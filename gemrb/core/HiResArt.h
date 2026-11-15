@@ -30,6 +30,8 @@ public:
 	static void Flush();
 	// Tests point this at a temp tree. An empty path returns to the configured root.
 	static void SetRoot(const std::string& path);
+	// UpscalePath, or <exe dir>/upscaled. SetRoot overrides this.
+	static std::string Root();
 	// "ar0202.tis" -> "AR0202". Extension and trailing spaces are dropped.
 	static std::string Stem(const char* filename);
 };

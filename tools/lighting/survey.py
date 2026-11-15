@@ -13,7 +13,6 @@ from pathlib import Path
 import numpy as np
 
 import common
-import extract
 from state import atomic_write_bytes, atomic_write_json
 
 SURVEY_VERSION = "survey-1"
@@ -67,22 +66,7 @@ def survey_row(area: common.Area) -> dict:
 
 
 def _sources(index, wed: str) -> list[bytes]:
-    wed_bytes = common.require_resource(index, wed, "wed")
-    overlays = extract.read_wed(wed_bytes)
-    if not overlays or not overlays[0].get("tis"):
-        raise ValueError(f"{wed} has no primary tileset")
-    tis = overlays[0]["tis"]
-    parts = [
-        common.require_resource(index, tis, "tis"),
-        wed_bytes,
-        common.require_resource(index, common.map_resref(wed, "LM"), "bmp"),
-        common.require_resource(index, common.map_resref(wed, "SR"), "bmp"),
-    ]
-    records = sorted(common.areas_by_wed(index).get(wed, []), key=lambda rec: rec[0])
-    for name, data, _anims in records:
-        parts.append(name.encode("ascii"))
-        parts.append(data)
-    return parts
+    return common.source_parts(index, wed)
 
 
 def _log_error(path: Path, label: str, exc: BaseException) -> None:

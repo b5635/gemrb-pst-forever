@@ -190,7 +190,7 @@ GL-only light pass, `Lighting=0` in GemRB.cfg turns it off (original look).
   to `maxLight`; very bright pixels (painted fires, spell glows) keep part of their brightness.
 - Ambient by area type: dungeon 0.66, indoor/city 0.76, outdoor 0.86, slightly cool. `LightingAmbient=<0..200>`
   scales the darkening (0 = none).
-- Lights: warm party light on every living PC (`PartyLight=0` off); `DynamicLights=0` turns off the rest:
+- Lights: optional warm party light on every living PC (off by default, `PartyLight=1` on); `DynamicLights=0` turns off the rest:
   area animations with BlendBlack (fires, braziers, portals), additive/light-spot VVCs and flying projectiles (light
   spot from the PRO, or the frame colour of brighten/blend projectiles). Colour and strength come from the
   luminance-weighted average of the current frame (cached per sprite), so flickering fires flicker their light.

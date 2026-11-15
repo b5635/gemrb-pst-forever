@@ -66,6 +66,15 @@ Height=480
 #UpscaledSprites=0
 #UpscalePath=
 
+# Warm light carried by the party. Off by default; set to 1 to enable.
+#PartyLight=0
+
+# Automatic scene lights from <UpscalePath>/lighting/<WED>/lights.txt (LIGHTING_PLAN.md).
+# OpenGL only. 0 looks like the current lighting pass.
+#BakedLights=1
+# 0..200, scales baked light strength (100 = default).
+#BakedLightGain=100
+
 # Cap FPS, 0 = request VSync (SDL2 only, default), -1 = no limit, 30+ = cap value
 #CapFPS=0
 

@@ -162,6 +162,26 @@ def require_resource(index: ie_formats.ResourceIndex, name: str, ext: str) -> by
     return index.get(name, ext)
 
 
+def source_parts(index: ie_formats.ResourceIndex, wed: str) -> list[bytes]:
+    """TIS, WED, LM, SR, then every ARE that names this WED. Same for every stage."""
+    wed_bytes = require_resource(index, wed, "wed")
+    overlays = extract.read_wed(wed_bytes)
+    if not overlays or not overlays[0].get("tis"):
+        raise ValueError(f"{wed} has no primary tileset")
+    tis = overlays[0]["tis"]
+    parts = [
+        require_resource(index, tis, "tis"),
+        wed_bytes,
+        require_resource(index, map_resref(wed, "LM"), "bmp"),
+        require_resource(index, map_resref(wed, "SR"), "bmp"),
+    ]
+    records = sorted(areas_by_wed(index).get(wed, []), key=lambda rec: rec[0])
+    for name, data, _anims in records:
+        parts.append(name.encode("ascii"))
+        parts.append(data)
+    return parts
+
+
 def source_digest(parts: list[bytes], version: str, model: str) -> str:
     """sha1 of the plan's source list: TIS, WED, LM, SR, each ARE, version, model."""
     import hashlib

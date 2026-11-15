@@ -49,7 +49,7 @@ static std::string Native(std::string path)
 	return path;
 }
 
-static std::string Root()
+std::string HiResArt::Root()
 {
 	if (!rootOverride.empty()) return rootOverride;
 	if (!core) return {};
@@ -276,7 +276,7 @@ void HiResArt::Attach(const Holder<Sprite2D>& spr, const std::string& relPath)
 		Flush();
 		pending.key = key;
 	}
-	std::string root = Root();
+	std::string root = HiResArt::Root();
 	if (root.empty()) return;
 	std::string full = Native(PathJoin(root, relPath));
 	if (!Listed(full)) return;
