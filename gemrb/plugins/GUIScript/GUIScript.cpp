@@ -3816,6 +3816,19 @@ static PyObject* GemRB_PlaySound(PyObject* /*self*/, PyObject* args)
 	Py_RETURN_NONE;
 }
 
+PyDoc_STRVAR(GemRB_IsNarrationPlaying__doc,
+	     "===== IsNarrationPlaying =====\n\
+\n\
+**Prototype:** GemRB.IsNarrationPlaying ()\n\
+\n\
+**Description:** True while an examine (info-point) narrator line is playing.\n\
+");
+
+static PyObject* GemRB_IsNarrationPlaying(PyObject* /*self*/, PyObject* /*args*/)
+{
+	return PyBool_FromLong(core->GetAudioPlayback().IsNarrationPlaying());
+}
+
 PyDoc_STRVAR(GemRB_Quit__doc,
 	     "===== Quit =====\n\
 \n\
@@ -13589,6 +13602,7 @@ static PyMethodDef GemRBMethods[] = {
 	METHOD(MoveToArea, METH_VARARGS),
 	METHOD(PlayMovie, METH_VARARGS),
 	METHOD(PlaySound, METH_VARARGS),
+	METHOD(IsNarrationPlaying, METH_NOARGS),
 	METHOD(PrepareSpontaneousCast, METH_VARARGS),
 	METHOD(Quit, METH_NOARGS),
 	METHOD(QuitGame, METH_NOARGS),

@@ -6,7 +6,10 @@
 
 #include "ImageMgr.h"
 #include "Interface.h"
+#include "Palette.h"
 #include "PluginMgr.h"
+
+#include "Video/Pixels.h"
 
 #include "Logging/Logging.h"
 #include "Streams/FileStream.h"
@@ -175,6 +178,14 @@ static Holder<Sprite2D> SpriteFromRGBA(int w, int h, uint8_t* pixels)
 	return MakeHolder<Sprite2D>(frame, pixels, fmt, uint16_t(w * 4));
 }
 
+static Holder<Sprite2D> SpriteFromIndexed(int w, int h, uint8_t* pixels, Holder<Palette> pal)
+{
+	PixelFormat fmt = PixelFormat::Paletted8Bit(std::move(pal), false, 0);
+	Region frame(0, 0, w, h);
+	if (VideoDriver) return VideoDriver->CreateSprite(frame, pixels, fmt);
+	return MakeHolder<Sprite2D>(frame, pixels, fmt, uint16_t(w));
+}
+
 static Holder<Sprite2D> LoadStoredPng(const std::string& path)
 {
 	std::vector<uint8_t> bytes = ReadAll(path);
@@ -182,8 +193,10 @@ static Holder<Sprite2D> LoadStoredPng(const std::string& path)
 	if (bytes.size() < 8 || std::memcmp(bytes.data(), sig, 8) != 0) return nullptr;
 	int w = 0;
 	int h = 0;
+	int colorType = 0;
 	bool have = false;
 	std::vector<uint8_t> idat;
+	std::vector<uint8_t> plte;
 	size_t p = 8;
 	while (p + 12 <= bytes.size()) {
 		uint32_t len = ReadBE32(bytes.data() + p);
@@ -196,9 +209,12 @@ static Holder<Sprite2D> LoadStoredPng(const std::string& path)
 			if (len < 13) return nullptr;
 			w = int(ReadBE32(data));
 			h = int(ReadBE32(data + 4));
-			// 8-bit RGBA, deflate, no filter method other than the default, not interlaced
-			if (data[8] != 8 || data[9] != 6 || data[10] || data[11] || data[12]) return nullptr;
+			colorType = data[9];
+			// 8-bit RGBA or indexed, deflate, default filter, not interlaced
+			if (data[8] != 8 || (colorType != 6 && colorType != 3) || data[10] || data[11] || data[12]) return nullptr;
 			have = true;
+		} else if (std::memcmp(type, "PLTE", 4) == 0) {
+			plte.assign(data, data + len);
 		} else if (std::memcmp(type, "IDAT", 4) == 0) {
 			idat.insert(idat.end(), data, data + len);
 		} else if (std::memcmp(type, "IEND", 4) == 0) {
@@ -207,19 +223,35 @@ static Holder<Sprite2D> LoadStoredPng(const std::string& path)
 		p += len + 4;
 	}
 	if (!have || w <= 0 || h <= 0) return nullptr;
-	if (size_t(w) * 4 > 65535) return nullptr;
+	const int bpp = colorType == 3 ? 1 : 4;
+	if (size_t(w) * bpp > 65535) return nullptr;
 	std::vector<uint8_t> raw;
 	if (!InflateStored(idat.data(), idat.size(), raw)) return nullptr;
-	size_t stride = 1 + size_t(w) * 4;
+	size_t stride = 1 + size_t(w) * bpp;
 	if (raw.size() < stride * size_t(h)) return nullptr;
-	uint8_t* pixels = static_cast<uint8_t*>(malloc(size_t(w) * h * 4));
+	uint8_t* pixels = static_cast<uint8_t*>(malloc(size_t(w) * h * bpp));
 	if (!pixels) return nullptr;
 	for (int y = 0; y < h; ++y) {
 		if (raw[y * stride] != 0) {
 			free(pixels);
 			return nullptr;
 		}
-		std::memcpy(pixels + size_t(y) * w * 4, raw.data() + y * stride + 1, size_t(w) * 4);
+		std::memcpy(pixels + size_t(y) * w * bpp, raw.data() + y * stride + 1, size_t(w) * bpp);
+	}
+	if (colorType == 3) {
+		if (plte.size() < 3 || plte.size() % 3) {
+			free(pixels);
+			return nullptr;
+		}
+		const int n = int(plte.size() / 3);
+		auto pal = MakeHolder<Palette>();
+		Palette::Colors buffer;
+		for (int i = 0; i < 256; i++) {
+			const int s = (i % n) * 3;
+			buffer[i] = Color(plte[s], plte[s + 1], plte[s + 2], 255);
+		}
+		pal->CopyColors(buffer);
+		return SpriteFromIndexed(w, h, pixels, std::move(pal));
 	}
 	return SpriteFromRGBA(w, h, pixels);
 }
@@ -300,6 +332,21 @@ void HiResArt::Attach(const Holder<Sprite2D>& spr, const std::string& relPath)
 	hi->Frame.y = 0;
 	spr->hiRes = std::move(hi);
 	pending.attached++;
+
+	// sprites/bam/<BAM>/<n>.idx.png: original palette indices at the same scale
+	if (relPath.size() > 4 && relPath.compare(relPath.size() - 4, 4, ".png") == 0) {
+		const std::string idxRel = relPath.substr(0, relPath.size() - 4) + ".idx.png";
+		const std::string idxFull = Native(PathJoin(root, idxRel));
+		if (Listed(idxFull)) {
+			Holder<Sprite2D> idx = LoadPng(idxFull);
+			if (idx && idx->Format().Bpp == 1 && ScaleOk(*spr, *idx) &&
+			    idx->Frame.w == spr->hiRes->Frame.w && idx->Frame.h == spr->hiRes->Frame.h) {
+				idx->Frame.x = 0;
+				idx->Frame.y = 0;
+				spr->hiResIndex = std::move(idx);
+			}
+		}
+	}
 }
 
 void HiResArt::Flush()

@@ -11,7 +11,7 @@ Three independent categories, each with its own toggle:
 |-----------|---------------------|------------------------------------|
 | GUI       | `UpscaledGUI=1`     | build and run in full              |
 | Areas     | `UpscaledAreas=1`   | build and run in full              |
-| Sprites   | `UpscaledSprites=0` | pipeline and engine hooks ready, not run |
+| Sprites   | `UpscaledSprites=1` | build and run in full              |
 
 Read `CLAUDE.md` first. Its rules apply here: run `build_install.bat` after every engine
 change, and put each new toggle's "on" line in `tools/dev_settings.ini`.
@@ -282,13 +282,13 @@ Use `tools\dev.ps1` (start / shot / log).
 Already covered by the hooks above. To turn it on:
 
 1. Run `--categories sprites`, on a small sample first.
-2. Recoloured creatures: the engine recolours some PST creature animations through the palette
-   (colour ranges). A baked RGBA twin can't follow that. Choose one:
-   - (a) skip the twin when the palette was modified (step 5 already falls back), or
-   - (b) for those BAMs, also emit a hi-res **index** image (upscale, then map each pixel to its
-     nearest palette entry) and draw it as an indexed texture, so palette swaps keep working.
-
-   Start with (a).
+2. Recoloured creatures: PST writes up to six 32-shade ramps into the top of the BAM palette
+   (`CharAnimations::SetupColors`). Extra colours from the upscale are kept. A sidecar
+   `sprites/bam/<BAM>/<n>.idx.png` is the original indices at the same scale (nearest, not
+   quantized). The GL driver (`texMode 4`) shifts each hi-res RGB by
+   `(live pal[idx] - orig pal[idx])`, skipping colour-key 0 and shadow 1. Identity when the
+   CRE has not recoloured. Generate with `python index_maps.py` (CPU; safe while the RGBA
+   upscale is still running). Do not quantize the RGBA twin back onto 32 shades.
 3. Shadows (index 1) and effect BAMs drawn with additive blending: check each looks right.
 4. Shimmer across animation frames: compare a walk cycle; if it shimmers, try another model.
 
@@ -312,6 +312,7 @@ Already covered by the hooks above. To turn it on:
 - [x] A: environment + model choice
 - [x] B: pipeline (index, classify, extract, upscale, resume)
 - [x] C: engine (Sprite2D twin, HiResArt, hooks, GLVideo, toggles, unit test)
-- [x] D: run gui + areas (open `tools/upscale/Upscale.bat` to continue sprites)
-- [ ] E: in-game check
-- [ ] Sprites (13 TNO body BAMs done; the rest is leftover)
+- [x] D: run gui + areas + sprites
+- [ ] E: in-game check (gui/areas dedicated pass; sprites were checked in AR0202)
+- [x] Sprites: 1871/1871 BAM, leftover 0, failed 0, model `4x-UltraSharp.safetensors` (4x then Lanczos to 2x, `--fp16`). Disk `D:\Games\GemRB\upscaled\sprites` 4.85 GB (151899 PNG, 1871 folders). `UpscaledSprites=1` already on. In-game AR0202 at render scale 2: TNO + Annah walk, no shimmer, no halo, feet stay on the upscaled floor, hover/click still hit low-res pixels. Palette twin kept (plan 7.2 a not needed). No engine change.
+- [x] Live PST recolour on upscaled sprites: `index_maps.py` wrote 109196 `*.idx.png` (nearest 2x BAM indices). GL `texMode 4` shifts hi-res RGB by `(live pal[idx] - orig pal[idx])`, skips colour-key 0 and shadow 1, keeps extra ESRGAN colours. In-game AR1600: `Drawing hi-res twin ... with live palette residual`. Extra engine path, not a quantize.

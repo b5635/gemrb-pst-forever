@@ -49,10 +49,16 @@ public:
 	Holder<PlaybackHandle> PlayDefaultSound(size_t index, const AudioPlaybackConfig& config);
 	time_t PlaySpeech(StringView resource, const AudioPlaybackConfig& config, bool interrupt = true);
 	void StopSpeech();
+	// One-at-a-time narrator (examine VO). Not on the speech source, so command
+	// acknowledgements that use PlaySpeech will not cut it. Dialog/movies call StopSpeech.
+	time_t PlayNarration(StringView resource, const AudioPlaybackConfig& config);
+	void StopNarration();
+	bool IsNarrationPlaying() const;
 
 private:
 	AudioBufferCache bufferCache { 40 };
 	Holder<SoundSourceHandle> speech;
+	Holder<PlaybackHandle> narration;
 	std::set<Holder<SoundSourceHandle>> activeSources;
 
 	const std::vector<ResRef>& defaultSounds;

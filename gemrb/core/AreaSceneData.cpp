@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstring>
 #include <sstream>
 
@@ -99,9 +100,10 @@ bool AreaSceneData::ParseLights(const std::string& text, AreaSceneData& out)
 			parsed.keyDir[0] = dirX;
 			parsed.keyDir[1] = dirY;
 			parsed.keyStrength = Clamp01(strength);
-			parsed.keyAmbient[0] = Clamp01(ar);
-			parsed.keyAmbient[1] = Clamp01(ag);
-			parsed.keyAmbient[2] = Clamp01(ab);
+			// luma-normalised ambient can have a channel above 1
+			parsed.keyAmbient[0] = std::max(0.0f, ar);
+			parsed.keyAmbient[1] = std::max(0.0f, ag);
+			parsed.keyAmbient[2] = std::max(0.0f, ab);
 			continue;
 		}
 		if (kw != "light") continue;
@@ -196,6 +198,21 @@ bool AreaSceneData::ReadMap(const std::string& path, const char magic[4], int by
 	return true;
 }
 
+float AreaSceneData::HeightAt(const SceneMap& map, float areaX, float areaY)
+{
+	if (map.w <= 0 || map.h <= 0 || map.data.size() < size_t(map.w) * size_t(map.h) * 2) {
+		return 0.0f;
+	}
+	const int texel = map.texel > 0 ? map.texel : 2;
+	int tx = int(std::floor(areaX / float(texel)));
+	int ty = int(std::floor(areaY / float(texel)));
+	tx = std::max(0, std::min(map.w - 1, tx));
+	ty = std::max(0, std::min(map.h - 1, ty));
+	const uint8_t* p = map.data.data() + (size_t(ty) * size_t(map.w) + size_t(tx)) * 2;
+	const uint16_t value = uint16_t(p[0]) | (uint16_t(p[1]) << 8);
+	return float(value) * map.unit;
+}
+
 const AreaSceneData* AreaSceneData::ForArea(const ResRef& wed)
 {
 	static AreaSceneData cached;
@@ -221,6 +238,18 @@ const AreaSceneData* AreaSceneData::ForArea(const ResRef& wed)
 				cached.lights.clear();
 				cached.hasKey = false;
 			}
+		}
+		const std::string heightPath = PathJoin(dir, "height.bin");
+		if (FileExists(heightPath)) {
+			ReadMap(heightPath, "GLH1", 2, cached.height);
+		}
+		const std::string normalPath = PathJoin(dir, "normal.bin");
+		if (FileExists(normalPath)) {
+			ReadMap(normalPath, "GLN1", 3, cached.normal);
+		}
+		const std::string aoPath = PathJoin(dir, "ao.bin");
+		if (FileExists(aoPath)) {
+			ReadMap(aoPath, "GLA1", 1, cached.ao);
 		}
 	}
 

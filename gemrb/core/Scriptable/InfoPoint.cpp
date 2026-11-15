@@ -64,6 +64,21 @@ ResRef InfoPoint::ExamineFallbackResRef(ieStrRef strref)
 	return sound;
 }
 
+void InfoPoint::DismissAllExamineText()
+{
+	const Game* game = core ? core->GetGame() : nullptr;
+	const Map* map = game ? game->GetCurrentArea() : nullptr;
+	if (!map || !map->TMap) {
+		return;
+	}
+	for (const auto& other : map->TMap->GetInfoPoints()) {
+		InfoPoint* ip = other.get();
+		if (ip && ip->overHead.IsDisplaying()) {
+			ip->overHead.Display(false);
+		}
+	}
+}
+
 void InfoPoint::DismissOtherExamineText() const
 {
 	const Map* map = GetCurrentArea();
@@ -83,8 +98,8 @@ tick_t InfoPoint::PlayExamineSound() const
 	if (!core || !core->GetDictionary().Get("InfoPointSounds", 1)) {
 		return 0;
 	}
-	core->GetAudioPlayback().StopSpeech();
 	if (StrRef == ieStrRef::INVALID || !ieDword(StrRef)) {
+		core->GetAudioPlayback().StopNarration();
 		return 0;
 	}
 
@@ -96,15 +111,17 @@ tick_t InfoPoint::PlayExamineSound() const
 	if (sound.IsEmpty()) {
 		sound = ExamineFallbackResRef(StrRef);
 		if (sound.IsEmpty() || !gamedata) {
+			core->GetAudioPlayback().StopNarration();
 			return 0;
 		}
 		if (!gamedata->Exists(sound, IE_WAV_CLASS_ID, true) && !gamedata->Exists(sound, IE_OGG_CLASS_ID, true)) {
+			core->GetAudioPlayback().StopNarration();
 			return 0;
 		}
 	}
 
-	auto config = core->GetAudioSettings().ConfigPresetDialog(SFXChannel::Dialog);
-	return static_cast<tick_t>(core->GetAudioPlayback().PlaySpeech(sound, config, true));
+	auto config = core->GetAudioSettings().ConfigPresetDialog(SFXChannel::Narrator);
+	return static_cast<tick_t>(core->GetAudioPlayback().PlayNarration(sound, config));
 }
 
 ieDword InfoPoint::GetUsePoint() const

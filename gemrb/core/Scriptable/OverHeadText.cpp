@@ -80,6 +80,9 @@ bool OverHeadText::Display(bool show, size_t idx)
 		isDisplaying = true;
 		messages[idx].timeStartDisplaying = core->Time.Ticks2Ms(core->GetGame()->GameTime);
 		messages[idx].minDuration = 0;
+		if (!owner || owner->Type != ST_ACTOR) {
+			messages[idx].scrollOffset.Invalidate();
+		}
 		return true;
 	} else if (isDisplaying) {
 		// is this the last displaying message?
@@ -142,11 +145,17 @@ void OverHeadText::Draw()
 
 // *******************************************************************
 // OverHeadMsg methods
+bool OverHeadText::ShouldScroll(int ownerType, const Point& scrollOffset)
+{
+	return ownerType == ST_ACTOR && !scrollOffset.IsInvalid();
+}
+
 bool OverHeadMsg::Draw(int heightOffset, const Point& fallbackPos, int ownerType)
 {
 	static constexpr tick_t maxDelay = OverHeadText::DefaultDurationMs;
+	const bool scrolling = OverHeadText::ShouldScroll(ownerType, scrollOffset);
 	tick_t delay = maxDelay;
-	if (core->HasFeature(GFFlags::ONSCREEN_TEXT) && !scrollOffset.IsInvalid()) {
+	if (core->HasFeature(GFFlags::ONSCREEN_TEXT) && scrolling) {
 		// empirically determined estimate to get the right speed and distance and 2px/tick
 		delay = 1800 * core->Time.ticksPerSec / core->Time.defaultTicksPerSec;
 	}
@@ -187,7 +196,7 @@ bool OverHeadMsg::Draw(int heightOffset, const Point& fallbackPos, int ownerType
 	Region vp = core->GetGameControl()->Viewport();
 	// NOTE: in case we just printed a message, should we reduce the offset, so we can draw immediately without interference?
 	Region rgn(p - Point(100, heightOffset) - vp.origin, Size(200, 400));
-	if (delay != maxDelay) {
+	if (scrolling) {
 		rgn.y -= maxScrollOffset - scrollOffset.y;
 		// rgn.h will be adjusted automatically, we don't need to worry about accidentally hiding other msgs
 		scrollOffset.y -= 2;

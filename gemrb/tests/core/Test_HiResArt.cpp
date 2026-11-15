@@ -113,6 +113,60 @@ static void WriteStoredPng(const path_t& path, int w, int h)
 	file.write(reinterpret_cast<const char*>(png.data()), std::streamsize(png.size()));
 }
 
+// 8-bit indexed, stored zlib, 256-entry PLTE. Colour of index i is (i, 40, 200).
+static void WriteStoredIndexedPng(const path_t& path, int w, int h)
+{
+	std::vector<uint8_t> raw;
+	raw.reserve(size_t(h) * (1 + w));
+	for (int y = 0; y < h; ++y) {
+		raw.push_back(0);
+		for (int x = 0; x < w; ++x) {
+			raw.push_back(uint8_t((x + y) & 255));
+		}
+	}
+	std::vector<uint8_t> zlib;
+	zlib.push_back(0x78);
+	zlib.push_back(0x01);
+	zlib.push_back(0x01);
+	uint16_t len = uint16_t(raw.size());
+	zlib.push_back(uint8_t(len));
+	zlib.push_back(uint8_t(len >> 8));
+	uint16_t nlen = uint16_t(~len);
+	zlib.push_back(uint8_t(nlen));
+	zlib.push_back(uint8_t(nlen >> 8));
+	zlib.insert(zlib.end(), raw.begin(), raw.end());
+	Be32(zlib, Adler32(raw.data(), raw.size()));
+
+	uint8_t ihdr[13] = {};
+	ihdr[0] = uint8_t(w >> 24);
+	ihdr[1] = uint8_t(w >> 16);
+	ihdr[2] = uint8_t(w >> 8);
+	ihdr[3] = uint8_t(w);
+	ihdr[4] = uint8_t(h >> 24);
+	ihdr[5] = uint8_t(h >> 16);
+	ihdr[6] = uint8_t(h >> 8);
+	ihdr[7] = uint8_t(h);
+	ihdr[8] = 8;
+	ihdr[9] = 3;
+
+	std::vector<uint8_t> plte(256 * 3);
+	for (int i = 0; i < 256; ++i) {
+		plte[i * 3] = uint8_t(i);
+		plte[i * 3 + 1] = 40;
+		plte[i * 3 + 2] = 200;
+	}
+
+	std::vector<uint8_t> png = { 137, 80, 78, 71, 13, 10, 26, 10 };
+	Chunk(png, "IHDR", ihdr, 13);
+	Chunk(png, "PLTE", plte.data(), plte.size());
+	Chunk(png, "IDAT", zlib.data(), zlib.size());
+	uint8_t end = 0;
+	Chunk(png, "IEND", &end, 0);
+
+	std::ofstream file(path.c_str(), std::ios::binary);
+	file.write(reinterpret_cast<const char*>(png.data()), std::streamsize(png.size()));
+}
+
 static Holder<Sprite2D> MakeIndexed(int w, int h)
 {
 	auto fmt = PixelFormat::Paletted8Bit(MakeHolder<Palette>());
@@ -129,6 +183,7 @@ TEST(HiResArt, Attach)
 	// both files exist before the first lookup, so the directory cache sees them
 	WriteStoredPng(PathJoin(dir, "BOX.png"), 8, 8);
 	WriteStoredPng(PathJoin(dir, "BAD.png"), 6, 6);
+	WriteStoredIndexedPng(PathJoin(dir, "BOX.idx.png"), 8, 8);
 	HiResArt::SetRoot(root);
 
 	Holder<Sprite2D> spr = MakeIndexed(4, 4);
@@ -144,22 +199,32 @@ TEST(HiResArt, Attach)
 	EXPECT_EQ(spr->hiRes->Frame.y, 0);
 	EXPECT_EQ(spr->hiRes->Frame.w, 8);
 	EXPECT_EQ(spr->hiRes->Frame.h, 8);
+	ASSERT_NE(spr->hiResIndex.get(), nullptr);
+	EXPECT_EQ(spr->hiResIndex->Format().Bpp, 1);
+	EXPECT_EQ(spr->hiResIndex->Frame.w, 8);
+	EXPECT_EQ(spr->hiResIndex->Frame.h, 8);
 
 	Holder<Sprite2D> copy = spr->copy();
 	EXPECT_EQ(copy->hiRes.get(), spr->hiRes.get());
+	EXPECT_EQ(copy->hiResIndex.get(), spr->hiResIndex.get());
 
 	const Sprite2D* view = spr.get();
 	view->LockSprite();
 	EXPECT_NE(spr->hiRes.get(), nullptr);
+	EXPECT_NE(spr->hiResIndex.get(), nullptr);
 	spr->LockSprite();
 	EXPECT_EQ(spr->hiRes.get(), nullptr);
+	EXPECT_EQ(spr->hiResIndex.get(), nullptr);
 
 	HiResArt::Attach(spr, "gui/mos/BOX.png");
 	ASSERT_NE(spr->hiRes.get(), nullptr);
+	ASSERT_NE(spr->hiResIndex.get(), nullptr);
 	spr->SetPalette(spr->GetPalette());
 	EXPECT_NE(spr->hiRes.get(), nullptr);
+	EXPECT_NE(spr->hiResIndex.get(), nullptr);
 	spr->SetPalette(MakeHolder<Palette>());
 	EXPECT_NE(spr->hiRes.get(), nullptr);
+	EXPECT_NE(spr->hiResIndex.get(), nullptr);
 
 	EXPECT_EQ(HiResArt::Stem("ar0202.tis"), "AR0202");
 	EXPECT_EQ(HiResArt::Stem("  Foo.BAM  "), "FOO");

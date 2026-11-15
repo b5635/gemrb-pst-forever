@@ -25,6 +25,7 @@ public:
 	static bool Enabled(HiResCategory category);
 	// relPath is relative to UpscalePath, with forward slashes, e.g. "areas/AR0202/0.png".
 	// A missing file is ignored. A file whose size is not an integer scale >= 2 is skipped.
+	// If <stem>.idx.png exists (nearest BAM indices, same size as the twin), it is put on hiResIndex.
 	static void Attach(const Holder<Sprite2D>& spr, const std::string& relPath);
 	// Logs how many twins the resource in progress actually received.
 	static void Flush();

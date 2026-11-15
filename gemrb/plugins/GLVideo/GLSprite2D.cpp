@@ -54,6 +54,7 @@ GLSprite2D::GLSprite2D(const GLSprite2D& other) noexcept
 	renderFlags = other.renderFlags;
 	// this copy ctor does not call Sprite2D's, so the twin has to be shared here
 	hiRes = other.hiRes;
+	hiResIndex = other.hiResIndex;
 	if (other.format.palette) {
 		format.palette = MakeHolder<Palette>(*other.format.palette);
 	}
@@ -75,6 +76,7 @@ void* GLSprite2D::LockSprite()
 	// writable access: assume the caller changes pixels. Does not call the base, which also drops the twin.
 	dirty = true;
 	hiRes.reset();
+	hiResIndex.reset();
 	return pixels;
 }
 
@@ -94,6 +96,7 @@ bool GLSprite2D::ConvertFormatTo(const PixelFormat& newfmt) noexcept
 		pitch = uint16_t(Frame.w);
 		dirty = true;
 		hiRes.reset();
+		hiResIndex.reset();
 		return true;
 	}
 	if (newfmt.Bpp == 4 && !format.RLE) {
@@ -106,6 +109,7 @@ bool GLSprite2D::ConvertFormatTo(const PixelFormat& newfmt) noexcept
 		pitch = uint16_t(Frame.w * 4);
 		dirty = true;
 		hiRes.reset();
+		hiResIndex.reset();
 		return true;
 	}
 	return false;

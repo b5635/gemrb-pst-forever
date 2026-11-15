@@ -30,11 +30,12 @@ public:
 	bool IsPortal() const;
 	int GetCursor(TargetMode targetMode) const;
 	// Play the TLK sound for this region's examine text, or VV<strref> if that WAV exists.
-	// Stops any current speech first so only one examine line plays at a time.
-	// Returns the voice length in ms, or 0 when nothing played.
+	// Uses the narrator slot (not speech), so move/select acks will not cut it.
+	// Another examine or a real dialog will. Returns the voice length in ms, or 0.
 	tick_t PlayExamineSound() const;
 	// Hide other infopoint floats so only this examine tooltip stays up.
 	void DismissOtherExamineText() const;
+	static void DismissAllExamineText();
 	static ResRef ExamineFallbackResRef(ieStrRef strref);
 	void TryBashLock(Actor*) override { return; };
 	void TryPickLock(Actor*) override { return; };

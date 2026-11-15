@@ -88,6 +88,10 @@ public:
 	// Copies share it. A non-const lock or a format conversion drops it. Palette swaps keep it:
 	// creature draws recolour every blit, and the GL driver samples the live palette for indexed twins.
 	Holder<Sprite2D> hiRes;
+	// Optional nearest-neighbour index map at the same scale as hiRes. Paletted PNG whose
+	// palette is the BAM default. The GL driver shifts hiRes RGB by (live pal - this pal)
+	// so PST colour slots follow the CRE while extra upscale colours stay.
+	Holder<Sprite2D> hiResIndex;
 	BlitFlags renderFlags = BlitFlags::NONE;
 
 	Sprite2D(const Region&, void* pixels, const PixelFormat& fmt, uint16_t pitch) noexcept;

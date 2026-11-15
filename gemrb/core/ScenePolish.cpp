@@ -450,9 +450,14 @@ void ScenePolish::DrawShadows(const std::vector<ShadowPart>& parts, const Point&
 		}
 	};
 
-	// the areas are painted with the light up-screen, so the shadow falls toward the camera,
-	// out in front of the feet rather than piled on the anchor
-	project(0.0f, 1.0f, 0.85f, 0.62f);
+	// default: painted light from up-screen, shadow toward the camera. AreaKeyLight
+	// replaces that with the fitted per-area direction when the lights file has a key line.
+	if (lights && lights->hasKey) {
+		const float k = std::max(0.4f, std::min(1.0f, lights->keyStrength));
+		project(lights->keyDir[0], lights->keyDir[1], 0.85f, 0.62f * k);
+	} else {
+		project(0.0f, 1.0f, 0.85f, 0.62f);
+	}
 
 	// a real fire, spell or projectile adds one more cast, away from itself
 	if (!lights) return;

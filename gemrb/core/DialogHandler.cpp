@@ -19,6 +19,7 @@
 #include "Audio/Playback.h"
 #include "GUI/TextArea.h"
 #include "GameScript/GameScript.h"
+#include "Scriptable/InfoPoint.h"
 
 namespace GemRB {
 
@@ -128,7 +129,9 @@ bool DialogHandler::InitDialog(Scriptable* spk, Scriptable* tgt, const ResRef& d
 
 	// FloatMessage VO shares the speech channel with dialog. Cut it the moment
 	// a real conversation starts, even if the first state has no audio yet.
+	// StopSpeech also stops examine narration.
 	core->GetAudioPlayback().StopSpeech();
+	InfoPoint::DismissAllExamineText();
 	if (spk) {
 		spk->overHead.Display(false);
 	}

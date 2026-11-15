@@ -2,3 +2,5 @@
 # has the cu128 build, and a PyPI torch would replace it with a CPU wheel.
 scipy>=1.11
 opencv-python-headless>=4.9,<5
+transformers>=4.45,<5
+huggingface_hub>=0.23

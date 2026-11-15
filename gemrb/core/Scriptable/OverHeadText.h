@@ -34,6 +34,9 @@ class GEM_EXPORT OverHeadText {
 
 public:
 	static constexpr tick_t DefaultDurationMs = 6000;
+	// Actor-queue floats (PST "Yes"/speech stack) still rise. Examine/info-point
+	// tooltips must stay parked over the object.
+	static bool ShouldScroll(int ownerType, const Point& scrollOffset);
 
 	explicit OverHeadText(const Scriptable* head)
 		: owner(head) {};

@@ -13,11 +13,14 @@ import numpy as np
 from scipy.ndimage import label
 
 import common
+import detect
 from state import atomic_write_bytes, atomic_write_json
 
-LIGHTS_VERSION = "lights-1"
-LIGHTS_MODEL = ""
+LIGHTS_VERSION = "lights-3"
+LIGHTS_MODEL = detect.DETECT_MODEL
 MAX_LIGHTS = 64
+BOX_SCORE_SCALE = 0.6
+POOL_BOX_BOOST = 1.2
 
 # Start values from LIGHTING_PLAN.md section 6.1. Tune and record in section 14.
 V_MIN = 0.85
@@ -74,12 +77,20 @@ class Light:
     boost: float = 1.0
 
 
+def casts_shadow_for(kind: str, strength: float) -> int:
+    """Plan 6.1 F: 1 when kind is fire or magic and strength >= 0.35."""
+    return 1 if kind in (KIND_FIRE, KIND_MAGIC) and strength >= 0.35 else 0
+
+
 @dataclass
 class LightsResult:
     lights: list[Light]
     tints: list[dict]
     area_w: int
     area_h: int
+    # phase 3: (dirX, dirY, strength, ambR, ambG, ambB) or None
+    key: tuple[float, float, float, float, float, float] | None = None
+    boxes: list = field(default_factory=list)
 
 
 def _hsv(rgb: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -308,7 +319,7 @@ def _emitter_light(stats: dict, floor_mask: np.ndarray) -> Light:
     kind = _kind_from_color(stats["core_color"])
     radius = float(np.clip(1.6 * stats["r10"], 60.0, 400.0))
     strength = float(np.clip(stats["a8"] / 0.35, 0.15, 1.0))
-    casts = 1 if kind in (KIND_FIRE, KIND_MAGIC) and strength >= 0.35 else 0
+    casts = casts_shadow_for(kind, strength)
     gy, z = _ground_from_floor(floor_mask, stats["ex"], stats["ey"])
     return Light(
         x=float(stats["ex"]),
@@ -474,7 +485,136 @@ def _lm_spots(
     return spots, tints
 
 
-def find_lights(area: common.Area) -> LightsResult:
+HEIGHT_FLOOR = 8.0
+HEIGHT_FLOOR_Z = 20.0
+
+
+def sample_height(height: np.ndarray, x: float, y: float) -> float:
+    """Nearest sample of a full-res or half-res height field, clamped."""
+    if height.size == 0:
+        return 0.0
+    rows, cols = height.shape[:2]
+    ix = int(np.clip(int(round(x)), 0, cols - 1))
+    iy = int(np.clip(int(round(y)), 0, rows - 1))
+    return float(height[iy, ix])
+
+
+def apply_height_map(result: LightsResult, height: np.ndarray, texel: int = 1) -> None:
+    """Replace phase 1 floor-scan ground with h from the height map (plan 7.2.7)."""
+    if height is None or height.size == 0:
+        return
+    scale = float(texel) if texel else 1.0
+    for light in result.lights:
+        if light.source != "emitter":
+            continue
+        ex, ey = light.emitter
+        z = sample_height(height, ex / scale, ey / scale)
+        if z < HEIGHT_FLOOR:
+            light.z = HEIGHT_FLOOR_Z
+            light.y = ey + HEIGHT_FLOOR_Z
+        else:
+            light.z = z
+            light.y = ey + z
+
+
+def load_height_bin(path: Path) -> tuple[np.ndarray, int] | None:
+    if not path.is_file():
+        return None
+    header, payload = common.read_map(path.read_bytes(), b"GLH1", 2)
+    values = np.frombuffer(payload, dtype="<u2").reshape(header.h, header.w)
+    height = values.astype(np.float32) * np.float32(header.unit)
+    texel = int(header.texel) if header.texel else 2
+    return height, texel
+
+
+def copy_key(result: LightsResult, payload: dict | None) -> None:
+    """Keep a phase-3 key line when the light list is rewritten."""
+    if result.key is not None or not payload:
+        return
+    old = result_from_json(payload)
+    result.key = old.key
+
+
+def apply_box_kinds(lights: list[Light], boxes: list[detect.DetectBox]) -> None:
+    """Emitter inside a box takes that box's kind; castsShadow follows 6.1 F."""
+    if not boxes:
+        return
+    for light in lights:
+        if light.source != "emitter":
+            continue
+        box = detect.best_box_at(boxes, light.emitter[0], light.emitter[1])
+        if box is None:
+            continue
+        light.kind = box.kind
+        light.casts_shadow = casts_shadow_for(light.kind, light.strength)
+
+
+def _lm_hue_at(hue: np.ndarray, x: float, y: float) -> float:
+    gh, gw = hue.shape[:2]
+    cx = int(x) // common.CELL_W
+    cy = int(y) // common.CELL_H
+    if cx < 0 or cy < 0 or cx >= gw or cy >= gh:
+        return 0.0
+    return float(hue[cy, cx])
+
+
+def pool_lights_from_boxes(
+    area: common.Area,
+    boxes: list[detect.DetectBox],
+    emitters: list[Light],
+) -> list[Light]:
+    """Pool box + LM boost >= 1.2 and no emitter: one pool light at the bottom centre."""
+    if not boxes:
+        return []
+    lm_luma, lm_chroma, lm_hue, lm_nonblack, lm_std, lm_ref = _lm_fields(area.lm)
+    added: list[Light] = []
+    for box in boxes:
+        if box.kind != KIND_POOL:
+            continue
+        if any(detect.contains(box, light.emitter[0], light.emitter[1]) for light in emitters):
+            continue
+        x = 0.5 * (box.x0 + box.x1)
+        y = box.y1
+        core_hue = _lm_hue_at(lm_hue, x, y)
+        boost = _lm_boost(x, y, core_hue, lm_luma, lm_chroma, lm_hue, lm_nonblack, lm_std, lm_ref)
+        if boost < POOL_BOX_BOOST:
+            continue
+        radius = float(np.clip(box.width * 2.0, 80.0, 400.0))
+        cx0 = max(0, int(box.x0) // common.CELL_W)
+        cy0 = max(0, int(box.y0) // common.CELL_H)
+        cx1 = min(area.lm.shape[1], int(box.x1) // common.CELL_W + 1)
+        cy1 = min(area.lm.shape[0], int(box.y1) // common.CELL_H + 1)
+        patch = area.lm[cy0:cy1, cx0:cx1]
+        if patch.size:
+            mean_color = patch.reshape(-1, 3).mean(axis=0)
+            mean_chroma = float((patch.max(axis=2) - patch.min(axis=2)).mean())
+        else:
+            mean_color = np.array([1.0, 1.0, 1.0], dtype=np.float64)
+            mean_chroma = 0.0
+        color = _normalize_max(mean_color)
+        strength = float(np.clip(mean_chroma / 0.25, 0.15, 1.0))
+        added.append(
+            Light(
+                x=float(x),
+                y=float(y),
+                z=120.0,
+                radius=radius,
+                r=float(color[0]),
+                g=float(color[1]),
+                b=float(color[2]),
+                strength=strength,
+                kind=KIND_POOL,
+                casts_shadow=0,
+                score=float(box.score),
+                source="pool",
+                emitter=(float(x), float(y)),
+                boost=float(boost),
+            )
+        )
+    return added
+
+
+def find_lights(area: common.Area, boxes: list[detect.DetectBox] | None = None) -> LightsResult:
     rgb = np.ascontiguousarray(area.rgb, dtype=np.float32)
     alpha = area.alpha
     height, width = rgb.shape[:2]
@@ -522,7 +662,10 @@ def find_lights(area: common.Area) -> LightsResult:
         core_hue = _hue_mean(hue[ys, xs], weights)
         boost = _lm_boost(ex, ey, core_hue, lm_luma, lm_chroma, lm_hue, lm_nonblack, lm_std, lm_ref)
         score *= boost
-        if score < SCORE_MIN:
+        threshold = SCORE_MIN
+        if boxes and detect.fire_or_magic_at(boxes, ex, ey):
+            threshold = SCORE_MIN * BOX_SCORE_SCALE
+        if score < threshold:
             continue
         accepted.append(
             {
@@ -542,11 +685,14 @@ def find_lights(area: common.Area) -> LightsResult:
     accepted = _merge_emitters(accepted)
     accepted = _drop_blendblack(accepted, area.anims)
     emitters = [_emitter_light(item, area.floor_mask) for item in accepted]
+    box_list = list(boxes or [])
+    apply_box_kinds(emitters, box_list)
+    from_boxes = pool_lights_from_boxes(area, box_list, emitters)
     spots, tints = _lm_spots(area.lm, lm_luma, lm_chroma, lm_nonblack, lm_std, lm_ref, emitters)
-    lights = emitters + spots
-    lights.sort(key=lambda item: item.score, reverse=True)
-    lights = lights[:MAX_LIGHTS]
-    return LightsResult(lights=lights, tints=tints, area_w=width, area_h=height)
+    found = emitters + from_boxes + spots
+    found.sort(key=lambda item: item.score, reverse=True)
+    found = found[:MAX_LIGHTS]
+    return LightsResult(lights=found, tints=tints, area_w=width, area_h=height, boxes=box_list)
 
 
 def format_lights_txt(result: LightsResult) -> str:
@@ -555,6 +701,13 @@ def format_lights_txt(result: LightsResult) -> str:
         "version 1",
         f"size {result.area_w} {result.area_h}",
     ]
+    if result.key is not None:
+        dir_x, dir_y, strength, ar, ag, ab = result.key
+        lines.append(
+            "key "
+            f"{dir_x:.4f} {dir_y:.4f} {strength:.4f} "
+            f"{ar:.4f} {ag:.4f} {ab:.4f}"
+        )
     for light in result.lights:
         lines.append(
             "light "
@@ -600,6 +753,13 @@ def lights_json(wed: str, result: LightsResult) -> dict:
             for light in result.lights
         ],
         "tints": result.tints,
+        "key": None
+        if result.key is None
+        else {
+            "dir": [result.key[0], result.key[1]],
+            "strength": result.key[2],
+            "ambient": [result.key[3], result.key[4], result.key[5]],
+        },
     }
 
 
@@ -631,11 +791,25 @@ def result_from_json(payload: dict) -> LightsResult:
             )
         )
     size = payload.get("size") or [0, 0]
+    key = None
+    raw_key = payload.get("key")
+    if isinstance(raw_key, dict) and raw_key.get("dir"):
+        direction = raw_key.get("dir") or [0.0, 1.0]
+        ambient = raw_key.get("ambient") or [1.0, 1.0, 1.0]
+        key = (
+            float(direction[0]),
+            float(direction[1]),
+            float(raw_key.get("strength") or 0.0),
+            float(ambient[0]),
+            float(ambient[1]),
+            float(ambient[2]),
+        )
     return LightsResult(
         lights=lights,
         tints=list(payload.get("tints") or []),
         area_w=int(size[0]),
         area_h=int(size[1]),
+        key=key,
     )
 
 
@@ -675,6 +849,8 @@ def render_review(rgb: np.ndarray, result: LightsResult, max_width: int = 1600) 
             1,
             cv2.LINE_AA,
         )
+    if result.boxes:
+        detect.draw_boxes(bgr, result.boxes, scale)
     return bgr
 
 
@@ -820,10 +996,14 @@ def run(ctx: common.RunContext) -> int:
         try:
             if any(char in wed for char in "\\/:"):
                 raise ValueError(f"bad WED name {wed!r}")
-            digest = common.source_digest(common.source_parts(ctx.index, wed), LIGHTS_VERSION, LIGHTS_MODEL)
             out_dir = ctx.out / wed
             txt_path = out_dir / "lights.txt"
             json_path = out_dir / "lights.json"
+            detect_path = out_dir / "detect.json"
+            parts = common.source_parts(ctx.index, wed)
+            if detect_path.is_file():
+                parts.append(detect_path.read_bytes())
+            digest = common.source_digest(parts, LIGHTS_VERSION, LIGHTS_MODEL)
             cached = (
                 not ctx.force
                 and not ctx.state.fresh(key, digest, LIGHTS_VERSION, 1, False)
@@ -831,13 +1011,25 @@ def run(ctx: common.RunContext) -> int:
                 and json_path.is_file()
             )
             area = None
+            boxes = detect.load_boxes(detect_path)
             if cached:
                 payload = json.loads(json_path.read_text(encoding="utf-8"))
                 result = result_from_json(payload)
+                result.boxes = boxes
                 label = "cached"
             else:
                 area = common.load_area(ctx.index, wed)
-                result = find_lights(area)
+                old_payload = None
+                if json_path.is_file():
+                    try:
+                        old_payload = json.loads(json_path.read_text(encoding="utf-8"))
+                    except json.JSONDecodeError:
+                        old_payload = None
+                result = find_lights(area, boxes)
+                height_info = load_height_bin(out_dir / "height.bin")
+                if height_info is not None:
+                    apply_height_map(result, height_info[0], height_info[1])
+                copy_key(result, old_payload)
                 atomic_write_bytes(txt_path, format_lights_txt(result).encode("utf-8"))
                 atomic_write_json(json_path, lights_json(wed, result))
                 ctx.state.mark(key, digest, LIGHTS_VERSION, 1, False, 1)
@@ -886,6 +1078,7 @@ def run(ctx: common.RunContext) -> int:
                 continue
             payload = json.loads(json_path.read_text(encoding="utf-8"))
             result = result_from_json(payload)
+            result.boxes = detect.load_boxes(ctx.out / wed / "detect.json")
             area = common.load_area(ctx.index, wed)
             cells.append((wed, area.rgb, result))
             del area

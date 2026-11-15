@@ -72,6 +72,9 @@ def png_stats(path: Path) -> tuple[int, int]:
             for entry in entries:
                 if not entry.is_file() or not entry.name.lower().endswith(".png"):
                     continue
+                # live-recolour index maps sit next to the RGBA frames
+                if entry.name.lower().endswith(".idx.png"):
+                    continue
                 count += 1
                 try:
                     size += entry.stat().st_size

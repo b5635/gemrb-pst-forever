@@ -6,6 +6,7 @@
 
 #include "Interface.h"
 #include "Game.h"
+#include "Logging/Logging.h"
 
 namespace GemRB {
 
@@ -183,6 +184,30 @@ void AudioPlayback::StopSpeech()
 		Housekeeping();
 		speech->Stop();
 	}
+	StopNarration();
+}
+
+time_t AudioPlayback::PlayNarration(StringView resource, const AudioPlaybackConfig& config)
+{
+	StopNarration();
+	narration = Play(resource, config);
+	time_t len = narration ? narration->GetLengthMs() : 0;
+	Log(MESSAGE, "Audio", "PlayNarration {} ({} ms)", resource, len);
+	return len;
+}
+
+void AudioPlayback::StopNarration()
+{
+	if (narration) {
+		Log(MESSAGE, "Audio", "StopNarration");
+		narration->Stop();
+		narration.reset();
+	}
+}
+
+bool AudioPlayback::IsNarrationPlaying() const
+{
+	return narration && narration->IsPlaying();
 }
 
 BufferCacheEntry AudioPlayback::GetBuffer(StringView resource, const AudioPlaybackConfig& config)

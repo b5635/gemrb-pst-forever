@@ -37,10 +37,14 @@ def act (action, slot = 1):
 	GemRB.ExecuteString (action, slot)
 
 def goto (area, x = -1, y = -1):
-	act ('LeaveAreaLUA("%s","",[%d.%d],0)' % (area, x, y))
+	# PST LeaveAreaLUA is Area, Point, Face (no MOS resref).
+	act ('LeaveAreaLUA("%s",[%d.%d],0)' % (area, x, y))
 
 def pc (slot = 1):
 	return GemRB.GetPlayerName (slot, 1)
+
+def narrating ():
+	return bool(GemRB.IsNarrationPlaying())
 
 def Poll ():
 	global Counter
@@ -82,6 +86,6 @@ def Start ():
 	except OSError:
 		pass
 	import GUIDefines
-	Namespace.update (GemRB = GemRB, GUIDefines = GUIDefines, here = here, act = act, goto = goto, pc = pc)
+	Namespace.update (GemRB = GemRB, GUIDefines = GUIDefines, here = here, act = act, goto = goto, pc = pc, narrating = narrating)
 	GemRB.SetTimer (Poll, POLL_MS)
 	print ("[DevConsole] polling %s" % os.path.abspath (CMD))

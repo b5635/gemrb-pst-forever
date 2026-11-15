@@ -74,6 +74,18 @@ Height=480
 #BakedLights=1
 # 0..200, scales baked light strength (100 = default).
 #BakedLightGain=100
+# Height map replaces wall-line depth. OpenGL only.
+#LightHeightMap=1
+# Lights are blocked by the height map. OpenGL only.
+#LightOcclusion=1
+# 4..32 ray samples per pixel per light.
+#LightOcclusionSteps=16
+# Normal map replaces the luminance bump. OpenGL only.
+#LightNormalMap=1
+# 0..100, darkens the ambient on sprites in enclosed spots.
+#SpriteAO=60
+# Per-area main light direction for sprite shadows and ambient tint.
+#AreaKeyLight=1
 
 # Cap FPS, 0 = request VSync (SDL2 only, default), -1 = no limit, 30+ = cap value
 #CapFPS=0

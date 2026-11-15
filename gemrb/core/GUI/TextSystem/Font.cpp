@@ -202,8 +202,10 @@ bool Font::GlyphAtlasPage::AddGlyph(ieWord chr, const Glyph& g, const Sprite2D* 
 	} else if (Sheet) {
 		// we need to lock/unlock the sprite because we are updating its pixels
 		Holder<Sprite2D> savedHi = Sheet->hiRes;
+		Holder<Sprite2D> savedIdx = Sheet->hiResIndex;
 		const void* pixels = Sheet->LockSprite();
 		Sheet->hiRes = std::move(savedHi);
+		Sheet->hiResIndex = std::move(savedIdx);
 		assert(pixels == pageData);
 	}
 
@@ -260,6 +262,7 @@ void Font::GlyphAtlasPage::EnsureSheet()
 	// FIXME: allow inverting non-paletted fonts (see #2224)
 	if (font->background && font->palette) {
 		Holder<Sprite2D> savedHi = Sheet->hiRes;
+		Holder<Sprite2D> savedIdx = Sheet->hiResIndex;
 		invertedSheet = Sheet->copy();
 		auto invertedPalette = MakeHolder<Palette>(*font->palette);
 
@@ -275,6 +278,7 @@ void Font::GlyphAtlasPage::EnsureSheet()
 		// a different palette drops the twin; both passes sample the same indices
 		invertedSheet->SetPalette(invertedPalette);
 		invertedSheet->hiRes = std::move(savedHi);
+		invertedSheet->hiResIndex = std::move(savedIdx);
 	}
 }
 
@@ -350,9 +354,11 @@ const Glyph& Font::CreateGlyphForCharSprite(ieWord chr, const Holder<Sprite2D>& 
 
 	// a writable lock drops the twin, and the atlas still needs those indices
 	Holder<Sprite2D> hi = spr->hiRes;
+	Holder<Sprite2D> idx = spr->hiResIndex;
 	Glyph tmp = Glyph(size, pos, (ieByte*) spr->LockSprite(), spr->Frame.w, spr->GetPalette() ? 1 : 4);
 	spr->UnlockSprite(); // FIXME: this is assuming it is ok to hang onto to pixel buffer returned from LockSprite()
 	spr->hiRes = hi;
+	spr->hiResIndex = idx;
 	// adjust the location for the glyph
 	if (!CurrentAtlasPage || !CurrentAtlasPage->AddGlyph(chr, tmp, hi.get())) {
 		// page is full, make a new one

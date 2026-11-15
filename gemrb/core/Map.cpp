@@ -1336,9 +1336,49 @@ void Map::CollectSceneLights(const Region& viewport, SceneLighting& out, const W
 	out.wallSpans.clear();
 	out.geometry = vars.Get("LightGeometry", 1) != 0;
 	out.normalStrength = std::max(0, std::min(100, int(vars.Get("LightNormalStrength", 80)))) / 100.0f;
+	out.scene = nullptr;
+	out.viewX = float(viewport.x);
+	out.viewY = float(viewport.y);
+	out.useHeight = false;
+	out.occlusion = false;
+	out.useNormals = false;
+	out.occlusionSteps = 0;
+	out.spriteAO = 0.0f;
+	out.hasKey = false;
+	out.keyDir[0] = 0.0f;
+	out.keyDir[1] = 1.0f;
+	out.keyStrength = 0.0f;
 
-	// depth map source: every visible wall polygon row, with the wall's ground line
-	if (out.geometry) {
+	const AreaSceneData* scene = AreaSceneData::ForArea(WEDResRef);
+	if (vars.Get("AreaKeyLight", 1) && scene && scene->hasKey) {
+		out.hasKey = true;
+		out.keyDir[0] = scene->keyDir[0];
+		out.keyDir[1] = scene->keyDir[1];
+		out.keyStrength = scene->keyStrength;
+		const float ambLuma = 0.299f * out.ambient[0] + 0.587f * out.ambient[1] + 0.114f * out.ambient[2];
+		for (int c = 0; c < 3; ++c) {
+			out.ambient[c] = out.ambient[c] * 0.5f + 0.5f * ambLuma * scene->keyAmbient[c];
+		}
+	}
+	const bool wantHeight = out.geometry && vars.Get("LightHeightMap", 1) && scene && !scene->height.data.empty();
+	const bool wantNormals = out.geometry && vars.Get("LightNormalMap", 1) && scene && !scene->normal.data.empty();
+	const int aoRaw = int(vars.Get("SpriteAO", 60));
+	out.spriteAO = std::max(0, std::min(100, aoRaw)) / 100.0f;
+	const bool wantAO = out.spriteAO > 0.0f && scene && !scene->ao.data.empty();
+	if (!wantAO) {
+		out.spriteAO = 0.0f;
+	}
+	out.scene = scene;
+	out.useHeight = wantHeight;
+	out.useNormals = wantNormals;
+	if (wantHeight) {
+		out.occlusion = vars.Get("LightOcclusion", 1) != 0;
+		if (out.occlusion) {
+			const int steps = int(vars.Get("LightOcclusionSteps", 16));
+			out.occlusionSteps = std::max(4, std::min(32, steps));
+		}
+	} else if (out.geometry) {
+		// depth map source: every visible wall polygon row, with the wall's ground line
 		const float vx = float(viewport.x), vy = float(viewport.y);
 		for (const auto& wp : walls) {
 			if (!wp || (wp->GetPolygonFlag() & WF_DISABLED)) continue;
@@ -1380,7 +1420,6 @@ void Map::CollectSceneLights(const Region& viewport, SceneLighting& out, const W
 	}
 
 	if (vars.Get("BakedLights", 1)) {
-		const AreaSceneData* scene = AreaSceneData::ForArea(WEDResRef);
 		if (scene) {
 			const float ambLuma = 0.299f * out.ambient[0] + 0.587f * out.ambient[1] + 0.114f * out.ambient[2];
 			const int gainRaw = int(vars.Get("BakedLightGain", 100));

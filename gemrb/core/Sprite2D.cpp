@@ -51,6 +51,7 @@ Sprite2D::Sprite2D(const Sprite2D& obj) noexcept
 {
 	renderFlags = obj.renderFlags;
 	hiRes = obj.hiRes;
+	hiResIndex = obj.hiResIndex;
 	freePixels = false;
 }
 
@@ -59,6 +60,7 @@ Sprite2D::Sprite2D(Sprite2D&& obj) noexcept
 {
 	renderFlags = obj.renderFlags;
 	hiRes = std::move(obj.hiRes);
+	hiResIndex = std::move(obj.hiResIndex);
 }
 
 Sprite2D::~Sprite2D() noexcept
@@ -100,6 +102,7 @@ void* Sprite2D::LockSprite()
 {
 	// writable access can change the pixels the twin was built from
 	hiRes.reset();
+	hiResIndex.reset();
 	return pixels;
 }
 
@@ -111,8 +114,8 @@ void Sprite2D::SetPalette(const Holder<Palette>& pal)
 	if (pal == format.palette) return;
 	// Keep the display twin. Creature draws swap a recolour holder every blit;
 	// dropping it here made every avatar fall back to the original BAM pixels.
-	// Indexed twins sample this live palette. A baked RGBA twin keeps the colours
-	// it was upscaled with, which is still sharper than the 1x art.
+	// Indexed twins sample this live palette. An RGBA twin plus hiResIndex is
+	// shifted toward the live ramp in the shader; extras from the upscale stay.
 
 	if (format.RLE) {
 		format.palette = pal;
@@ -144,6 +147,7 @@ bool Sprite2D::ConvertFormatTo(const PixelFormat& newfmt) noexcept
 		format = newfmt;
 		assert(format.palette);
 		hiRes.reset();
+		hiResIndex.reset();
 		return true;
 	}
 	return false;

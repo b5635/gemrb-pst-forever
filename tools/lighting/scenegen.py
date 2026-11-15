@@ -50,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--review", action="store_true")
     parser.add_argument("--game", default=str(common.DEFAULT_GAME))
     parser.add_argument("--out", default=str(common.DEFAULT_OUT))
+    parser.add_argument("--depth-input", type=int, default=1036, choices=[518, 1036])
+    parser.add_argument("--depth-model", default="")
     args = parser.parse_args(argv)
     args.game = Path(args.game)
     args.out = Path(args.out)
@@ -91,6 +93,8 @@ def main(argv: list[str] | None = None) -> int:
         work=work,
         state=State(work / "state.json"),
         game=args.game,
+        depth_input=int(args.depth_input),
+        depth_model=str(args.depth_model or ""),
     )
     for stage in stages:
         code = runners[stage](ctx)

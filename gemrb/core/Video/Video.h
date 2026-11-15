@@ -23,6 +23,7 @@ namespace GemRB {
 class EventMgr;
 class Gem_Polygon;
 class Palette;
+class AreaSceneData;
 
 class GEM_EXPORT VideoBuffer {
 protected:
@@ -140,6 +141,14 @@ struct SceneLighting {
 	float normalStrength = 0.8f; // 0 = flat, 1 = full normal-map shading
 	std::vector<SceneLight> lights;
 	std::vector<SceneSpan> wallSpans;
+	const AreaSceneData* scene = nullptr;
+	float viewX = 0.0f, viewY = 0.0f;
+	bool useHeight = false, occlusion = false, useNormals = false;
+	int occlusionSteps = 16;
+	float spriteAO = 0.0f;
+	bool hasKey = false;
+	float keyDir[2] {};
+	float keyStrength = 0.0f;
 };
 
 class GEM_EXPORT Video : public Plugin {

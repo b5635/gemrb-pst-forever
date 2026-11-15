@@ -43,10 +43,10 @@ static const char* const SpriteFS = R"GLSL(
 #version 330 core
 in vec2 v_uv;
 in vec4 v_color;
-flat in vec4 v_param; // x: palette row, y: grey mode, z: colour key index, w: unused
+flat in vec4 v_param; // x: palette row, y: grey mode, z: colour key index, w: orig palette row (texMode 4)
                       // texMode 3 (soft shapes): x: profile, y: ring half width, z: glow width, w: glow alpha
 
-uniform int u_texMode; // 0 colour, 1 rgba, 2 indexed, 3 soft shape (v_uv = ellipse space, 1 = radius)
+uniform int u_texMode; // 0 colour, 1 rgba, 2 indexed, 3 soft shape, 4 rgba + index residual recolour
 uniform sampler2D u_rgba;
 uniform usampler2D u_index;
 uniform sampler2D u_palette;
@@ -80,6 +80,16 @@ vec4 fetch(ivec2 p, ivec2 size)
 		c = texelFetch(u_palette, ivec2(idx, int(v_param.x)), 0);
 	} else {
 		c = texelFetch(u_rgba, p, 0);
+		if (u_texMode == 4) {
+			int idx = int(texelFetch(u_index, p, 0).r);
+			if (idx == int(v_param.z)) return vec4(0.0);
+			// extra upscale colours stay; the slot ramp is a residual on that region
+			if (idx > 1) {
+				vec3 live = texelFetch(u_palette, ivec2(idx, int(v_param.x)), 0).rgb;
+				vec3 orig = texelFetch(u_palette, ivec2(idx, int(v_param.w)), 0).rgb;
+				c.rgb = clamp(c.rgb + (live - orig), 0.0, 1.0);
+			}
+		}
 	}
 	return vec4(c.rgb * c.a, c.a); // premultiplied so edges don't pick up dark fringes
 }
@@ -89,7 +99,7 @@ float alphaAt(ivec2 p, ivec2 size)
 {
 	if (any(lessThan(p, ivec2(0))) || any(greaterThanEqual(p, size))) return 0.0;
 	// creature BAMs keep their baked-in ground shadow in palette index 1: not part of the body
-	if (u_texMode == 2 && int(texelFetch(u_index, p, 0).r) == 1) return 0.0;
+	if ((u_texMode == 2 || u_texMode == 4) && int(texelFetch(u_index, p, 0).r) == 1) return 0.0;
 	return fetch(p, size).a;
 }
 
@@ -201,6 +211,7 @@ void main()
 // mode 1: multiplies a copy of the scene by the light buffer; very bright
 //         pixels keep part of their brightness.
 // mode 2: writes wall polygon rows into the wall depth map (v_uv.x = ground y).
+// mode 3: multiply sprite ambient by the offline AO map (full quad).
 static const char* const LightFS = R"GLSL(
 #version 330 core
 in vec2 v_uv;
@@ -225,6 +236,17 @@ uniform float u_lightToPhys; // physical px per light buffer px
 uniform float u_bump;
 uniform float u_normalStrength;
 uniform int u_debug; // GEMRB_LIGHT_DEBUG: red = vertical surface, green = falloff, blue = normal x
+uniform int u_hasHeight;
+uniform sampler2D u_height;
+uniform vec2 u_viewOrigin;
+uniform float u_sceneTexel;
+uniform int u_occlSteps;
+uniform float u_occlBias;
+uniform float u_occlThickness;
+uniform int u_hasNormals;
+uniform sampler2D u_normalMap;
+uniform sampler2D u_ao;
+uniform float u_spriteAO;
 
 out vec4 o_color;
 
@@ -239,10 +261,52 @@ float lambert(vec3 n, vec3 l)
 	return clamp((dot(n, l) + 0.4) / 1.4, 0.0, 1.0); // wrapped, so shading stays soft
 }
 
+float heightAt(vec2 scenePos)
+{
+	vec2 area = scenePos + u_viewOrigin;
+	ivec2 sz = textureSize(u_height, 0);
+	ivec2 t = ivec2(floor(area / max(u_sceneTexel, 1.0)));
+	t = clamp(t, ivec2(0), sz - ivec2(1));
+	return texelFetch(u_height, t, 0).r;
+}
+
+float occlusion(vec3 P, vec3 Lp)
+{
+	const float T = 1.285714;
+	float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+	float hits = 0.0;
+	float len = length(Lp - P);
+	for (int i = 0; i < u_occlSteps; ++i) {
+		float s = (float(i) + jitter) / float(u_occlSteps);
+		if (s * len < 4.0) continue;
+		vec3 Q = mix(P, Lp, s);
+		vec2 scr = vec2(Q.x, Q.y - Q.z);
+		float hs = heightAt(scr);
+		float dQ = -Q.y - Q.z * T;
+		float dS = -(scr.y + hs) - hs * T;
+		float diff = dQ - dS;
+		if (diff > u_occlBias && diff < u_occlThickness) hits += 1.0;
+	}
+	return 1.0 - clamp(hits / 2.0, 0.0, 1.0);
+}
+
 void main()
 {
 	if (u_mode == 2) {
 		o_color = vec4(v_uv.x, 0.0, 0.0, 1.0);
+		return;
+	}
+	if (u_mode == 3) {
+		vec2 phys = gl_FragCoord.xy * u_lightToPhys + u_regionOrigin;
+		vec2 m = (phys - u_map.yz) / u_map.x;
+		vec4 sd = texelFetch(u_spriteDepth, clamp(ivec2(floor(phys)), ivec2(0), textureSize(u_spriteDepth, 0) - 1), 0);
+		float ao = 1.0;
+		if (sd.a > 0.5) {
+			vec2 area = vec2(m.x, sd.r / sd.a) + u_viewOrigin;
+			vec2 uv = (area / max(u_sceneTexel, 1.0) + 0.5) / vec2(textureSize(u_ao, 0));
+			ao = mix(1.0, texture(u_ao, uv).r, u_spriteAO);
+		}
+		o_color = vec4(vec3(ao), 1.0);
 		return;
 	}
 	if (u_mode == 0) {
@@ -259,8 +323,12 @@ void main()
 		ivec2 rp = ivec2(floor(phys - u_regionOrigin));
 		// depth: ground line under this pixel
 		float ground = m.y;
-		vec4 wd = texelFetch(u_wallDepth, clamp(rp, ivec2(0), textureSize(u_wallDepth, 0) - 1), 0);
-		if (wd.a > 0.5) ground = max(ground, wd.r);
+		if (u_hasHeight == 1) {
+			ground = m.y + heightAt(m);
+		} else {
+			vec4 wd = texelFetch(u_wallDepth, clamp(rp, ivec2(0), textureSize(u_wallDepth, 0) - 1), 0);
+			if (wd.a > 0.5) ground = max(ground, wd.r);
+		}
 		vec4 sd = texelFetch(u_spriteDepth, clamp(ivec2(floor(phys)), ivec2(0), textureSize(u_spriteDepth, 0) - 1), 0);
 		if (sd.a > 0.5) ground = sd.r / sd.a;
 		float h = max(ground - m.y, 0.0);
@@ -271,11 +339,22 @@ void main()
 		if (dist >= 1.0) discard;
 		float att = 1.0 - dist * dist;
 		att *= att;
-		// normal from the art: brighter = higher, sampled one map unit apart
-		int k = max(1, int(u_map.x + 0.5));
-		float gx = (luma(rp + ivec2(k, 0)) - luma(rp - ivec2(k, 0))) * 0.5 * u_bump;
-		float gy = (luma(rp + ivec2(0, k)) - luma(rp - ivec2(0, k))) * 0.5 * u_bump;
-		vec3 n = vertical ? normalize(vec3(-gx, 1.0, gy)) : normalize(vec3(-gx, -gy, 1.0));
+		if (sd.a <= 0.5 && u_occlSteps > 0) {
+			att *= occlusion(P, u_lightPos.xyz);
+		}
+		vec3 n;
+		if (u_hasNormals == 1 && sd.a <= 0.5) {
+			vec2 area = m + u_viewOrigin;
+			vec2 uv = (area / max(u_sceneTexel, 1.0) + 0.5) / vec2(textureSize(u_normalMap, 0));
+			vec3 nMap = texture(u_normalMap, uv).xyz * 2.0 - 1.0;
+			float nlen = length(nMap);
+			n = nlen > 1e-4 ? nMap / nlen : vec3(0.0, 0.0, 1.0);
+		} else {
+			int k = max(1, int(u_map.x + 0.5));
+			float gx = (luma(rp + ivec2(k, 0)) - luma(rp - ivec2(k, 0))) * 0.5 * u_bump;
+			float gy = (luma(rp + ivec2(0, k)) - luma(rp - ivec2(0, k))) * 0.5 * u_bump;
+			n = vertical ? normalize(vec3(-gx, 1.0, gy)) : normalize(vec3(-gx, -gy, 1.0));
+		}
 		vec3 l = normalize(L);
 		// relative to an unbumped floor, so overall falloff matches the flat lights
 		float ratio = clamp(lambert(n, l) / max(lambert(vec3(0.0, 0.0, 1.0), l), 0.25), 0.0, 2.5);

@@ -8,6 +8,7 @@
 
 #include "GLVideo.h"
 
+#include "AreaSceneData.h"
 #include "GLShaders.h"
 #include "Geometry.h"
 #include "Interface.h"
@@ -19,6 +20,7 @@
 
 #include <cmath>
 #include <cstdarg>
+#include <vector>
 
 using namespace GemRB;
 
@@ -380,11 +382,25 @@ bool GLVideoDriver::CreateResources()
 		luni.bump = glGetUniformLocation(lightProgram, "u_bump");
 		luni.normalStrength = glGetUniformLocation(lightProgram, "u_normalStrength");
 		luni.debug = glGetUniformLocation(lightProgram, "u_debug");
+		luni.hasHeight = glGetUniformLocation(lightProgram, "u_hasHeight");
+		luni.height = glGetUniformLocation(lightProgram, "u_height");
+		luni.viewOrigin = glGetUniformLocation(lightProgram, "u_viewOrigin");
+		luni.sceneTexel = glGetUniformLocation(lightProgram, "u_sceneTexel");
+		luni.occlSteps = glGetUniformLocation(lightProgram, "u_occlSteps");
+		luni.occlBias = glGetUniformLocation(lightProgram, "u_occlBias");
+		luni.occlThickness = glGetUniformLocation(lightProgram, "u_occlThickness");
+		luni.hasNormals = glGetUniformLocation(lightProgram, "u_hasNormals");
+		luni.normalMap = glGetUniformLocation(lightProgram, "u_normalMap");
+		luni.ao = glGetUniformLocation(lightProgram, "u_ao");
+		luni.spriteAO = glGetUniformLocation(lightProgram, "u_spriteAO");
 		glUseProgram(lightProgram);
 		glUniform1i(luni.scene, 0);
 		glUniform1i(luni.light, 1);
 		glUniform1i(luni.spriteDepth, 2);
 		glUniform1i(luni.wallDepth, 3);
+		glUniform1i(luni.height, 4);
+		glUniform1i(luni.normalMap, 5);
+		glUniform1i(luni.ao, 6);
 		glUseProgram(program);
 	} else {
 		Log(WARNING, "GLVideo", "Lighting shader unavailable, scene lighting disabled");
@@ -445,6 +461,33 @@ bool GLVideoDriver::CreateResources()
 	glGenTextures(1, &whiteTex);
 	glBindTexture(GL_TEXTURE_2D, whiteTex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &white);
+
+	const float zeroHeight = 0.0f;
+	glGenTextures(1, &heightZeroTex);
+	glBindTexture(GL_TEXTURE_2D, heightZeroTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 1, 1, 0, GL_RED, GL_FLOAT, &zeroHeight);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	const uint8_t flatNormal[3] = { 128, 128, 255 };
+	glGenTextures(1, &normalZeroTex);
+	glBindTexture(GL_TEXTURE_2D, normalZeroTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, flatNormal);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	const uint8_t openAO = 255;
+	glGenTextures(1, &aoZeroTex);
+	glBindTexture(GL_TEXTURE_2D, aoZeroTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, 1, 1, 0, GL_RED, GL_UNSIGNED_BYTE, &openAO);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	// screen composite target (physical size, follows the render scale)
 	screenPhys = screenSize;
@@ -554,9 +597,12 @@ void GLVideoDriver::Flush()
 	}
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, st.texMode == 1 ? st.texture : whiteTex);
+	glBindTexture(GL_TEXTURE_2D, (st.texMode == 1 || st.texMode == 4) ? st.texture : whiteTex);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, st.texMode == 2 ? st.texture : 0);
+	GLuint indexBind = 0;
+	if (st.texMode == 2) indexBind = st.texture;
+	else if (st.texMode == 4) indexBind = st.indexTex;
+	glBindTexture(GL_TEXTURE_2D, indexBind);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, paletteTex);
 	glActiveTexture(GL_TEXTURE3);
@@ -677,14 +723,14 @@ void GLVideoDriver::SetupStencil(GLBatchState& st, BlitFlags flags)
 	st.dither = (flags & BlitFlags::STENCIL_DITHER) ? 1 : 0;
 }
 
-void GLVideoDriver::PushQuad(float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, const Color& c, float pal, float grey, float ckey)
+void GLVideoDriver::PushQuad(float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, const Color& c, float pal, float grey, float ckey, float origPal)
 {
 	xf.Apply(x0, y0);
 	xf.Apply(x1, y1);
-	GLVertex a { x0, y0, u0, v0, c.r, c.g, c.b, c.a, pal, grey, ckey, 0 };
-	GLVertex b { x1, y0, u1, v0, c.r, c.g, c.b, c.a, pal, grey, ckey, 0 };
-	GLVertex d { x0, y1, u0, v1, c.r, c.g, c.b, c.a, pal, grey, ckey, 0 };
-	GLVertex e { x1, y1, u1, v1, c.r, c.g, c.b, c.a, pal, grey, ckey, 0 };
+	GLVertex a { x0, y0, u0, v0, c.r, c.g, c.b, c.a, pal, grey, ckey, origPal };
+	GLVertex b { x1, y0, u1, v0, c.r, c.g, c.b, c.a, pal, grey, ckey, origPal };
+	GLVertex d { x0, y1, u0, v1, c.r, c.g, c.b, c.a, pal, grey, ckey, origPal };
+	GLVertex e { x1, y1, u1, v1, c.r, c.g, c.b, c.a, pal, grey, ckey, origPal };
 	vertices.push_back(a);
 	vertices.push_back(b);
 	vertices.push_back(d);
@@ -796,9 +842,10 @@ void GLVideoDriver::BlitGameSprite(const Holder<Sprite2D>& spr, const Point& p, 
 	DrawSprite(spr, src, dst, flags, tint);
 }
 
-bool GLVideoDriver::PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags, GLBatchState& st, float& pal, float& ckey, float& texelScale)
+bool GLVideoDriver::PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags, GLBatchState& st, float& pal, float& ckey, float& texelScale, float& origPal)
 {
 	texelScale = 1.0f;
+	origPal = 0;
 	const GLSprite2D* gspr = dynamic_cast<const GLSprite2D*>(spr.get());
 	if (!gspr) {
 		Log(WARNING, "GLVideo", "Skipping a sprite not created by this driver");
@@ -828,7 +875,8 @@ bool GLVideoDriver::PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags,
 	    hi->Frame.w >= spr->Frame.w * 2 && hi->Frame.h >= spr->Frame.h * 2 &&
 	    hi->Frame.w % spr->Frame.w == 0 && hi->Frame.h % spr->Frame.h == 0 &&
 	    hi->Frame.w / spr->Frame.w == hi->Frame.h / spr->Frame.h) {
-		if (hi->NeedsReupload()) Flush();
+		const GLSprite2D* idxMap = spr->hiResIndex ? dynamic_cast<const GLSprite2D*>(spr->hiResIndex.get()) : nullptr;
+		if (hi->NeedsReupload() || (idxMap && idxMap->NeedsReupload())) Flush();
 		bool uploaded = false;
 		GLuint tex = hi->GetTexture(uploaded);
 		if (tex && hi->IsIndexed()) {
@@ -866,16 +914,40 @@ bool GLVideoDriver::PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags,
 		} else if (tex) {
 			texelScale = float(hi->Frame.w / spr->Frame.w);
 			if (hi->HasTransparency()) flags |= BlitFlags::BLENDED;
-			st.texMode = 1;
-			st.texture = tex;
+			const Holder<Palette>& live = spr->GetPalette();
+			Holder<Palette> orig = idxMap ? idxMap->GetPalette() : Holder<Palette>();
+			GLuint idxTex = 0;
+			if (idxMap && live && orig && idxMap->IsIndexed() &&
+			    idxMap->Frame.w == hi->Frame.w && idxMap->Frame.h == hi->Frame.h) {
+				bool idxUploaded = false;
+				idxTex = idxMap->GetTexture(idxUploaded);
+			}
+			if (idxTex) {
+				pal = float(PaletteRow(live.get()));
+				origPal = float(PaletteRow(orig.get()));
+				if (spr->Format().HasColorKey) ckey = float(spr->GetColorKey());
+				st.texMode = 4;
+				st.texture = tex;
+				st.indexTex = idxTex;
+				static bool loggedRecolour = false;
+				if (!loggedRecolour) {
+					Log(MESSAGE, "GLVideo", "Drawing hi-res twin {}x{} with live palette residual (from {}x{}, scale {}).",
+					    hi->Frame.w, hi->Frame.h, spr->Frame.w, spr->Frame.h, int(texelScale));
+					loggedRecolour = true;
+				}
+			} else {
+				st.texMode = 1;
+				st.texture = tex;
+				st.indexTex = 0;
+				static bool loggedTwin = false;
+				if (!loggedTwin) {
+					Log(MESSAGE, "GLVideo", "Drawing hi-res twin {}x{} (from {}x{}, scale {}).",
+					    hi->Frame.w, hi->Frame.h, spr->Frame.w, spr->Frame.h, int(texelScale));
+					loggedTwin = true;
+				}
+			}
 			st.blend = BlendForFlags(flags);
 			SetupStencil(st, flags);
-			static bool loggedTwin = false;
-			if (!loggedTwin) {
-				Log(MESSAGE, "GLVideo", "Drawing hi-res twin {}x{} (from {}x{}, scale {}).",
-				    hi->Frame.w, hi->Frame.h, spr->Frame.w, spr->Frame.h, int(texelScale));
-				loggedTwin = true;
-			}
 			return true;
 		}
 	} else if (hi) {
@@ -948,8 +1020,8 @@ void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, c
 	if (st.scissor.w <= 0 || st.scissor.h <= 0) return;
 	if (!XfRegion(dst).IntersectsRegion(st.scissor)) return;
 
-	float pal, ckey, texelScale;
-	if (!PrepareSprite(spr, flags, st, pal, ckey, texelScale)) return;
+	float pal, ckey, texelScale, origPal;
+	if (!PrepareSprite(spr, flags, st, pal, ckey, texelScale, origPal)) return;
 
 	// Font pages ask for this. Their grey ramp is already the edge; bilinear fattens it.
 	if (flags & BlitFlags::NEAREST) st.smooth = false;
@@ -983,11 +1055,11 @@ void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, c
 		float eu = (u1 > u0 ? 1.0f : -1.0f) * e * texPerUnit;
 		float ev = (v1 > v0 ? 1.0f : -1.0f) * e * texPerUnit;
 		PushQuad(float(dst.x) - e, float(dst.y) - e, float(dst.x + dst.w) + e, float(dst.y + dst.h) + e,
-			 u0 - eu, v0 - ev, u1 + eu, v1 + ev, c, pal, 0, ckey);
+			 u0 - eu, v0 - ev, u1 + eu, v1 + ev, c, pal, 0, ckey, origPal);
 	}
 
 	SetBatch(st);
-	PushQuad(float(dst.x), float(dst.y), float(dst.x + dst.w), float(dst.y + dst.h), u0, v0, u1, v1, c, pal, grey, ckey);
+	PushQuad(float(dst.x), float(dst.y), float(dst.x + dst.w), float(dst.y + dst.h), u0, v0, u1, v1, c, pal, grey, ckey, origPal);
 }
 
 bool GLVideoDriver::BlitSpriteQuad(const Holder<Sprite2D>& spr, const Holder<Palette>& palOverride, const float corners[8], const Color colors[4], BlitFlags flags)
@@ -999,17 +1071,21 @@ bool GLVideoDriver::BlitSpriteQuad(const Holder<Sprite2D>& spr, const Holder<Pal
 
 	Holder<Palette> oldPal;
 	Holder<Sprite2D> savedHi;
+	Holder<Sprite2D> savedIdx;
 	if (palOverride) {
 		savedHi = spr->hiRes;
+		savedIdx = spr->hiResIndex;
 		oldPal = spr->GetPalette();
 		spr->SetPalette(palOverride);
 		spr->hiRes = savedHi;
+		spr->hiResIndex = savedIdx;
 	}
-	float pal, ckey, texelScale;
-	bool ok = PrepareSprite(spr, flags, st, pal, ckey, texelScale);
+	float pal, ckey, texelScale, origPal;
+	bool ok = PrepareSprite(spr, flags, st, pal, ckey, texelScale, origPal);
 	if (palOverride) {
 		spr->SetPalette(oldPal);
 		spr->hiRes = std::move(savedHi);
+		spr->hiResIndex = std::move(savedIdx);
 	}
 	if (!ok) return true;
 	if (st.blend == GLBlend::None) st.blend = GLBlend::Alpha;
@@ -1024,7 +1100,7 @@ bool GLVideoDriver::BlitSpriteQuad(const Holder<Sprite2D>& spr, const Holder<Pal
 		float x = corners[i * 2], y = corners[i * 2 + 1];
 		xf.Apply(x, y);
 		const Color& c = colors[i];
-		v[i] = { x, y, uv[i][0], uv[i][1], c.r, c.g, c.b, c.a, pal, 0, ckey, 0 };
+		v[i] = { x, y, uv[i][0], uv[i][1], c.r, c.g, c.b, c.a, pal, 0, ckey, origPal };
 	}
 	vertices.insert(vertices.end(), { v[0], v[1], v[2], v[1], v[3], v[2] });
 	return true;
@@ -1406,6 +1482,94 @@ void GLVideoDriver::SceneEnding()
 	depthAttachedFbo = 0;
 }
 
+void GLVideoDriver::DeleteSceneMaps()
+{
+	if (heightTex) {
+		glDeleteTextures(1, &heightTex);
+		heightTex = 0;
+	}
+	if (normalTex) {
+		glDeleteTextures(1, &normalTex);
+		normalTex = 0;
+	}
+	if (aoTex) {
+		glDeleteTextures(1, &aoTex);
+		aoTex = 0;
+	}
+	heightKey = nullptr;
+	heightGen = 0;
+}
+
+void GLVideoDriver::EnsureSceneMaps(const SceneLighting& lighting)
+{
+	if (!lighting.scene) {
+		return;
+	}
+	const AreaSceneData* scene = lighting.scene;
+	if (heightKey == scene && heightGen == scene->generation) {
+		return;
+	}
+	DeleteSceneMaps();
+	heightKey = scene;
+	heightGen = scene->generation;
+	GLint maxSize = 0;
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxSize);
+
+	const SceneMap& height = scene->height;
+	if (!height.data.empty() && height.w > 0 && height.h > 0) {
+		if (height.w > maxSize || height.h > maxSize) {
+			Log(WARNING, "GLVideo", "Height map {}x{} exceeds GL_MAX_TEXTURE_SIZE {}, skipped.", height.w, height.h, maxSize);
+		} else {
+			std::vector<float> pixels(size_t(height.w) * size_t(height.h));
+			const uint8_t* src = height.data.data();
+			for (size_t i = 0; i < pixels.size(); ++i) {
+				const uint16_t value = uint16_t(src[i * 2]) | (uint16_t(src[i * 2 + 1]) << 8);
+				pixels[i] = float(value) * height.unit;
+			}
+			glGenTextures(1, &heightTex);
+			glBindTexture(GL_TEXTURE_2D, heightTex);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, height.w, height.h, 0, GL_RED, GL_FLOAT, pixels.data());
+		}
+	}
+
+	const SceneMap& normal = scene->normal;
+	if (!normal.data.empty() && normal.w > 0 && normal.h > 0) {
+		if (normal.w > maxSize || normal.h > maxSize) {
+			Log(WARNING, "GLVideo", "Normal map {}x{} exceeds GL_MAX_TEXTURE_SIZE {}, skipped.", normal.w, normal.h, maxSize);
+		} else {
+			glGenTextures(1, &normalTex);
+			glBindTexture(GL_TEXTURE_2D, normalTex);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, normal.w, normal.h, 0, GL_RGB, GL_UNSIGNED_BYTE, normal.data.data());
+		}
+	}
+
+	const SceneMap& ao = scene->ao;
+	if (!ao.data.empty() && ao.w > 0 && ao.h > 0) {
+		if (ao.w > maxSize || ao.h > maxSize) {
+			Log(WARNING, "GLVideo", "AO map {}x{} exceeds GL_MAX_TEXTURE_SIZE {}, skipped.", ao.w, ao.h, maxSize);
+		} else {
+			glGenTextures(1, &aoTex);
+			glBindTexture(GL_TEXTURE_2D, aoTex);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, ao.w, ao.h, 0, GL_RED, GL_UNSIGNED_BYTE, ao.data.data());
+		}
+	}
+}
+
 // The scene drawn so far is copied out, then drawn back multiplied by a light
 // buffer: cleared to the ambient colour, every light added on top. With
 // geometry the lights are evaluated per pixel in 3D from the generated depth
@@ -1494,23 +1658,64 @@ void GLVideoDriver::DrawSceneLighting(const SceneLighting& lighting)
 	}
 	glClear(GL_COLOR_BUFFER_BIT);
 	glClearColor(0, 0, 0, 0);
+
+	EnsureSceneMaps(lighting);
+	const bool hasHeight = lighting.useHeight && heightTex != 0;
+	const bool hasNormals = lighting.useNormals && normalTex != 0;
+	const bool hasAO = lighting.spriteAO > 0.0f && aoTex != 0 && geom;
+	const float toPhys = float(R.w) / float(lsz.w);
+	float texel = 2.0f;
+	if (lighting.scene) {
+		if (lighting.scene->height.texel > 0) {
+			texel = float(lighting.scene->height.texel);
+		} else if (lighting.scene->normal.texel > 0) {
+			texel = float(lighting.scene->normal.texel);
+		} else if (lighting.scene->ao.texel > 0) {
+			texel = float(lighting.scene->ao.texel);
+		}
+	}
+	glUniform1i(luni.geom, geom ? 1 : 0);
+	glUniform2f(luni.targetSize, float(lsz.w), float(lsz.h));
+	glUniform1f(luni.lightToPhys, toPhys);
+	glUniform2f(luni.regionOrigin, float(R.x), float(R.y));
+	glUniform3f(luni.map, S, baseXf.tx, baseXf.ty);
+	glUniform1f(luni.bump, lighting.bump);
+	glUniform1f(luni.normalStrength, lighting.normalStrength);
+	glUniform1i(luni.hasHeight, hasHeight ? 1 : 0);
+	glUniform1i(luni.hasNormals, hasNormals ? 1 : 0);
+	glUniform1f(luni.spriteAO, lighting.spriteAO);
+	glUniform2f(luni.viewOrigin, lighting.viewX, lighting.viewY);
+	glUniform1f(luni.sceneTexel, texel);
+	glUniform1i(luni.occlSteps, hasHeight && lighting.occlusion ? lighting.occlusionSteps : 0);
+	glUniform1f(luni.occlBias, 2.0f);
+	glUniform1f(luni.occlThickness, 48.0f);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, copyTex);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, geom ? depthTex : zeroTex);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, geom ? wallTex : zeroTex);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, hasHeight ? heightTex : heightZeroTex);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, hasNormals ? normalTex : normalZeroTex);
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, hasAO ? aoTex : aoZeroTex);
+	glActiveTexture(GL_TEXTURE0);
+
+	if (hasAO) {
+		glUniform1i(luni.mode, 3);
+		glEnable(GL_BLEND);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_DST_COLOR, GL_ZERO);
+		std::vector<GLVertex> aoQuad;
+		PushLightQuad(aoQuad, 0, 0, float(lsz.w), float(lsz.h), 0, 0, 0, 0, 0, 0, 0);
+		DrawLightVertices(aoQuad);
+		glDisable(GL_BLEND);
+	}
+
 	if (!lighting.lights.empty()) {
 		glUniform1i(luni.mode, 0);
-		glUniform1i(luni.geom, geom ? 1 : 0);
-		glUniform2f(luni.targetSize, float(lsz.w), float(lsz.h));
-		const float toPhys = float(R.w) / float(lsz.w);
-		glUniform1f(luni.lightToPhys, toPhys);
-		glUniform2f(luni.regionOrigin, float(R.x), float(R.y));
-		glUniform3f(luni.map, S, baseXf.tx, baseXf.ty);
-		glUniform1f(luni.bump, lighting.bump);
-		glUniform1f(luni.normalStrength, lighting.normalStrength);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, copyTex);
-		glActiveTexture(GL_TEXTURE2);
-		glBindTexture(GL_TEXTURE_2D, geom ? depthTex : zeroTex);
-		glActiveTexture(GL_TEXTURE3);
-		glBindTexture(GL_TEXTURE_2D, geom ? wallTex : zeroTex);
-		glActiveTexture(GL_TEXTURE0);
 		glEnable(GL_BLEND);
 		glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_ONE, GL_ONE);
@@ -1533,6 +1738,12 @@ void GLVideoDriver::DrawSceneLighting(const SceneLighting& lighting)
 	}
 
 	// 4. composite back, lit (the depth map is attached to this FBO: don't keep it bound)
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, 0);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glDisable(GL_BLEND);

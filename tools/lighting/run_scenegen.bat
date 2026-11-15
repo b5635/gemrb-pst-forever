@@ -8,5 +8,7 @@ if not exist "..\upscale\.venv\Scripts\activate.bat" (
 	exit /b 1
 )
 call ..\upscale\.venv\Scripts\activate.bat
+set "HF_HOME=%~dp0..\upscale\models\hf"
+if not exist "%HF_HOME%" mkdir "%HF_HOME%"
 python scenegen.py %*
 exit /b %errorlevel%

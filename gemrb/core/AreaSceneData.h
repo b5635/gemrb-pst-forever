@@ -41,6 +41,8 @@ public:
 	// exposed for the unit tests
 	static bool ParseLights(const std::string& text, AreaSceneData& out);
 	static bool ReadMap(const std::string& path, const char magic[4], int bytesPerTexel, SceneMap& out);
+	// nearest texel, clamped; GLSL heightAt samples the uploaded float texture the same way
+	static float HeightAt(const SceneMap& map, float areaX, float areaY);
 };
 
 }

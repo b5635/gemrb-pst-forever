@@ -822,16 +822,33 @@ the phase's "Done when", the files changed, and "nothing is committed".
 ## 14. Progress
 
 - [x] Phase 0: tooling and survey
-- [ ] Phase 1: light sources (pipeline + engine `BakedLights`)
-- [ ] Phase 2: height map (model choice, calibration, engine height + occlusion)
-- [ ] Phase 3: normals, sprite AO, key light
-- [ ] Phase 4: detector labels
+- [x] Phase 1: light sources (pipeline + engine `BakedLights`)
+- [x] Phase 2: height map (model choice, calibration, engine height + occlusion)
+- [x] Phase 3: normals, sprite AO, key light
+- [x] Phase 4: detector labels
 - [ ] Phase 5: SAM 2 (deferred, only on trigger)
 - [ ] Phase 6: other games (not until asked)
 
 Notes (survey summary, final thresholds, model pick, metrics, exceptions):
 
-- Phase 0 tooling is in and the survey finished with 0 errors. Phase 1 is unblocked.
+- Phase 0 tooling is in and the survey finished with 0 errors.
+- Phase 1 is in. Owner signed it off in game (AR0105 hanging lantern; Mortuary wall torches already have DynamicLights so they are a bad A/B). Nothing is committed.
+- `run_scenegen.bat --stage lights` on all 123 WEDs, 0 failures. Manifest stage `lights-1`. Summary:
+
+```
+lights: 123 areas, 0 failed, version lights-1
+total lights: 1384
+by kind: fire 921, magic 240, steady 117, pool 106
+areas with 0 lights: 14
+  AR0106 AR0206 AR0209 AR0304 AR0401 AR0405 AR0609 AR1202 AR1404 AR3006 AR3007 AR3010 AR3012 AR3014
+thresholds: V_MIN=0.85 EXCESS_MIN=0.12 A8_MIN=0.05 SCORE_MIN=0.035 CHROMA_COS_MIN=0.6 MERGE_DIST=64.0
+most lights: AR0800 64
+```
+
+  Review images in `tools/lighting/work/review/`. Output `D:\Games\GemRB\upscaled\lighting\<WED>\lights.txt`.
+- Thresholds kept the section 6.1 start values except `MERGE_DIST` 24 -> 64 (AR1101 lava was many cores on one glow) and `LM_SPOT_MIN` 2 -> 12. AR0508 cave-mouth glow is still a miss (phase 4).
+- Engine: `AreaSceneData` loads `lights.txt`; `Map::CollectSceneLights` adds them when `BakedLights=1`. `BakedLightGain=100`. `PartyLight` default is 0 (owner request during this phase).
+- Python: `test_lights.py` plus the phase 0 tests. C++: `Test_AreaSceneData`. `tb_autotest.ps1` was not re-run in the phase 1 session.
 - Upscale dry-run before adding ARE: 5609 resources. gui 974 (bam 715, bmp 10, mos 249), areas 125 (tis 125), sprites 1871 (bam 1871), skip 5 (bam 5). After `0x03F2: "are"`: same four category counts, 5817 resources. The extra entries are ARE files. `idx.names("are")` is non-empty.
 - `run_scenegen.bat --stage survey` on all 123 WEDs, 0 failures, no `errors.log`, about 2.5 minutes. Rows in `tools/lighting/work/survey.csv`. Summary below. Manifest: `D:\Games\GemRB\upscaled\lighting\manifest.json` (`survey-1`, 123 areas, failed empty).
 - Survey summary (2026-11-14):
@@ -863,3 +880,83 @@ STOP: 107 of 123 areas (87.0%) have a non-uniform HT map.
   uses HT to nudge the actor sprite by -7..+7 pixels (`TileProps::QueryElevation`); lighting
   still keys off `Pos.y`. Multiple HT values are stairs, not storeys. The survey still records
   HT unique counts as a fact. Phase 2 calibrates against `floor_mask` and wall polygons only.
+
+- Phase 2 is in. Nothing is committed. Output `D:\Games\GemRB\upscaled\lighting\<WED>\height.bin` (123 files) plus rewritten `lights.txt` (7.2.7, stage `lights-2`). Disk size of `lighting/`: 365.4 MB (370 files). No `errors.log`.
+- Third comparison model (Hugging Face search, transformers `AutoModelForDepthEstimation`, not diffusion): `xingyang1/Distill-Any-Depth-Large-hf`, MIT, 2025 Distill-Any-Depth Large. Depth Anything 3 has no AutoModel checkpoint; Apple Depth Pro is AMLR and 384-px patches. Distill-Any-Depth loads like DA-V2 (ViT-14, safetensors).
+- Comparison (6 areas x 3 models x 2 sizes), sheet `tools/lighting/work/review/depth_compare.png`. Areas: AR1000, AR1001 (dungeon), AR0500 + AR0400 (city / outdoor hive; PST sets AT_CITY only on AR0500), AR0202, AR0105 (indoor). Pick rule: best wall among median held-out residual < 4 px. Every candidate had wall 1.0 and residual < 4, so residual broke the tie.
+
+```
+pick: xingyang1/Distill-Any-Depth-Large-hf  --depth-input 518
+licences: Distill-Any-Depth MIT; DA-V2 Small Apache-2.0; DA-V2 Large CC-BY-NC-4.0
+median residual on the 6: 0.538
+unanchored on the 6: 0
+```
+
+  518 beat 1036 on residual for this model. Torch still `2.11.0+cu128`, CUDA true. HF_HOME `tools/upscale/models/hf`.
+- Full run `run_scenegen.bat --stage depth --review`, 123 areas, 0 failed:
+
+```
+depth: 123 areas, 0 failed, version depth-1
+model: xingyang1/Distill-Any-Depth-Large-hf
+depth_input: 518
+median residual: 0.645 n=118
+median wall: 1.000 n=122
+seam < 3 px: 123/123 (100.0%)
+```
+
+  Worst finite residual AR0306 2.156 (still < 4). Wall score is 1.0 wherever there are wall polygons (isometric column cap plus a minimum of 8 px on wall pixels that the net left flat), so it is not a useful ranking signal; residual is. AR0613 has no wall polygons (wall nan).
+- Seam exceptions: none (100% < 3 after writing the blended field back onto tiles).
+- Unanchored / nan residual (one line from the review image):
+  - AR1601: 9/9 tiles unanchored, nan residual. Circular hut, almost no walkable floor in the tiles; only a few wall polygons got height.
+  - AR3008 AR3010 AR3011 AR3016: nan residual, 1 leftover tile. Tiny Fortress / negative-material rooms, too little floor to fit.
+  - AR0201 AR0401 AR0403 AR0704 AR1500 AR1600 AR1700 AR1800: 1-2 leftover edge tiles with no floor. Blend still covers the area; seam 0.
+- Extra review pair (walls all tied at 1.0): AR1601 (most leftover tiles) and AR0306 (highest residual; furniture and walls recovered, floor flat). The 6 comparison areas plus those two: `depth_<WED>.png` / `height_<WED>.png` under `tools/lighting/work/review/`.
+- Engine: `ForArea` loads `height.bin`; `HeightAt` nearest-texel clamped; texture unit 4 `GL_R32F`; `LightFS` `heightAt` + occlusion `T=1.285714`; sprites skip occlusion; `wallSpans` skipped when the height map is used. Toggles `LightHeightMap=1`, `LightOcclusion=1`, `LightOcclusionSteps=16`. Bias 2.0, thickness 48.0. Steps stayed 16 (no visible hitch while panning AR0202).
+- In game (new game into AR0202; original `pst_saves` were empty): log `AR0202: 39 baked lights, height 1`. Pixel diffs of occlusion 1 vs 0 and height 1 vs 0 are on the pillar/torch, hanging lantern, and slab. `GEMRB_LIGHT_DEBUG=1` red = vertical, green = falloff*occlusion. Zoom and pan keep the overlay on the art. Shots in `D:\gemrb\shots\p2_*.png`.
+- Python: `unittest discover tools/lighting/tests` 17 OK. C++: `AreaSceneData*` 6/6; full `Test_gemrb_core` 233 pass, 2 pre-existing VFS fails (`MakeDirectories`, `RemoveDirectoryW`). `tools\tb_autotest.ps1` AUTOTEST PASSED (mortuary + ghouls).
+
+- Phase 3 is in. Nothing is committed. Pipeline `run_scenegen.bat --stage surface`, 123 areas, 0 failed, no `errors.log`. Stage `surface-1`. Full-res h cache `tools/lighting/work/hcache/<WED>.npy` (gitignored). Normals from full-res h (1 px masked gaussian, then `depth.height_to_normals`, half-res average+renorm). `normal.bin` GLN1, `ao.bin` GLA1, both texel 2. Lights file bumped with a `key` line; light list / `lights-2` unchanged.
+
+```
+surface: 123 areas, 0 failed, version surface-1
+key lines: 111/123
+model: xingyang1/Distill-Any-Depth-Large-hf
+depth_input: 518
+```
+
+  No key line (fit `hypot(c1,c2)/c0 < 0.05`): AR0110 AR0202 AR0203 AR0511 AR0604 AR0605 AR0901 AR0903 AR1400 AR1500 AR1700 AR3011.
+- Disk size of `D:\Games\GemRB\upscaled\lighting\`: 1088.3 MB (123 height + 123 normal + 123 ao). Under the 3 GB cap; no zlib.
+- Surface constants kept at section 8.1 start values (blur sigma 1, AO 16 dirs / 96 units / height 30 / gamma 0.7, key h>6, nvar 0.05, horiz 0.05, tint cover 0.30).
+- Review for the 8 areas from 7.5 (AR1000 AR1001 AR0500 AR0400 AR0202 AR0105 AR1601 AR0306): `normal_<WED>.png`, `ao_<WED>.png`, key arrow on `lights_<WED>.png` under `tools/lighting/work/review/`.
+- Engine: `ForArea` loads GLN1 (unit 5, GL_RGB8 linear) and GLA1 (unit 6, GL_R8 linear). Same cache key `(scene*, generation)`. `LightFS` mode 0 uses the normal map on non-sprite pixels; sprites keep the luminance bump. Mode 3 sprite AO after the ambient clear, `GL_DST_COLOR, GL_ZERO`. `SceneLighting` carries `hasKey` / `keyDir` / `keyStrength`; `DrawShadows` uses `project(keyDir[0], keyDir[1], 0.85, 0.62 * clamp(keyStrength, 0.4, 1))`. Ambient mix keeps luma. Toggles `LightNormalMap=1`, `SpriteAO=60`, `AreaKeyLight=1`.
+- In game (save `lights`, AR0202 then LeaveAreaLUA): log `AR0202: 39 baked lights, height 1, normals 1, ao 1`. LightNormalMap 1 vs 0: book text loses luminance-bump speckle. SpriteAO 100 vs 0: TNO next to the inner-ring slab darkens (mean luma -16.7); TNO in the open is unchanged (0 px). AreaKeyLight 1 vs 0 on AR0105 (key 0.60,0.80) and AR0500 (key 0.35,0.94): sprite shadows follow the review arrow; paused control shots identical. All new scene toggles at 0 match each other (max delta 0) and look like original lighting with BakedLights off. Shots in `D:\gemrb\shots\p3_*.png`.
+- PST `LeaveAreaLUA` is `Area, Point, Face` (no MOS string). `DevConsole.goto` was using the BG2 4-arg form and always teleported to `[0.0]`; fixed.
+- Python: `unittest discover tools/lighting/tests` 24 OK. C++: `AreaSceneData*` includes ReadMap GLN1/GLA1 and ParseLights with/without a key line; full `Test_gemrb_core` 235 pass, 2 pre-existing VFS fails. `tools\tb_autotest.ps1` AUTOTEST PASSED (mortuary 18 turns / 36 swings, ghouls 2 turns / 2 swings).
+
+- Phase 4 is in. Nothing is committed. No engine change. Model `google/owlv2-base-patch16-ensemble` (Apache-2.0, safetensors, CUDA fp16) in `tools/upscale/models/hf`. Stage `detect-1` then `lights-3` (boxes feed the lights stage). Key lines copied from the previous `lights.json`; still **111 / 123**. `height.bin` / `normal.bin` / `ao.bin` not rewritten.
+
+```
+detect: 123 areas, 0 failed, version detect-1
+model: google/owlv2-base-patch16-ensemble
+threshold: 0.12 nms_iou=0.5 tile=960 overlap=128 box_max_side=192
+total boxes: 5873
+by kind: fire 2146, magic 2435, steady 802, pool 490
+areas with 0 boxes: 1  AR0206
+```
+
+```
+lights: 123 areas, 0 failed, version lights-3
+total lights: 1531
+by kind: fire 830, magic 310, steady 129, pool 262
+areas with 0 lights: 14
+  AR0106 AR0206 AR0209 AR0304 AR0401 AR0405 AR0609 AR1202 AR1404 AR3006 AR3007 AR3010 AR3012 AR3014
+```
+
+  Kind counts before (lights-2): fire 921, magic 240, steady 117, pool 106, total 1384.
+  After: fire 830, magic 310, steady 129, pool 262, total 1531.
+- Detector score kept at the 0.12 start value. Tune: `BOX_MAX_SIDE=192` (drop region-sized lava/portal boxes that stole kinds). SCORE_MIN inside fire/magic boxes is still `0.035 * 0.6`.
+- Same 12 areas as phase 1 (`lights_sheet_phase1.png` kept; `lights_sheet_phase4_same12.png` is the after). Counts: no area lost lights. AR0800 64, AR1000 64, AR0105 48->49, AR1001 48, AR0203 45, AR0500 43->55, AR0202 39, AR0201 30->31, AR0110 11->12, AR0508 4, AR1201 42, AR0403 36. Dynamic 6+6 sheet is `lights_sheet.png` (AR0700 entered the top 6).
+- AR0508 cave-mouth glow is still a miss. Two real tries: (1) score 0.12 with no size cap, OWL only put huge lava boxes on it; (2) `BOX_MAX_SIDE=192`, a compact lava box 141x219 at 0.137 covers (1466,1673) but those pixels fail 6.1 A (V=0.89, S=0.07, not white enough). No window/portal box even at 0.05. The stairs lamp in that area did relabel fire -> steady.
+- In game: AR0105 hanging lantern at emitter (1921, 730), ground (1921, 768), z=38. Kind fire (flicker, castsShadow 1) -> steady (no flicker, castsShadow 0). OWL prompt "a glowing lantern" score 0.41. Log `AR0105: 49 baked lights, height 1, normals 1, ao 1`. Shots `D:\gemrb\shots\p4_lantern_AR0105.png` and `_t1` / `_t2`. No strref (painted background, not a BAM).
+- Python: `unittest discover tools/lighting/tests` 38 OK. No C++ change, so no `build_install` and no `tb_autotest`.
+- SAM 2 trigger (section 11) is false: phase 2/3 did not show height edges bleeding in more than 1 of 8 areas in the in-game shots, and the phase 4 sheet does not show detector boxes merging separate emitters. Do not start phase 5.

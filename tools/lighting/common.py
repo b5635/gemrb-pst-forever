@@ -99,6 +99,8 @@ class RunContext:
     work: Path
     state: object
     game: Path
+    depth_input: int = 1036
+    depth_model: str = ""
 
 
 _WALKABLE: set[int] | None = None
@@ -295,6 +297,13 @@ def read_wed_polygons(data: bytes) -> tuple[list[np.ndarray], list[np.ndarray], 
                 if points is not None:
                     doors.append(points)
     return walls, doors, wall_count, door_count
+
+
+def read_area_type(data: bytes) -> int:
+    """AREAV1.0 area type flags (word at 0x48). Same bits as Map.h MapEnv."""
+    if len(data) < 0x4A or data[:8] != b"AREAV1.0":
+        return 0
+    return int(struct.unpack_from("<H", data, 0x48)[0])
 
 
 def read_area_anims(data: bytes) -> tuple[str, list[tuple[int, int, str, int]]]:

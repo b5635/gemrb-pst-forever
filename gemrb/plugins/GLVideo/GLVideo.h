@@ -14,6 +14,7 @@
 
 #include <GL/glew.h>
 #include <SDL.h>
+#include <cstdint>
 #include <unordered_map>
 #include <vector>
 
@@ -78,8 +79,9 @@ struct GLBatchState {
 	GLuint fbo = 0;
 	Size targetSize;
 	GLBlend blend = GLBlend::None;
-	int texMode = 0; // 0 colour only, 1 rgba, 2 indexed
+	int texMode = 0; // 0 colour only, 1 rgba, 2 indexed, 3 soft, 4 rgba+index residual
 	GLuint texture = 0;
+	GLuint indexTex = 0; // texMode 4: BAM index map (texMode 2 still uses texture)
 	GLuint stencilTex = 0;
 	int stencilChannel = -1;
 	int dither = 0;
@@ -98,7 +100,7 @@ struct GLBatchState {
 
 	bool operator==(const GLBatchState& o) const
 	{
-		return outline == o.outline && outlineRadius == o.outlineRadius && depthWrite == o.depthWrite && objDepth == o.objDepth && fbo == o.fbo && targetSize == o.targetSize && blend == o.blend && texMode == o.texMode && texture == o.texture && stencilTex == o.stencilTex && stencilChannel == o.stencilChannel && dither == o.dither && stencilA == o.stencilA && stencilBx == o.stencilBx && stencilBy == o.stencilBy && scissor == o.scissor && flipY == o.flipY && smooth == o.smooth && brightness == o.brightness && contrast == o.contrast;
+		return outline == o.outline && outlineRadius == o.outlineRadius && depthWrite == o.depthWrite && objDepth == o.objDepth && fbo == o.fbo && targetSize == o.targetSize && blend == o.blend && texMode == o.texMode && texture == o.texture && indexTex == o.indexTex && stencilTex == o.stencilTex && stencilChannel == o.stencilChannel && dither == o.dither && stencilA == o.stencilA && stencilBx == o.stencilBx && stencilBy == o.stencilBy && scissor == o.scissor && flipY == o.flipY && smooth == o.smooth && brightness == o.brightness && contrast == o.contrast;
 	}
 	bool operator!=(const GLBatchState& o) const { return !(*this == o); }
 };
@@ -180,7 +182,17 @@ private:
 	struct LightUniforms {
 		GLint targetSize, flipY, mode, scene, light, sceneSize, keep, maxLight;
 		GLint spriteDepth, wallDepth, geom, lightPos, lightColor, map, regionOrigin, lightToPhys, bump, normalStrength, debug;
+		GLint hasHeight, height, viewOrigin, sceneTexel, occlSteps, occlBias, occlThickness;
+		GLint hasNormals, normalMap, ao, spriteAO;
 	} luni {};
+	GLuint heightTex = 0;
+	GLuint heightZeroTex = 0;
+	GLuint normalTex = 0;
+	GLuint normalZeroTex = 0;
+	GLuint aoTex = 0;
+	GLuint aoZeroTex = 0;
+	const void* heightKey = nullptr;
+	uint32_t heightGen = 0;
 	// generated depth map: ground line per pixel. Sprites write theirs while the
 	// scene is drawn (second colour attachment of the scene buffer), walls are
 	// rasterised from their polygons when lighting is applied
@@ -243,14 +255,14 @@ private:
 	void SetBatch(const GLBatchState& state);
 	GLBatchState TargetState();
 	void ApplyColorBlend(GLBatchState& st, BlitFlags flags) const;
-	void PushQuad(float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, const Color& c, float pal = -1, float grey = 0, float ckey = -1);
+	void PushQuad(float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, const Color& c, float pal = -1, float grey = 0, float ckey = -1, float origPal = 0);
 	void PushColorRect(const Region& r, const Color& c);
 	void PushLine(const BasePoint& a, const BasePoint& b, const Color& c);
 	int PaletteRow(const Palette* pal);
 	void DrawTexture(const GLVideoBuffer* buf, const Region& src, const Region& dst, BlitFlags flags, const Color& tint);
 	void DrawSprite(const Holder<Sprite2D>& spr, const Region& src, const Region& dst, BlitFlags flags, const Color& tint);
 	// batch state, palette row and colour key for drawing a sprite; false = nothing to draw
-	bool PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags, GLBatchState& st, float& pal, float& ckey, float& texelScale);
+	bool PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags, GLBatchState& st, float& pal, float& ckey, float& texelScale, float& origPal);
 	void UpdatePresentRect();
 	void ResizeScreenTarget();
 	static Region ToPhys(const Region& logical, float scale);
@@ -258,6 +270,8 @@ private:
 	void SetupStencil(GLBatchState& st, BlitFlags flags);
 	void DevScreenshot();
 	void DrawLightVertices(const std::vector<GLVertex>& verts);
+	void EnsureSceneMaps(const SceneLighting& lighting);
+	void DeleteSceneMaps();
 	bool LightingWanted() const;
 	Point WindowToScreen(float x, float y) const;
 

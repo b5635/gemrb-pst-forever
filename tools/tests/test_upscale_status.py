@@ -38,6 +38,7 @@ class OutputLayout(unittest.TestCase):
             bam.mkdir()
             (bam / "0.png").write_bytes(b"x")
             (bam / "1.png").write_bytes(b"yy")
+            (bam / "0.idx.png").write_bytes(b"idx")
             (bam / "notes.txt").write_text("ignore", encoding="utf-8")
             count, size = png_stats(bam)
             self.assertEqual(count, 2)
