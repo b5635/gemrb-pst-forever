@@ -5,6 +5,8 @@ VVE_Builder has generated right now.
 
   * Reads <vve>/pst_revoice/plan.csv (strref -> sound resref) and takes the audio from
     the first audio folder that has it (default: audio_omnivoice, then audio).
+    Info-point examine lines use the same plan rows (Speaker=Narrator, VV<strref>);
+    dump them with tools/vve_infopoints.py.
   * Copies new/changed WAVs into <game>/override; removes ones it put there earlier
     that are no longer generated.
   * In Dialog.tlk and dialogF.tlk it changes only the sound resref of each line,

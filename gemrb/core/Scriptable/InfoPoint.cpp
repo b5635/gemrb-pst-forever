@@ -51,6 +51,45 @@ void InfoPoint::SetEnter(const ResRef& resref)
 	}
 }
 
+ResRef InfoPoint::ExamineFallbackResRef(ieStrRef strref)
+{
+	ResRef sound;
+	const ieDword id = ieDword(strref);
+	if (!id || strref == ieStrRef::INVALID) {
+		return sound;
+	}
+	sound.Format("VV{}", id);
+	return sound;
+}
+
+void InfoPoint::PlayExamineSound() const
+{
+	if (!core || !core->GetDictionary().Get("InfoPointSounds", 1)) {
+		return;
+	}
+	if (StrRef == ieStrRef::INVALID || !ieDword(StrRef)) {
+		return;
+	}
+
+	ResRef sound;
+	if (core->strings) {
+		StringBlock block = core->strings->GetStringBlock(StrRef, STRING_FLAGS::NONE);
+		sound = block.Sound;
+	}
+	if (sound.IsEmpty()) {
+		sound = ExamineFallbackResRef(StrRef);
+		if (sound.IsEmpty() || !gamedata) {
+			return;
+		}
+		if (!gamedata->Exists(sound, IE_WAV_CLASS_ID, true) && !gamedata->Exists(sound, IE_OGG_CLASS_ID, true)) {
+			return;
+		}
+	}
+
+	auto config = core->GetAudioSettings().ConfigPresetDialog(SFXChannel::Dialog);
+	core->GetAudioPlayback().PlaySpeech(sound, config, true);
+}
+
 ieDword InfoPoint::GetUsePoint() const
 {
 	return Flags & TRAP_USEPOINT;

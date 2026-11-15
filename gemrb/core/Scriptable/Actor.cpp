@@ -348,6 +348,15 @@ void Actor::SetName(ieStrRef strref, unsigned char type)
 	SetName(std::move(name), type);
 }
 
+const String& Actor::GetDisplayedName() const
+{
+	// same choice as GameControl::TooltipText
+	if (core->HasFeature(GFFlags::PST_STATE_FLAGS)) {
+		return GetLongName();
+	}
+	return GetDefaultName();
+}
+
 void Actor::SetAnimationID(stat_t animID)
 {
 	//if the palette is locked, then it will be transferred to the new animation
@@ -4713,13 +4722,18 @@ void Actor::DisplayCombatFeedback(unsigned int damage, int resisted, int damaget
 			}
 			displaymsg->DisplayConstantStringName(strref, GUIColors::WHITE, this);
 		} else if (core->HasFeature(GFFlags::ONSCREEN_TEXT)) {
-			auto color = GUIColors::WHITE;
-			if (InParty) {
-				color = GUIColors::RED;
+			const Game* game = core->GetGame();
+			if (game && game->combat.IsActive() && core->GetDictionary().Get(StringView("Turn Based Floating Text"), 1)) {
+				CombatHud::NotifyFloater(GetGlobalID(), fmt::format(u"{}", damage));
+			} else {
+				auto color = GUIColors::WHITE;
+				if (InParty) {
+					color = GUIColors::RED;
+				}
+				// eeeh, no token (Damage: x)
+				String text = fmt::format(u"{} {}", core->GetString(ieStrRef::DAMAGE), damage);
+				overHead.SetText(std::move(text), true, true, displaymsg->GetColor(color));
 			}
-			// eeeh, no token (Damage: x)
-			String text = fmt::format(u"{} {}", core->GetString(ieStrRef::DAMAGE), damage);
-			overHead.SetText(std::move(text), true, true, displaymsg->GetColor(color));
 		} else if (!DisplayMessage::HasStringReference(HCStrings::Damage2) || !damager) {
 			// bg1 and iwd
 			// or any traps or self-infliction (also for bg1)

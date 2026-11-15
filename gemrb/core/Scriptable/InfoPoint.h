@@ -29,6 +29,9 @@ public:
 	bool PossibleToSeeTrap() const override;
 	bool IsPortal() const;
 	int GetCursor(TargetMode targetMode) const;
+	// Play the TLK sound for this region's examine text, or VV<strref> if that WAV exists.
+	void PlayExamineSound() const;
+	static ResRef ExamineFallbackResRef(ieStrRef strref);
 	void TryBashLock(Actor*) override { return; };
 	void TryPickLock(Actor*) override { return; };
 	static void Reset();

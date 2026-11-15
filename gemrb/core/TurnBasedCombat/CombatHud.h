@@ -11,7 +11,6 @@
 #include "Region.h"
 #include "Video/Video.h"
 
-#include <functional>
 #include <string>
 #include <vector>
 
@@ -60,8 +59,10 @@ public:
 
 	/** A saving throw was rolled: a little die spins over the creature, then a sound for the result */
 	static void NotifySave(ieDword actor, int roll, bool success);
-	/** draws the save dice; toScreen maps a map point to the screen, scale is map units per pixel */
-	static void DrawSaves(const std::function<Point(const Point&)>& toScreen, float scale);
+	/** Combat text over a creature: stays a few seconds, white, slight random drift, stacked so they don't overlap. */
+	static void NotifyFloater(ieDword actor, String text);
+	/** Save dice and combat text, in map space with overhead text (just above the head). */
+	static void DrawWorldOverlays();
 
 private:
 	struct Roll {

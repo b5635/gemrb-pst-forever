@@ -685,7 +685,7 @@ def UpdateCombatBar ():
 	Window.GetControl (CID_CANCEL).SetVisible (SelectedMode is not None)
 
 	# info line
-	name = GemRB.GetPlayerName (pc, 1)
+	name = GemRB.GetPlayerName (pc, -1)
 	hp = GemRB.GetPlayerStat (pc, IE_HITPOINTS)
 	maxhp = GemRB.GetPlayerStat (pc, IE_MAXHITPOINTS)
 	ac = GemRB.GetPlayerStat (pc, IE_ARMORCLASS)

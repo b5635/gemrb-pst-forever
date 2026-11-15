@@ -258,6 +258,10 @@ public:
 	void MoveViewportUnlockedTo(Point, bool center);
 	bool MoveViewportTo(Point, bool center, int speed = 0);
 	Region Viewport() const;
+	/** Map pixels to shift combat centering: +X right, +Y toward the bottom of the screen. */
+	Point CombatCameraOffset() const;
+	/** Map point to center on so the actor sits at the combat camera offset. */
+	Point CombatFocus(const Point& actorPos) const;
 
 	/** Selects one or all PC */
 	void SelectActor(int whom, int type = -1);

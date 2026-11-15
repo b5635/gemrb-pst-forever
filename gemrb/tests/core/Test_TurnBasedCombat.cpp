@@ -10,6 +10,8 @@
 #include "../../core/PathFinder.h"
 #include "../../core/TurnBasedCombat/CombatDirector.h"
 
+#include "ie_stats.h"
+
 #include <gtest/gtest.h>
 
 namespace GemRB {
@@ -70,6 +72,37 @@ TEST(CombatDirectorTest, JoinerIsInsertedAtItsInitiative)
 
 	idx = CombatDirector::InsertByInitiative(order, MakeCombatant(4, 10, 10, false));
 	EXPECT_EQ(idx, 3u);
+}
+
+TEST(CombatDirectorTest, CombatVisionIsOnForLivingEnemies)
+{
+	EXPECT_TRUE(CombatDirector::ShouldGrantCombatVision(true, true));
+	EXPECT_FALSE(CombatDirector::ShouldGrantCombatVision(false, true));
+	EXPECT_FALSE(CombatDirector::ShouldGrantCombatVision(true, false));
+	EXPECT_FALSE(CombatDirector::ShouldGrantCombatVision(false, false));
+}
+
+TEST(CombatDirectorTest, OnlyActualHostilesAreEnemies)
+{
+	EXPECT_TRUE(CombatDirector::IsEnemyEA(EA_ENEMY));
+	EXPECT_TRUE(CombatDirector::IsEnemyEA(EA_EVILCUTOFF));
+	EXPECT_FALSE(CombatDirector::IsEnemyEA(EA_NEUTRAL));
+	EXPECT_FALSE(CombatDirector::IsEnemyEA(EA_PC));
+	EXPECT_FALSE(CombatDirector::IsEnemyEA(EA_ALLY));
+
+	EXPECT_TRUE(CombatDirector::IsNeutralEA(EA_NEUTRAL));
+	EXPECT_TRUE(CombatDirector::IsNeutralEA(EA_NOTGOOD));
+	EXPECT_FALSE(CombatDirector::IsNeutralEA(EA_ENEMY));
+	EXPECT_FALSE(CombatDirector::IsNeutralEA(EA_PC));
+	EXPECT_FALSE(CombatDirector::IsNeutralEA(EA_GOODCUTOFF));
+
+	EXPECT_TRUE(CombatDirector::AreEnemies(EA_PC, EA_ENEMY));
+	EXPECT_TRUE(CombatDirector::AreEnemies(EA_ENEMY, EA_ALLY));
+	EXPECT_FALSE(CombatDirector::AreEnemies(EA_PC, EA_NEUTRAL));
+	EXPECT_FALSE(CombatDirector::AreEnemies(EA_ENEMY, EA_NEUTRAL));
+	EXPECT_FALSE(CombatDirector::AreEnemies(EA_NEUTRAL, EA_NEUTRAL));
+	EXPECT_FALSE(CombatDirector::AreEnemies(EA_PC, EA_ALLY));
+	EXPECT_FALSE(CombatDirector::AreEnemies(EA_ENEMY, EA_EVILBUTGREEN));
 }
 
 TEST(CombatDirectorTest, ResetBudgetRestoresTheTurn)
@@ -137,6 +170,14 @@ TEST(CombatDirectorTest, TripAndKnockdownShareTheTakedownPenalty)
 	EXPECT_EQ(CombatDirector::TakedownPenalty(TakedownKind::Trip), -2);
 	EXPECT_EQ(CombatDirector::TakedownPenalty(TakedownKind::Knockdown), 0);
 	EXPECT_EQ(CombatDirector::TakedownPenalty(TakedownKind::None), 0);
+}
+
+TEST(CombatDirectorTest, TakedownResultTextNamesTheManeuverAndTheOutcome)
+{
+	EXPECT_EQ(CombatDirector::TakedownResultText(TakedownKind::Trip, true), u"Trip: Success");
+	EXPECT_EQ(CombatDirector::TakedownResultText(TakedownKind::Trip, false), u"Trip: Failure");
+	EXPECT_EQ(CombatDirector::TakedownResultText(TakedownKind::Knockdown, true), u"Knockdown: Success");
+	EXPECT_EQ(CombatDirector::TakedownResultText(TakedownKind::Knockdown, false), u"Knockdown: Failure");
 }
 
 TEST(TurnMovementTest, CostIsTheSameAcrossAndDown)

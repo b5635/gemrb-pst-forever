@@ -698,6 +698,9 @@ public:
 		return TalkCount ? GetLongName() : GetShortName();
 	}
 
+	/** The name mouseover shows: long name on PST, otherwise GetDefaultName. */
+	const String& GetDisplayedName() const;
+
 	ResRef GetScript(int ScriptIndex, bool empty = false, bool skipNone = false) const;
 	/** Gets the Character's level for XP calculations */
 	ieDword GetXPLevel(int modified) const;

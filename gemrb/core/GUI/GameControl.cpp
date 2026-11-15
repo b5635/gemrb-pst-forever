@@ -35,6 +35,7 @@
 #include <map>
 #include "TurnBasedCombat/CombatHud.h"
 #include "GUI/TextSystem/Font.h"
+#include "Scriptable/Actor.h"
 #include "Scriptable/Door.h"
 #include "Scriptable/InfoPoint.h"
 #include "Video/Video.h"
@@ -439,8 +440,8 @@ void GameControl::WillDraw(const Region& /*drawFrame*/, const Region& /*clip*/)
 	if (game && game->combat.IsRunning() && update_scripts && !core->timer.ViewportIsMoving()) {
 		const Actor* active = game->combat.GetActiveActor();
 		if (active && active->InMove() && active->GetCurrentArea() == CurrentArea() && CurrentArea()->IsVisible(active->Pos)) {
-			Point center = viewport.origin + Point(viewport.w / 2, viewport.h / 2);
-			// only once it strays from the middle, so short steps don't make it swim
+			Point center = viewport.origin + Point(viewport.w / 2, viewport.h / 2) + CombatCameraOffset();
+			// only once it strays from the framed point, so short steps don't make it swim
 			if (Distance(center, active->Pos) > viewport.h / 8) {
 				Point step = active->Pos - center;
 				step.x /= 4;
@@ -1176,8 +1177,6 @@ void GameControl::DrawCombatOverlays(const Region& screen)
 {
 	const Game* game = core->GetGame();
 	if (!game) return;
-	const float mapScale = SceneCamera() && camera.scale > 0.0f ? camera.scale : 1.0f;
-	CombatHud::DrawSaves([&](const Point& p) { return MapToScreen(p, screen); }, mapScale);
 	DrawHoverHP(screen);
 	if (game->combat.IsActive()) {
 		DrawHitPanel(screen);
@@ -1250,7 +1249,7 @@ void GameControl::DrawHitPanel(const Region& screen) const
 
 	const Font::PrintColors title { target->GetStat(IE_EA) >= EA_EVILCUTOFF ? Color(236, 120, 96, 255) : Theme::text, ColorBlack };
 	int cy = y + 8;
-	font->Print(Region(x + 10, cy, w - 20, line), target->GetShortName(), IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, title);
+	font->Print(Region(x + 10, cy, w - 20, line), target->GetDisplayedName(), IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, title);
 	cy += line + 4;
 
 	// the chance, big
@@ -1368,7 +1367,7 @@ void GameControl::DrawHoverHP(const Region& screen) const
 
 	Color nameColor = Theme::text;
 	if (!actor->InParty) nameColor = actor->GetStat(IE_EA) >= EA_EVILCUTOFF ? Color(236, 120, 96, 255) : Theme::textDim;
-	const String name = actor->GetShortName();
+	const String name = actor->GetDisplayedName();
 	const String level = fmt::format(u"  Lv. {}", actor->GetXPLevel(true));
 	const int nameW = font->StringSize(name).w;
 	const int levelW = font->StringSize(level).w;
@@ -1456,7 +1455,7 @@ void GameControl::DrawTurnBanner(const Region& screen)
 		const Actor* who = area ? area->GetActorByGlobalID(id) : nullptr;
 		if (!who || !who->InParty) continue;
 		if (!names.empty()) names += u"     ";
-		names += who->GetShortName();
+		names += who->GetDisplayedName();
 	}
 	const int w = std::max(420, font->StringSize(names).w + 80);
 	const int h = 76;
@@ -2051,12 +2050,7 @@ String GameControl::TooltipText() const
 	}
 
 	static String tip; // only one game control and we return a const& so cant be temporary.
-	// pst ignores TalkCount
-	if (core->HasFeature(GFFlags::PST_STATE_FLAGS)) {
-		tip = actor->GetName();
-	} else {
-		tip = actor->GetDefaultName();
-	}
+	tip = actor->GetDisplayedName();
 
 	int hp = actor->GetStat(IE_HITPOINTS);
 	int maxhp = actor->GetStat(IE_MAXHITPOINTS);
@@ -2709,6 +2703,17 @@ bool GameControl::MoveViewportTo(Point p, bool center, int speed)
 Region GameControl::Viewport() const
 {
 	return viewport;
+}
+
+Point GameControl::CombatCameraOffset() const
+{
+	return Point(core->GetDictionary().Get("Turn Based Camera Offset X", 0),
+		     core->GetDictionary().Get("Turn Based Camera Offset Y", 80));
+}
+
+Point GameControl::CombatFocus(const Point& actorPos) const
+{
+	return actorPos - CombatCameraOffset();
 }
 
 //generate action code for source actor to try to attack a target
@@ -3675,6 +3680,9 @@ void GameControl::DisplayString(Scriptable* target) const
 		displaymsg->DisplayString(target->overHead.GetText());
 	}
 	target->overHead.Display(true, 0);
+	if (InfoPoint* ip = Scriptable::As<InfoPoint>(target)) {
+		ip->PlayExamineSound();
+	}
 }
 
 /** changes displayed map to the currently selected PC */

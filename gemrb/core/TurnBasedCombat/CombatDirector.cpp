@@ -60,10 +60,10 @@ static void PlayCombatSound(const Actor* actor, const char* resRef)
 	core->GetAudioPlayback().Play(StringView(resRef), AudioPreset::Spatial, SFXChannel::Actions, actor->Pos);
 }
 
-static void ShowFloater(Actor* actor, String text, const Color& color)
+static void ShowFloater(Actor* actor, String text)
 {
 	if (!actor || !Setting("Turn Based Floating Text", 1)) return;
-	actor->overHead.SetText(std::move(text), true, true, color);
+	CombatHud::NotifyFloater(actor->GetGlobalID(), std::move(text));
 }
 
 // party members are the player's, unless "Turn Based Party AI" lets the AI play them (autotest)
@@ -109,6 +109,56 @@ static float walkSpent = 0;
 bool CombatDirector::IsEnabled()
 {
 	return core->GetDictionary().Get("Turn Based Combat", 1) != 0;
+}
+
+bool CombatDirector::CombatVisionEnabled()
+{
+	return Setting("Turn Based Combat Vision", 1);
+}
+
+bool CombatDirector::ShouldGrantCombatVision(bool enabled, bool enemyAndAlive)
+{
+	return enabled && enemyAndAlive;
+}
+
+bool CombatDirector::IsEnemyEA(ieDword ea)
+{
+	return ea >= EA_EVILCUTOFF;
+}
+
+bool CombatDirector::IsNeutralEA(ieDword ea)
+{
+	return ea > EA_GOODCUTOFF && ea < EA_EVILCUTOFF;
+}
+
+bool CombatDirector::AreEnemies(ieDword eaA, ieDword eaB)
+{
+	if (IsNeutralEA(eaA) || IsNeutralEA(eaB)) return false;
+	return (eaA <= EA_GOODCUTOFF) != (eaB <= EA_GOODCUTOFF);
+}
+
+bool CombatDirector::GrantsCombatVision(const Actor* actor) const
+{
+	if (!IsActive() || !actor) return false;
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
+	if (!combatant) return false;
+	return ShouldGrantCombatVision(CombatVisionEnabled(), IsEnemyCombatant(*combatant));
+}
+
+bool CombatDirector::RevealCombatVision(Map* map) const
+{
+	if (!map || map != combatMap || !IsActive() || !CombatVisionEnabled()) return false;
+	bool explored = false;
+	for (const auto& combatant : order) {
+		if (!ShouldGrantCombatVision(true, IsEnemyCombatant(combatant))) continue;
+		Actor* actor = map->GetActorByGlobalID(combatant.globalID);
+		if (!actor) continue;
+		explored |= map->ExploreTile(FogPoint(actor->Pos));
+		if (!actor->GetAnims()) continue;
+		int vis = std::max(2, int(actor->GetVisualRange()));
+		explored |= map->ExploreMapChunk(actor->SMPos, vis + actor->GetAnims()->GetCircleSize(), 1, false);
+	}
+	return explored;
 }
 
 bool CombatDirector::Owns(const Actor* actor)
@@ -200,6 +250,12 @@ int CombatDirector::TakedownPenalty(TakedownKind kind)
 	return kind == TakedownKind::Trip ? -2 : 0;
 }
 
+String CombatDirector::TakedownResultText(TakedownKind kind, bool success)
+{
+	return fmt::format(u"{}: {}", kind == TakedownKind::Knockdown ? u"Knockdown" : u"Trip",
+			   success ? u"Success" : u"Failure");
+}
+
 Path CombatDirector::ClipPath(const Point& start, const Path& path, int budget)
 {
 	Path clipped;
@@ -243,7 +299,7 @@ static bool IsAliveCombatant(const Actor* actor)
 
 static String Name(const Actor* actor)
 {
-	return actor ? actor->GetShortName() : u"?";
+	return actor ? actor->GetDisplayedName() : u"?";
 }
 
 // the living party members standing in this area
@@ -401,14 +457,22 @@ bool CombatDirector::ProjectileInFlight(const Actor* actor) const
 bool CombatDirector::ShouldStartCombat(const Map* map) const
 {
 	const Game* game = core->GetGame();
-	if (game->PartyAttack) return true;
-	if (!core->GetDictionary().Get("Turn Based Start On Sight", 1)) return false;
-
 	const std::vector<Actor*> party = PartyOnMap(map);
+	const bool attacked = game->PartyAttack;
+	const bool onSight = core->GetDictionary().Get("Turn Based Start On Sight", 1) != 0;
+	if (!attacked && !onSight) return false;
+
 	for (const Actor* actor : map->GetAllActors()) {
-		if (actor->GetStat(IE_EA) < EA_EVILCUTOFF) continue;
+		if (!IsEnemyEA(actor->GetStat(IE_EA))) continue;
 		if (!IsAliveCombatant(actor) || !actor->Schedule(game->GameTime, true)) continue;
-		if (!map->IsVisible(actor->Pos)) continue;
+		if (attacked) {
+			for (const Actor* pc : party) {
+				if (pc->objects.LastTarget == actor->GetGlobalID() || actor->objects.LastTarget == pc->GetGlobalID()) {
+					return true;
+				}
+			}
+		}
+		if (!onSight || !map->IsVisible(actor->Pos)) continue;
 		for (const Actor* pc : party) {
 			if (WithinRange(pc, actor->Pos, pc->GetVisualRange()) && map->IsVisibleLOS(pc->Pos, actor->Pos)) {
 				return true;
@@ -424,8 +488,8 @@ bool CombatDirector::ShouldJoin(const Actor* actor, const std::vector<Actor*>& p
 	if (!actor->Schedule(core->GetGame()->GameTime, true)) return false;
 
 	ieDword ea = actor->GetStat(IE_EA);
-	bool hostile = ea >= EA_EVILCUTOFF;
-	bool ally = ea <= EA_GOODCUTOFF;
+	if (IsNeutralEA(ea)) return false;
+
 	bool targeted = false;
 	for (const Actor* pc : party) {
 		if (pc->objects.LastTarget == actor->GetGlobalID() || actor->objects.LastTarget == pc->GetGlobalID()) {
@@ -433,11 +497,9 @@ bool CombatDirector::ShouldJoin(const Actor* actor, const std::vector<Actor*>& p
 			break;
 		}
 	}
-	// it acts on someone who already fights
 	if (!targeted && actor->objects.LastTarget && FindCombatant(actor->objects.LastTarget)) {
-		targeted = hostile || ally || actor->objects.LastTarget == actor->objects.LastTargetPersistent;
+		targeted = true;
 	}
-	if (!hostile && !ally && !targeted) return false;
 
 	for (const Actor* pc : party) {
 		if (targeted || WithinRange(pc, actor->Pos, pc->GetVisualRange())) {
@@ -447,25 +509,18 @@ bool CombatDirector::ShouldJoin(const Actor* actor, const std::vector<Actor*>& p
 	return false;
 }
 
-bool CombatDirector::IsHostileCombatant(const Combatant& combatant) const
+bool CombatDirector::IsEnemyCombatant(const Combatant& combatant) const
 {
 	if (combatant.dead) return false;
-	const Actor* actor = combatMap->GetActorByGlobalID(combatant.globalID);
-	if (!IsAliveCombatant(actor)) return false;
-	if (actor->GetStat(IE_EA) >= EA_EVILCUTOFF) return true;
-	if (!combatant.provoked) return false;
-
-	// a provoked neutral only keeps the fight going while the party is around
-	const std::vector<Actor*> party = PartyOnMap(combatMap);
-	return std::any_of(party.begin(), party.end(), [actor](const Actor* pc) {
-		return WithinRange(pc, actor->Pos, pc->GetVisualRange());
-	});
+	const Actor* actor = combatMap ? combatMap->GetActorByGlobalID(combatant.globalID) : nullptr;
+	if (!IsAliveCombatant(actor) || actor->InParty) return false;
+	return IsEnemyEA(actor->GetStat(IE_EA));
 }
 
 bool CombatDirector::ShouldEndCombat() const
 {
 	if (!combatMap || core->GetGame()->GetCurrentArea() != combatMap) return true;
-	return std::none_of(order.begin(), order.end(), [this](const Combatant& c) { return IsHostileCombatant(c); });
+	return std::none_of(order.begin(), order.end(), [this](const Combatant& c) { return IsEnemyCombatant(c); });
 }
 
 // ------------------------------------------------------------------------------------------
@@ -473,16 +528,15 @@ bool CombatDirector::ShouldEndCombat() const
 
 static Actor* NearestEnemy(const Actor* actor, const Map* map, const std::vector<Combatant>& order)
 {
-	bool hostile = actor->GetStat(IE_EA) >= EA_EVILCUTOFF;
+	ieDword ea = actor->GetStat(IE_EA);
+	if (CombatDirector::IsNeutralEA(ea)) return nullptr;
 	Actor* best = nullptr;
 	unsigned int bestDistance = 0;
 	for (const Combatant& other : order) {
 		if (other.dead || other.globalID == actor->GetGlobalID()) continue;
 		Actor* candidate = map->GetActorByGlobalID(other.globalID);
 		if (!IsAliveCombatant(candidate)) continue;
-		ieDword ea = candidate->GetStat(IE_EA);
-		bool enemy = hostile ? ea <= EA_GOODCUTOFF : (ea >= EA_EVILCUTOFF || other.provoked);
-		if (!enemy) continue;
+		if (!CombatDirector::AreEnemies(ea, candidate->GetStat(IE_EA))) continue;
 		unsigned int distance = SquaredDistance(actor->Pos, candidate->Pos);
 		if (!best || distance < bestDistance) {
 			best = candidate;
@@ -595,9 +649,7 @@ void CombatDirector::StartCombat(Map* map)
 	}
 	for (Actor* actor : map->GetAllActors()) {
 		if (!ShouldJoin(actor, party)) continue;
-		Combatant combatant = MakeCombatant(actor);
-		combatant.provoked = actor->GetStat(IE_EA) < EA_EVILCUTOFF && actor->GetStat(IE_EA) > EA_GOODCUTOFF;
-		order.push_back(combatant);
+		order.push_back(MakeCombatant(actor));
 	}
 	SortByInitiative(order);
 
@@ -606,13 +658,12 @@ void CombatDirector::StartCombat(Map* map)
 		for (auto& combatant : order) {
 			const Actor* actor = map->GetActorByGlobalID(combatant.globalID);
 			if (!actor) continue;
-			bool hostile = actor->GetStat(IE_EA) >= EA_EVILCUTOFF || combatant.provoked;
+			ieDword ea = actor->GetStat(IE_EA);
 			bool sees = false;
 			for (const auto& other : order) {
 				const Actor* them = map->GetActorByGlobalID(other.globalID);
 				if (!them || them == actor) continue;
-				bool themHostile = them->GetStat(IE_EA) >= EA_EVILCUTOFF || other.provoked;
-				if (hostile == themHostile) continue;
+				if (!AreEnemies(ea, them->GetStat(IE_EA))) continue;
 				if (WithinRange(actor, them->Pos, actor->GetVisualRange()) && map->IsVisibleLOS(actor->Pos, them->Pos)) {
 					sees = true;
 					break;
@@ -626,7 +677,9 @@ void CombatDirector::StartCombat(Map* map)
 	TakeOverAll();
 	for (auto& combatant : order) {
 		Actor* actor = map->GetActorByGlobalID(combatant.globalID);
-		if (actor) AllocateAttacks(combatant, actor);
+		if (!actor) continue;
+		AllocateAttacks(combatant, actor);
+		ShowFloater(actor, fmt::format(u"Initiative: {}", combatant.initiative));
 	}
 
 	CombatEvent event;
@@ -641,6 +694,7 @@ void CombatDirector::StartCombat(Map* map)
 		savedZoom = gc->GetScalePercent();
 		gc->SetScalePercent(zoom);
 	}
+	RevealCombatVision(map);
 	BeginTurn(0);
 }
 
@@ -655,11 +709,13 @@ void CombatDirector::EndCombat()
 	event.round = round;
 	PushEvent(event);
 
+	Map* map = combatMap;
 	state = State::Inactive;
 	order.clear();
 	activeID = 0;
 	activeIdx = 0;
 	combatMap = nullptr;
+	if (map) map->UpdateFog();
 
 	GameControl* gc = core->GetGameControl();
 	if (gc && savedZoom) {
@@ -724,7 +780,7 @@ void CombatDirector::ActivateMember(size_t idx)
 	}
 	GameControl* gc = core->GetGameControl();
 	if (gc && game->GetCurrentArea() == combatMap) {
-		gc->MoveViewportTo(actor->Pos, true, TURN_CAMERA_SPEED);
+		gc->MoveViewportTo(gc->CombatFocus(actor->Pos), true, TURN_CAMERA_SPEED);
 	}
 	NotifyGUI();
 }
@@ -883,6 +939,8 @@ void CombatDirector::Join(Actor* actor, bool midRound)
 		}
 		TakeOver(actor, order[idx]);
 		AllocateAttacks(order[idx], actor);
+		ShowFloater(actor, fmt::format(u"Initiative: {}", order[idx].initiative));
+		RevealCombatVision(combatMap);
 		Log(COMBAT, "CombatDirector", "{} joins the fight", fmt::WideToChar { Name(actor) });
 		NotifyGUI();
 	}
@@ -904,6 +962,72 @@ void CombatDirector::RefreshDeaths()
 			PushEvent(event);
 			NotifyGUI();
 		}
+	}
+}
+
+void CombatDirector::DropCombatant(size_t idx, bool& droppedActive)
+{
+	if (idx >= order.size()) return;
+	Actor* actor = combatMap ? combatMap->GetActorByGlobalID(order[idx].globalID) : nullptr;
+	if (order[idx].globalID == activeID) droppedActive = true;
+	Log(COMBAT, "CombatDirector", "{} leaves the fight (not hostile)", fmt::WideToChar { Name(actor) });
+	HandBack(actor, &order[idx]);
+	order.erase(order.begin() + idx);
+	if (idx < activeIdx) --activeIdx;
+	if (idx < groupStart) --groupStart;
+	if (idx <= groupEnd && groupEnd > 0) --groupEnd;
+}
+
+void CombatDirector::ContinueAfterDrop()
+{
+	endRequested = false;
+	flightTicks = 0;
+	activeID = 0;
+	if (ShouldEndCombat()) return;
+	auto waiting = [](const Combatant& c) { return !c.dead && !c.done && !c.delayed; };
+	for (size_t i = 0; i < order.size(); ++i) {
+		if (waiting(order[i])) {
+			BeginTurn(i);
+			return;
+		}
+	}
+	for (size_t i = 0; i < order.size(); ++i) {
+		if (!order[i].dead && !order[i].done && order[i].delayed) {
+			order[i].delayed = false;
+			groupStart = groupEnd = i;
+			ActivateMember(i);
+			return;
+		}
+	}
+	EndRound();
+}
+
+void CombatDirector::RefreshBystanders()
+{
+	bool droppedActive = false;
+	bool dropped = false;
+	for (size_t i = 0; i < order.size();) {
+		if (order[i].dead) {
+			++i;
+			continue;
+		}
+		Actor* actor = combatMap->GetActorByGlobalID(order[i].globalID);
+		if (actor && actor->InParty) {
+			++i;
+			continue;
+		}
+		ieDword ea = actor ? actor->GetStat(IE_EA) : EA_NEUTRAL;
+		if (actor && !IsNeutralEA(ea)) {
+			++i;
+			continue;
+		}
+		DropCombatant(i, droppedActive);
+		dropped = true;
+	}
+	if (droppedActive) {
+		ContinueAfterDrop();
+	} else if (dropped) {
+		NotifyGUI();
 	}
 }
 
@@ -964,18 +1088,19 @@ void CombatDirector::Update()
 	}
 
 	RefreshDeaths();
+	// creatures that act on the fight join it right away, so they never act in real time on it
+	AddJoiners(true);
+	ReactToProvocations();
+	RefreshBystanders();
 	if (ShouldEndCombat()) {
 		EndCombat();
 		return;
 	}
-	// creatures that act on the fight join it right away, so they never act in real time on it
-	AddJoiners(true);
-	ReactToProvocations();
 
 	FollowGroupSelection();
 
 	Actor* actor = GetActiveActor();
-	if (!actor || !IsAliveCombatant(actor)) {
+	if (!actor || !IsAliveCombatant(actor) || !IsCombatant(actor)) {
 		AdvanceTurn();
 		return;
 	}
@@ -1124,7 +1249,7 @@ bool CombatDirector::TacticsFallback(Actor* actor)
 	// party members only fight on their own when the AI plays them
 	bool partyAI = actor->InParty && !PlayerControlled(actor);
 	if (!core->GetDictionary().Get("Turn Based Tactical AI", 1) && !partyAI) return false;
-	if (actor->GetStat(IE_EA) < EA_EVILCUTOFF && !partyAI) return false;
+	if (!IsEnemyEA(actor->GetStat(IE_EA)) && !partyAI) return false;
 	// cowards and callers do what their script says, they aren't made to fight
 	CombatArchetype archetype = ArchetypeOf(actor);
 	if (!partyAI && (archetype == CombatArchetype::Coward || archetype == CombatArchetype::Caller)) return false;
@@ -1411,7 +1536,9 @@ void CombatDirector::RequestAttackRound(Actor* attacker, Scriptable* target)
 	if (!Owns(attacker) || !victim) {
 		// someone outside the fight goes for a combatant: it joins instead of swinging in real time
 		if (victim && IsRunning() && Owns(victim) && attacker->GetCurrentArea() == combatMap && IsAliveCombatant(attacker) && !IsCombatant(attacker)) {
-			Join(attacker, true);
+			if (attacker->InParty || ShouldJoin(attacker, PartyOnMap(combatMap))) {
+				Join(attacker, true);
+			}
 			return;
 		}
 		attacker->PerformAttack(core->GetGame()->GameTime);
@@ -1459,14 +1586,8 @@ void CombatDirector::StartSwing(Actor* actor, Actor* target)
 	actor->FaceTarget(target);
 
 	Combatant* combatant = FindCombatant(actor->GetGlobalID());
-	if (combatant && combatant->takedown != TakedownKind::None) {
+	if (combatant) {
 		combatant->toHitMod = TakedownPenalty(combatant->takedown);
-		const bool trip = combatant->takedown == TakedownKind::Trip;
-		static const Color tripColor(220, 180, 80, 255);
-		static const Color knockdownColor(220, 140, 80, 255);
-		ShowFloater(actor, trip ? u"Trip!" : u"Knockdown!", trip ? tripColor : knockdownColor);
-	} else if (combatant) {
-		combatant->toHitMod = 0;
 	}
 
 	// the dice panel starts rolling now and lands when the swing resolves
@@ -1576,6 +1697,7 @@ void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
 		}
 	}
 
+	TakedownKind resolvedTakedown = TakedownKind::None;
 	if (!swingResolved) {
 		// melee lands halfway into the swing
 		const int hitFrame = SwingHitFrame(frames);
@@ -1584,9 +1706,9 @@ void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
 			Log(COMBAT, "CombatDirector", "swing lands on frame {}/{} after {} ticks", frame, frames, swingTicks);
 			if (IsAliveCombatant(target) && WithinPersonalRange(actor, target, actor->GetWeaponRange(false))) {
 				actor->objects.LastTarget = swingTarget;
-				const TakedownKind takedown = combatant.takedown;
-				if (takedown != TakedownKind::None) {
-					if (!ResolveTakedown(actor, target, takedown)) {
+				resolvedTakedown = combatant.takedown;
+				if (resolvedTakedown != TakedownKind::None) {
+					if (!ResolveTakedown(actor, target, resolvedTakedown)) {
 						actor->attackcount = 0;
 					} else {
 						--actor->attackcount;
@@ -1597,7 +1719,7 @@ void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
 					actor->attackcount = 0; // it couldn't swing (weapon unusable ...), so the round is lost
 				}
 				// the damage rides the attack projectile, which GemRB only fires on frame 8 exactly
-				if (takedown == TakedownKind::None) actor->FireAttackProjectile();
+				if (resolvedTakedown == TakedownKind::None) actor->FireAttackProjectile();
 			} else {
 				actor->attackcount = 0;
 			}
@@ -1619,7 +1741,8 @@ void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
 		event.value = info.damage;
 		event.hit = info.hit;
 		event.critical = info.critical;
-		if (blockSucceeded) event.text = "blocked";
+		if (resolvedTakedown != TakedownKind::None) event.text = "takedown";
+		else if (blockSucceeded) event.text = "blocked";
 		PushEvent(event);
 		actor->lastSwing.made = false;
 	}
@@ -1661,14 +1784,9 @@ void CombatDirector::FinishRound(Actor* actor, Combatant& combatant)
 // ------------------------------------------------------------------------------------------
 // reactions, delay, cancel
 
-static bool AreEnemies(const Actor* a, bool aProvoked, const Actor* b, bool bProvoked)
+static bool ActorsAreEnemies(const Actor* a, const Actor* b)
 {
-	bool aHostile = a->GetStat(IE_EA) >= EA_EVILCUTOFF || aProvoked;
-	bool bHostile = b->GetStat(IE_EA) >= EA_EVILCUTOFF || bProvoked;
-	if (aHostile == bHostile) return false;
-	// neutrals that nobody provoked stay out of it
-	ieDword friendlyEA = aHostile ? b->GetStat(IE_EA) : a->GetStat(IE_EA);
-	return friendlyEA <= EA_GOODCUTOFF || (aHostile ? bProvoked : aProvoked);
+	return CombatDirector::AreEnemies(a->GetStat(IE_EA), b->GetStat(IE_EA));
 }
 
 static bool HasMeleeWeapon(const Actor* actor)
@@ -1691,7 +1809,7 @@ std::vector<ieDword> CombatDirector::ThreatsTo(const Actor* mover) const
 		if (reactor->GetStat(IE_STATE_ID) & (STATE_HELPLESS | STATE_SLEEP | STATE_PANIC)) continue;
 		const Combatant* otherC = FindCombatant(other.globalID);
 		if (otherC && otherC->prone) continue;
-		if (!AreEnemies(reactor, other.provoked, mover, moving->provoked) || !HasMeleeWeapon(reactor)) continue;
+		if (!ActorsAreEnemies(reactor, mover) || !HasMeleeWeapon(reactor)) continue;
 		if (WithinPersonalRange(reactor, mover, reactor->GetWeaponRange(false))) {
 			threats.push_back(other.globalID);
 		}
@@ -1745,8 +1863,7 @@ void CombatDirector::ReactionStep(Actor* mover)
 			return;
 		}
 		Log(COMBAT, "CombatDirector", "{} gets an attack of opportunity on {}", fmt::WideToChar { Name(reactor) }, fmt::WideToChar { Name(mover) });
-		static const Color aooColor(255, 180, 60, 255);
-		ShowFloater(reactor, u"Attack of Opportunity!", aooColor);
+		ShowFloater(reactor, u"Attack of Opportunity!");
 		CombatEvent event;
 		event.type = CombatEventType::Reaction;
 		event.actor = reactorID;
@@ -2011,8 +2128,7 @@ bool CombatDirector::UseRun(Actor* actor)
 	ApplyMovementFlags(actor, *FindCombatant(actor->GetGlobalID()));
 	PlayCombatSound(actor, "sprint");
 	ScenePolish::Get().SpawnSmokePuff(actor->Pos, actor->Pos, true);
-	static const Color runColor(180, 220, 120, 255);
-	ShowFloater(actor, u"Run!", runColor);
+	ShowFloater(actor, u"Run!");
 	Log(COMBAT, "CombatDirector", "{} runs", fmt::WideToChar { Name(actor) });
 	return true;
 }
@@ -2025,8 +2141,7 @@ bool CombatDirector::UseWithdraw(Actor* actor)
 	ApplyMovementFlags(actor, *FindCombatant(actor->GetGlobalID()));
 	PlayCombatSound(actor, "withdraw");
 	ScenePolish::Get().SpawnDustPuff(actor->Pos);
-	static const Color dust(210, 190, 140, 255);
-	ShowFloater(actor, u"Withdraw!", dust);
+	ShowFloater(actor, u"Withdraw!");
 	Log(COMBAT, "CombatDirector", "{} withdraws", fmt::WideToChar { Name(actor) });
 	return true;
 }
@@ -2045,8 +2160,7 @@ bool CombatDirector::UseBlock(Actor* actor)
 	if (!combatant || !ApplyBlock(*combatant)) return false;
 	PlayCombatSound(actor, "block");
 	ScenePolish::Get().SpawnShieldGlow(actor);
-	static const Color shield(140, 190, 255, 255);
-	ShowFloater(actor, u"Block!", shield);
+	ShowFloater(actor, u"Block!");
 	Log(COMBAT, "CombatDirector", "{} prepares to block ({} stacks, {} attacks left)", fmt::WideToChar { Name(actor) },
 	    combatant->blockStacks, combatant->remainingAttacks);
 	NotifyGUI();
@@ -2138,8 +2252,7 @@ void CombatDirector::FinishBlockAnimation(const Actor* attacker, Actor* target, 
 		target->ReverseStanceAnimation();
 		ScenePolish::Get().SpawnBlockSparks(target, attacker);
 		PlayCombatSound(target, "parry");
-		static const Color parry(255, 230, 120, 255);
-		ShowFloater(target, u"Blocked!", parry);
+		ShowFloater(target, u"Blocked!");
 	}
 	blockerID = 0;
 	blockerFrozen = false;
@@ -2217,11 +2330,10 @@ bool CombatDirector::ResolveTakedown(Actor* attacker, Actor* target, TakedownKin
 		attacker->lastSwing.hit = false;
 	}
 
-	static const Color tripColor(220, 180, 80, 255);
 	Log(COMBAT, "CombatDirector", "{} takedown roll {} vs {} -> {}", fmt::WideToChar { Name(attacker) },
 	    roll, attacker->lastSwing.defense, hit ? "hit" : "miss");
 	if (!hit) {
-		ShowFloater(target, kind == TakedownKind::Trip ? u"Trip missed" : u"Knockdown missed", tripColor);
+		ShowFloater(target, TakedownResultText(kind, false));
 		Log(COMBAT, "CombatDirector", "{}: takedown missed", fmt::WideToChar { Name(attacker) });
 		return true;
 	}
@@ -2229,20 +2341,19 @@ bool CombatDirector::ResolveTakedown(Actor* attacker, Actor* target, TakedownKin
 	// a hit with no damage and no bleeding: the pain of being caught off-balance
 	target->PlayHitSound(core->GetResDataINI(), DAMAGE_CRUSHING, false);
 	target->GetHit(0);
-	ShowFloater(target, u"Hit", tripColor);
 
 	target->SetInternalFlag(IF_USEDSAVE, BitOp::OR);
 	target->RollSaves();
 	const bool saved = target->GetSavingThrow(2, 0); // vs death
 	if (saved) {
-		ShowFloater(target, u"Kept footing", tripColor);
+		ShowFloater(target, TakedownResultText(kind, false));
 		Log(COMBAT, "CombatDirector", "{}: takedown hit, {} kept footing", fmt::WideToChar { Name(attacker) }, fmt::WideToChar { Name(target) });
 		return true;
 	}
 
 	Combatant* victim = FindCombatant(target->GetGlobalID());
 	if (victim) KnockProne(target, *victim);
-	ShowFloater(target, kind == TakedownKind::Trip ? u"Tripped!" : u"Knocked down!", tripColor);
+	ShowFloater(target, TakedownResultText(kind, true));
 	return true;
 }
 
@@ -2313,22 +2424,15 @@ void CombatDirector::ChooseAIManeuvers(Actor* actor, Combatant& combatant)
 // ------------------------------------------------------------------------------------------
 // events
 
-// floating combat text over whoever was swung at: the roll's outcome and the damage
+// miss/fumble over the attacker; damage numbers come from Actor::Damage on the wounded
 static void ShowSwingFloater(const CombatEvent& event)
 {
 	if (event.type != CombatEventType::Swing || !Setting("Turn Based Floating Text", 1)) return;
+	if (event.hit || event.text == "blocked" || event.text == "takedown") return;
 	const Map* map = core->GetGame()->GetCurrentArea();
-	Actor* target = map ? map->GetActorByGlobalID(event.target) : nullptr;
-	if (!target) return;
-	static const Color hitColor(240, 70, 50, 255);
-	static const Color critColor(255, 200, 40, 255);
-	static const Color missColor(200, 200, 200, 255);
-	// PST shows damage and hit messages itself; only a miss would otherwise go unseen
-	(void) hitColor;
-	(void) critColor;
-	if (event.hit || event.text == "blocked") return;
-	String text = event.roll == 1 ? u"Fumble" : u"Miss";
-	target->overHead.SetText(std::move(text), true, false, missColor);
+	Actor* attacker = map ? map->GetActorByGlobalID(event.actor) : nullptr;
+	if (!attacker) return;
+	CombatHud::NotifyFloater(attacker->GetGlobalID(), event.roll == 1 ? u"Fumble" : u"Miss");
 }
 
 void CombatDirector::PushEvent(CombatEvent event)

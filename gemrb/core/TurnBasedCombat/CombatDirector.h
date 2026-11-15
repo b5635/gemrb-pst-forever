@@ -25,6 +25,7 @@
 
 #include "PathFinder.h"
 #include "Region.h"
+#include "Strings/String.h"
 
 #include <string>
 #include <vector>
@@ -58,8 +59,6 @@ struct GEM_EXPORT Combatant {
 	int initiative = 0; // roll + modifiers, lower goes first
 	int dexterity = 0;
 	bool isPC = false;
-	// the party attacked a neutral, so it counts as hostile while it lives
-	bool provoked = false;
 
 	// per turn budget
 	bool mainActionUsed = false;
@@ -144,6 +143,20 @@ public:
 
 	/** Is the feature switched on in the config? */
 	static bool IsEnabled();
+	/** Enemies in the fight grant the party vision (and clear fog) at their position. Default on. */
+	static bool CombatVisionEnabled();
+	/** True for a living EA_EVIL enemy in the fight, when combat vision is on. Neutrals are ignored. */
+	bool GrantsCombatVision(const Actor* actor) const;
+	/** Punch fog holes around enemy combatants on this map. True if it uncovered something. */
+	bool RevealCombatVision(Map* map) const;
+	/** enabled && a living enemy: the party can see this combatant through fog. */
+	static bool ShouldGrantCombatVision(bool enabled, bool enemyAndAlive);
+	/** EA_EVIL and above. Neutrals and the party side are not enemies. */
+	static bool IsEnemyEA(ieDword ea);
+	/** Between the good and evil cutoffs: townsfolk, uninvolved NPCs. */
+	static bool IsNeutralEA(ieDword ea);
+	/** True only for good-vs-evil. A neutral is nobody's enemy. */
+	static bool AreEnemies(ieDword eaA, ieDword eaB);
 
 	/** Runs once per game tick, after the area scripts. */
 	void Update();
@@ -231,6 +244,8 @@ public:
 	static void ApplyWithdraw(Combatant& combatant);
 	static bool ApplyBlock(Combatant& combatant);
 	static int TakedownPenalty(TakedownKind kind);
+	/** "Trip: Success" / "Knockdown: Failure" — the only floater a takedown shows. */
+	static String TakedownResultText(TakedownKind kind, bool success);
 
 	// hooks from GemRB's actions, for owned actors
 	/** AttackCore has the target in reach: run (or refuse) a round of swings. */
@@ -333,8 +348,13 @@ private:
 
 	bool ShouldStartCombat(const Map* map) const;
 	bool ShouldEndCombat() const;
-	bool IsHostileCombatant(const Combatant& combatant) const;
+	/** Living EA_EVIL only. Neutrals do not count, even if the party hit them. */
+	bool IsEnemyCombatant(const Combatant& combatant) const;
 	bool ShouldJoin(const Actor* actor, const std::vector<Actor*>& party) const;
+	/** Hands back anyone who is no longer hostile or allied (true neutrals). */
+	void RefreshBystanders();
+	void DropCombatant(size_t idx, bool& droppedActive);
+	void ContinueAfterDrop();
 	Combatant MakeCombatant(Actor* actor) const;
 	void AddJoiners(bool midRound);
 	void ReactToProvocations();

@@ -30,6 +30,7 @@
 #include "ScenePolish.h"
 #include "ScriptedAnimation.h"
 #include "TileMap.h"
+#include "TurnBasedCombat/CombatHud.h"
 #include "VEFObject.h"
 
 #include "Audio/Ambient.h"
@@ -1082,9 +1083,11 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 				bool visible;
 				visible = false;
 				// always update the animations even if we arent visible
-				if (actor->UpdateDrawingState() && IsExplored(actor->Pos)) {
+				bool combatSeen;
+				combatSeen = game->combat.GrantsCombatVision(actor);
+				if (actor->UpdateDrawingState() && (IsExplored(actor->Pos) || combatSeen)) {
 					// apparently birds and the dead are always visible?
-					visible = IsVisible(actor->Pos) || actor->Modified[IE_DONOTJUMP] & DNJ_BIRD || actor->GetInternalFlag() & IF_REALLYDIED;
+					visible = IsVisible(actor->Pos) || combatSeen || actor->Modified[IE_DONOTJUMP] & DNJ_BIRD || actor->GetInternalFlag() & IF_REALLYDIED;
 					if (visible) {
 						BlitFlags flags = SetDrawingStencilForScriptable(actor, viewport);
 						if (game->TimeStoppedFor(actor)) {
@@ -1476,6 +1479,7 @@ void Map::DrawOverheadText() const
 		actors[count]->overHead.Draw();
 		if (shifted) VideoDriver->SetObjectOffset(0.0f, 0.0f);
 	}
+	CombatHud::DrawWorldOverlays();
 }
 
 void Map::DrawWallPolygons(const Region& viewport) const
@@ -3400,6 +3404,11 @@ void Map::UpdateFog()
 		if (sp) {
 			potentialSpawns.insert(sp);
 		}
+	}
+
+	Game* game = core->GetGame();
+	if (game) {
+		explored |= game->combat.RevealCombatVision(this);
 	}
 
 	if (explored) {

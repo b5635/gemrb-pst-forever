@@ -82,12 +82,26 @@ Height=480
 # For nostalgia. By default it looks more like accelerated FoW in BG2.
 #SpriteFogOfWar=1
 
+# Enemies (EA_EVIL, not neutrals) in turn-based combat with the party grant
+# vision and clear fog of war at their position. Default on.
+#Turn Based Combat Vision=1
+
+# Shift the combat camera when it centres on a character, in map pixels.
+# Positive X is right of centre. Positive Y puts the character closer to the
+# bottom of the screen, so the hover HP bar and turn cards do not cover it.
+#Turn Based Camera Offset X=0
+#Turn Based Camera Offset Y=80
+
 ###############################################################################
 #  Audio Parameters                                                           #
 ###############################################################################
 
 # Choices: openal (default), sdlaudio (faster, but limited featureset), none
 #AudioDriver = openal
+
+# Play voice audio when clicking a question-mark info point (examine text).
+# Uses the TLK sound on that strref, or VV<strref>.wav if present. 0 = silent.
+#InfoPointSounds=1
 
 ###############################################################################
 #  GUI Parameters                                                             #

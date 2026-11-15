@@ -44,6 +44,7 @@
 #include "GUI/WindowManager.h"
 #include "GUI/WorldMapControl.h"
 #include "GameScript/GSUtils.h" //checkvariable
+#include "Scriptable/Actor.h"
 #include "Scriptable/Container.h"
 #include "Scriptable/Door.h"
 #include "Scriptable/InfoPoint.h"
@@ -12226,7 +12227,7 @@ static PyObject* GemRB_GetTurnOrder(PyObject* /*self*/, PyObject* /*args*/)
 		PyDict_SetItemString(entry, "Dead", DecRef(PyBool_FromLong, combatant.dead || !actor));
 		PyDict_SetItemString(entry, "Prone", DecRef(PyBool_FromLong, combatant.prone));
 		if (actor) {
-			PyObject* name = PyString_FromStringObj(actor->GetShortName());
+			PyObject* name = PyString_FromStringObj(actor->GetDisplayedName());
 			PyDict_SetItemString(entry, "Name", name);
 			Py_DecRef(name);
 			PyDict_SetItemString(entry, "Portrait", DecRef(PyString_FromResRef, actor->SmallPortrait));

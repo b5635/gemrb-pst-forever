@@ -7,8 +7,10 @@
 #include "Game.h"
 #include "Interface.h"
 #include "Map.h"
+#include "RNG.h"
 #include "Audio/Playback.h"
 
+#include "GUI/GameControl.h"
 #include "GUI/TextSystem/Font.h"
 #include "Scriptable/Actor.h"
 #include "TurnBasedCombat/CombatDirector.h"
@@ -16,6 +18,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
 
 namespace GemRB {
 
@@ -636,6 +639,53 @@ void CombatHud::Draw(const Region& screen) const
 }
 
 // ------------------------------------------------------------------------------------------
+// combat floaters: stay a few seconds, white, slight random drift, stacked per creature
+
+namespace {
+struct CombatFloater {
+	ieDword actor = 0;
+	String text;
+	tick_t start = 0;
+	int stack = 0;
+	float vx = 0;
+	float vy = 0;
+};
+std::vector<CombatFloater> floaters;
+constexpr tick_t FLOATER_SHOWN = 4000;
+constexpr tick_t FLOATER_FADE = 500;
+constexpr int FLOATER_GAP = 4;
+}
+
+void CombatHud::NotifyFloater(ieDword actor, String text)
+{
+	if (text.empty() || !core->GetDictionary().Get(StringView("Turn Based Floating Text"), 1)) return;
+	const tick_t now = GetMilliseconds();
+	int stack = 0;
+	for (const CombatFloater& f : floaters) {
+		if (f.actor == actor) ++stack;
+	}
+	// a pixel or two over the whole life, in a random direction
+	const float ang = float(RAND(0, 359)) * 3.14159265f / 180.0f;
+	const float spd = float(RAND(6, 14)) / 10.0f;
+	if (floaters.size() > 32) floaters.erase(floaters.begin());
+	floaters.push_back({ actor, std::move(text), now, stack, std::cos(ang) * spd, std::sin(ang) * spd });
+}
+
+static Point HeadAnchor(const Actor* actor, const Region& vp)
+{
+	return actor->Pos - Point(0, actor->overHead.GetHeightOffset()) - vp.origin;
+}
+
+static void WithDrawOffset(const Actor* actor, const std::function<void()>& draw)
+{
+	float ox = 0, oy = 0;
+	const bool shifted = actor->DrawOffset(ox, oy);
+	if (shifted) VideoDriver->SetObjectOffset(ox, oy);
+	draw();
+	if (shifted) VideoDriver->SetObjectOffset(0.0f, 0.0f);
+}
+
+// ------------------------------------------------------------------------------------------
 // saving throws
 
 namespace {
@@ -653,7 +703,6 @@ constexpr tick_t SAVE_SHOWN = 1100;
 
 void CombatHud::NotifySave(ieDword actor, int roll, bool success)
 {
-	if (!core->GetDictionary().Get(StringView("Turn Based Save Dice"), 1)) return;
 	const tick_t now = GetMilliseconds();
 	// every effect of a spell rolls the same save; show it once
 	for (const SaveRoll& s : saves) {
@@ -661,21 +710,33 @@ void CombatHud::NotifySave(ieDword actor, int roll, bool success)
 	}
 	if (saves.size() > 16) saves.erase(saves.begin());
 	saves.push_back({ actor, Clamp(roll, 1, 20), success, now, false });
+	NotifyFloater(actor, success ? u"Saved" : u"Save failed");
 }
 
-void CombatHud::DrawSaves(const std::function<Point(const Point&)>& toScreen, float scale)
+void CombatHud::DrawWorldOverlays()
 {
-	if (saves.empty()) return;
+	if (floaters.empty() && saves.empty()) return;
+	const GameControl* gc = core->GetGameControl();
+	if (!gc) return;
 	const Game* game = core->GetGame();
 	const Map* area = game ? game->GetCurrentArea() : nullptr;
+	if (!area) return;
+	const Region vp = gc->Viewport();
 	const tick_t now = GetMilliseconds();
 	Holder<Font> font = HudFont();
+	const int line = font ? font->LineHeight : 14;
+
+	const bool dice = core->GetDictionary().Get(StringView("Turn Based Save Dice"), 1) != 0;
 	for (auto it = saves.begin(); it != saves.end();) {
 		SaveRoll& s = *it;
 		const tick_t t = now - s.start;
-		const Actor* actor = area ? area->GetActorByGlobalID(s.actor) : nullptr;
+		const Actor* actor = area->GetActorByGlobalID(s.actor);
 		if (t > SAVE_SHOWN || !actor) {
 			it = saves.erase(it);
+			continue;
+		}
+		if (!dice) {
+			++it;
 			continue;
 		}
 		if (t >= SAVE_SPIN && !s.sounded) {
@@ -683,23 +744,45 @@ void CombatHud::DrawSaves(const std::function<Point(const Point&)>& toScreen, fl
 			core->GetAudioPlayback().Play(StringView(s.success ? "tbsaveok" : "tbsavefl"), AudioPreset::Spatial, SFXChannel::Actions, actor->Pos);
 		}
 		float alpha = t > SAVE_SHOWN - 300 ? float(SAVE_SHOWN - t) / 300.0f : 1.0f;
-		const Point head = toScreen(actor->Pos) - Point(0, int(95.0f / std::max(0.2f, scale)));
+		const Point head = HeadAnchor(actor, vp) + Point(0, 8);
 		const bool landed = t >= SAVE_SPIN;
 		const float settle = Clamp(float(t) / float(SAVE_SPIN), 0.0f, 1.0f);
-		// bone while it spins, the same as the attack die; green or red eases in after the face lands
 		const Color outcome = s.success ? Theme::hit : Theme::miss;
 		const float turn = landed ? Smooth(std::min(1.0f, float(t - SAVE_SPIN) / 200.0f)) : 0.0f;
 		const Color tint = Mix(kDieBone, outcome, turn);
 		float radius = 13.0f;
 		if (landed) radius *= 1.0f + 0.2f * std::sin(std::min(1.0f, float(t - SAVE_SPIN) / 160.0f) * 3.14159f);
 		if (VideoDriver->CanDrawRawGeometry()) {
-			DrawD20(head, radius, float(t) / 1000.0f * 2.0f, settle, s.roll, tint, alpha);
+			WithDrawOffset(actor, [&]() {
+				DrawD20(head, radius, float(t) / 1000.0f * 2.0f, settle, s.roll, tint, alpha);
+			});
 		}
-		if (landed && font) {
-			const Font::PrintColors colors { Faded(s.success ? Theme::hit : Theme::miss, alpha), ColorBlack };
-			font->Print(Region(head.x - 60, head.y + 16, 120, font->LineHeight + 2), s.success ? u"Saved" : u"Save failed",
+		++it;
+	}
+
+	if (!font) {
+		floaters.clear();
+		return;
+	}
+	for (auto it = floaters.begin(); it != floaters.end();) {
+		CombatFloater& f = *it;
+		const tick_t t = now - f.start;
+		const Actor* actor = area->GetActorByGlobalID(f.actor);
+		if (t > FLOATER_SHOWN || !actor) {
+			it = floaters.erase(it);
+			continue;
+		}
+		const float alpha = t > FLOATER_SHOWN - FLOATER_FADE ? float(FLOATER_SHOWN - t) / float(FLOATER_FADE) : 1.0f;
+		const float sec = float(t) / 1000.0f;
+		const Point head = HeadAnchor(actor, vp);
+		const Point at(head.x + int(f.vx * sec), head.y - f.stack * (line + FLOATER_GAP) + int(f.vy * sec));
+		const Size size = font->StringSize(f.text);
+		const int w = std::max(24, size.w + 8);
+		const Font::PrintColors colors { Faded(ColorWhite, alpha), Faded(ColorBlack, alpha) };
+		WithDrawOffset(actor, [&]() {
+			font->Print(Region(at.x - w / 2, at.y, w, line + 4), f.text,
 				    IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, colors);
-		}
+		});
 		++it;
 	}
 }

@@ -404,7 +404,11 @@ Weapon Speed`, `Turn Based Start On Sight`, `Turn Based Party Groups`,
 `Turn Based Auto End Turn`, `Turn Based Camera Zoom`.
 New: `Turn Based Tactical AI`, `Turn Based Opportunity Attacks`,
 `Turn Based Surprise`, `Turn Based Combat Speed`,
-`Turn Based Dice Panel`, `Turn Based Show Enemy Intent`.
+`Turn Based Dice Panel`, `Turn Based Show Enemy Intent`,
+`Turn Based Combat Vision` (default on: living enemies in the fight grant
+the party vision and clear fog of war on them),
+`Turn Based Camera Offset X` / `Turn Based Camera Offset Y` (map pixels;
+positive Y puts the active character toward the bottom of the screen).
 
 ## 9. Open decisions
 
@@ -515,11 +519,17 @@ Built, in `gemrb/core/TurnBasedCombat/CombatDirector.*` (TurnManager renamed and
   80x101; lost HP fills cards and PST's party portraits red from the bottom; the dead fade and
   fall; the line under it shows the round and who acts with their level.
 - **Saving throws:** each 2e save shows a small d20 over the creature for 0.2 s, then
-  "Saved"/"Save failed" and `tbsaveok`/`tbsavefl` (sounds from `sounds/`, in `override/pst`).
+  white "Saved"/"Save failed" combat text (same stay-and-drift floaters as damage/miss)
+  and `tbsaveok`/`tbsavefl` (sounds from `sounds/`, in `override/pst`).
   `Turn Based Save Dice`. The WAV reader now skips LIST and other chunks before `data`.
 - **Fonts:** the new HUD and the bar/timeline labels use FONTDLG; TRMTFONT dropped there.
-- **Floating text:** `Turn Based Floating Text` shows only "Miss"/"Fumble": PST already shows
-  damage and hit messages itself. GemRB's attack-roll lines stay the combat log.
+- **Floating text:** `Turn Based Floating Text` draws white stay-and-drift numbers and
+  labels just above the head (same map-space as PST overhead text): Miss/Fumble over the
+  attacker, damage / saves / trip results / Blocked over the creature they apply to.
+  Everyone who joins a fight shows "Initiative: N". They sit a few seconds, drift a pixel
+  or two, stack so a new one doesn't cover the last, then fade. No flying-up PST overhead.
+  A trip/knockdown shows only the result, not "Trip!" as it starts. GemRB's attack-roll
+  lines stay the combat log.
 - **Tests:** `ClipPath` in `Test_TurnBasedCombat.cpp`. In game: `tools\tb_fight.ps1` (three
   Mortuary ghouls, save index 2), `tools\tb_flee_cast.ps1` (a fight-then-flee ghoul, a cast with
   `-Spell <spell.ids number>`), `tools\tb_flee_pc.py` (party members flee on their turn).
@@ -549,6 +559,20 @@ Verified in game: walking within the budget, full attack rounds swing by swing (
 joining mid-fight, deaths handed back, a cast (`ForceSpell`) inside the caster's turn, flee
 walking (`RunAwayFrom`), TNO's regeneration only at his turn starts (HP flat through 16 s of
 others' turns), End Turn for a party group, dice panel, hover numbers, the autotest.
+
+Combat vision (2026-11-14): `Turn Based Combat Vision` (default on) makes living EA_EVIL
+enemies in the fight grant party vision and clear fog of war on them (`Map::UpdateFog` via
+`CombatDirector::RevealCombatVision`). Neutrals are ignored. Off restores the original fog.
+
+Neutrals are not combatants (2026-11-14): only living EA_EVIL count as enemies. A still-neutral
+NPC is not pulled in (even if the party hits it), is dropped from the order if its EA goes
+neutral, and does not keep the fight going. `Enemy()` first, then they join as a real hostile.
+
+Combat camera offset (2026-11-14): turn-start centering and the walk-follow camera use
+`Turn Based Camera Offset X/Y` (map pixels, Y default 80) so the character sits below the
+hover HP bar instead of under it. Combat HUD names (timeline, hover bar, hit panel, dice,
+turn banner, hotbar) use `Actor::GetDisplayedName`, the same string mouseover shows
+(PST long name / `GetDefaultName` elsewhere).
 
 Found along the way (GemRB, not the director): `Actor::AttackedBy` records `LastAttacker` only
 when neither side is a PC (since 2011). Scripts that flee from or retaliate against
