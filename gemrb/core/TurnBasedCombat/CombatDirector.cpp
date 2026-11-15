@@ -93,11 +93,10 @@ static unsigned int SwingPauseTicks()
 	return AtCombatSpeed(6);
 }
 
-// squaring up before the swing animation: 9 ticks is 0.6 s; a takedown takes 24 (1.6 s)
-static unsigned int SwingWindupTicks(bool takedown)
-{
-	return AtCombatSpeed(takedown ? 24 : 9);
-}
+// A takedown is the attack animation itself: early frames at half speed (the pull-back),
+// then the strike at 2.2x. There is no pause before the animation starts.
+static constexpr float TAKEDOWN_CHAMBER = 0.5f;
+static constexpr float TAKEDOWN_PUNCH = 2.2f;
 static Point walkFrom;
 static Point walkDest;
 // the walk in progress: movement before it, what its whole (clipped) path costs, and the
@@ -527,6 +526,7 @@ void CombatDirector::HandBack(Actor* actor, Combatant* combatant)
 	// prone ends with the fight, or SetStance below would keep them lying there
 	if (combatant) combatant->prone = false;
 	// the dead keep their dying animation and get their last script run from GemRB
+	RestoreSwingSpeed(actor);
 	if (IsAliveCombatant(actor)) {
 		actor->ClearActions();
 		actor->SetStance(IE_ANI_READY);
@@ -1461,14 +1461,12 @@ void CombatDirector::StartSwing(Actor* actor, Actor* target)
 	Combatant* combatant = FindCombatant(actor->GetGlobalID());
 	if (combatant && combatant->takedown != TakedownKind::None) {
 		combatant->toHitMod = TakedownPenalty(combatant->takedown);
-		swingWindup = SwingWindupTicks(true); // a slow wind-up, then a snappy blow
 		const bool trip = combatant->takedown == TakedownKind::Trip;
 		static const Color tripColor(220, 180, 80, 255);
 		static const Color knockdownColor(220, 140, 80, 255);
 		ShowFloater(actor, trip ? u"Trip!" : u"Knockdown!", trip ? tripColor : knockdownColor);
-	} else {
-		if (combatant) combatant->toHitMod = 0;
-		swingWindup = SwingWindupTicks(false);
+	} else if (combatant) {
+		combatant->toHitMod = 0;
 	}
 
 	// the dice panel starts rolling now and lands when the swing resolves
@@ -1488,6 +1486,16 @@ void CombatDirector::StartSwing(Actor* actor, Actor* target)
 	swingRanged = header && (header->AttackType == ITEM_AT_BOW || header->AttackType == ITEM_AT_PROJECTILE);
 	actor->SetStance(IE_ANI_READY);
 	step = Step::Swing;
+	BeginSwingAnimation(actor);
+}
+
+void CombatDirector::RestoreSwingSpeed(Actor* actor)
+{
+	if (swingBaseFps <= 0.0f || !actor || actor->GetGlobalID() != swingSpeedActor) return;
+	actor->SetStanceAnimationFPS(swingSpeedStance, static_cast<orient_t>(swingSpeedFace), swingBaseFps);
+	swingBaseFps = 0.0f;
+	swingSpeedActor = 0;
+	takedownPunched = false;
 }
 
 void CombatDirector::BeginSwingAnimation(Actor* actor)
@@ -1502,9 +1510,16 @@ void CombatDirector::BeginSwingAnimation(Actor* actor)
 	}
 	// the cached animation may still be where an earlier swing was cut off: play it from the top
 	actor->RestartStanceAnimation();
+	// a previous takedown may still be on this animation if the swing was cut off
+	RestoreSwingSpeed(actor);
 	Combatant* combatant = FindCombatant(actor->GetGlobalID());
-	if (combatant && combatant->takedown != TakedownKind::None) {
-		actor->SetStanceAnimationSpeed(2.2f); // the punch after the wind-up is quick
+	if (!swingRanged && combatant && combatant->takedown != TakedownKind::None) {
+		swingBaseFps = actor->GetStanceAnimationFPS();
+		swingSpeedActor = actor->GetGlobalID();
+		swingSpeedStance = actor->GetStance();
+		swingSpeedFace = static_cast<unsigned char>(actor->GetNextFace());
+		takedownPunched = false;
+		actor->SetStanceAnimationFPS(swingSpeedStance, static_cast<orient_t>(swingSpeedFace), swingBaseFps * TAKEDOWN_CHAMBER);
 		PlayCombatSound(actor, "trip");
 	}
 	if (!swingRanged) {
@@ -1533,10 +1548,6 @@ void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
 		}
 		return;
 	}
-	if (swingWindup > 0) {
-		if (--swingWindup == 0) BeginSwingAnimation(actor);
-		return;
-	}
 	++swingTicks;
 	// until the swing has been drawn once, the frame is still the ready stance's
 	if (!actor->StanceAnimationShown() && swingTicks <= SWING_MAX_TICKS) return;
@@ -1544,6 +1555,15 @@ void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
 	const int frames = actor->GetStanceFrameCount();
 	const bool attackStance = actor->GetStance() == IE_ANI_ATTACK || actor->GetStance() == IE_ANI_ATTACK_JAB ||
 		actor->GetStance() == IE_ANI_ATTACK_SLASH || actor->GetStance() == IE_ANI_ATTACK_BACKSLASH || actor->GetStance() == IE_ANI_SHOOT;
+
+	// the early frames are the pull-back; the strike itself runs fast, and the hit lands in that part
+	if (swingBaseFps > 0.0f && !takedownPunched && attackStance && frame >= 0 && frames > 1) {
+		const int punchAt = std::max(1, frames * 2 / 5);
+		if (frame >= punchAt) {
+			actor->SetStanceAnimationFPS(swingSpeedStance, static_cast<orient_t>(swingSpeedFace), swingBaseFps * TAKEDOWN_PUNCH);
+			takedownPunched = true;
+		}
+	}
 
 	if (blockerID && !blockerFrozen) {
 		Actor* blocker = combatMap->GetActorByGlobalID(blockerID);
@@ -1611,6 +1631,7 @@ void CombatDirector::SwingStep(Actor* actor, Combatant& combatant)
 
 	// a beat before the next swing, so each one reads as its own blow; after the last one the
 	// pause only waits for the dice panel
+	RestoreSwingSpeed(actor);
 	actor->SetStance(IE_ANI_READY);
 	swingPausing = true;
 	const bool more = actor->attackcount > 0 && IsAliveCombatant(target) && WithinPersonalRange(actor, target, actor->GetWeaponRange(false));

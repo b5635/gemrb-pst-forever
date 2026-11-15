@@ -4,10 +4,13 @@
 
 #include "BMPImporter.h"
 
+#include "HiResArt.h"
 #include "RGBAColor.h"
 
 #include "Logging/Logging.h"
 #include "Video/Video.h"
+
+#include "fmt/format.h"
 
 using namespace GemRB;
 
@@ -240,6 +243,14 @@ Holder<Sprite2D> BMPImporter::GetSprite2D()
 		}
 	}
 
+	// after any create-time lock: locking clears a twin attached too early
+	if (spr && HiResArt::Enabled(HiResCategory::GUI) && str) {
+		auto stem = HiResArt::Stem(str->filename.c_str());
+		if (!stem.empty()) {
+			HiResArt::Attach(spr, fmt::format("gui/bmp/{}.png", stem));
+		}
+	}
+	HiResArt::Flush();
 	return spr;
 }
 

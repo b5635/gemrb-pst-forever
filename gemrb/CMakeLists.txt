@@ -210,6 +210,8 @@ IF (BUILD_TESTING)
     tests/core/Test_SaveGame.cpp
     tests/core/Test_TurnBasedCombat.cpp
     tests/core/Test_HitMaterial.cpp
+    tests/core/Test_HiResArt.cpp
+    tests/core/Test_FontHiRes.cpp
     tests/core/Streams/Test_DataStream.cpp
     tests/core/Strings/Test_CString.cpp
     tests/core/Strings/Test_String.cpp

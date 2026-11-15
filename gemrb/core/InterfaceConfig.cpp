@@ -295,6 +295,9 @@ CoreSettings LoadFromDictionary(InterfaceConfig cfg)
 #endif
 
 	CONFIG_PATH("SavePath", config.SavePath, config.GamePath);
+	// before the leftover loop: that loop atoi's every remaining value and would destroy a path
+	CONFIG_PATH("AbsoluteGemRBPath", config.AbsoluteGemRBPath);
+	CONFIG_PATH("UpscalePath", config.UpscalePath);
 
 	CONFIG_STRING("AudioDriver", config.AudioDriverName);
 	CONFIG_STRING("VideoDriver", config.VideoDriverName);

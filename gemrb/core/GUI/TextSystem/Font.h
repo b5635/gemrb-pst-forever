@@ -27,6 +27,8 @@
 
 namespace GemRB {
 
+class FontHiResTest;
+
 enum FontStyle {
 	NORMAL = 0x00,
 	BOLD = 0x01,
@@ -102,9 +104,14 @@ private:
 		using GlyphMap = std::map<ieWord, Glyph>;
 		GlyphMap glyphs;
 		ieByte* pageData = nullptr; // current raw page being built
+		ieByte* hiPageData = nullptr; // indexed twin of the page, scale hiScale
 		int pageXPos = 0; // current position on building page
+		int hiScale = 0;
 		Font* font = nullptr;
 		Holder<Sprite2D> invertedSheet;
+
+		void BlitHi(const Glyph& g, const Sprite2D* hi);
+		void GrowHi(int oldH, int newH);
 
 	public:
 		GlyphAtlasPage(Size pageSize, Font* font);
@@ -115,8 +122,10 @@ private:
 			if (Sheet == NULL) {
 				free(pageData);
 			}
+			free(hiPageData);
 		}
-		bool AddGlyph(ieWord chr, const Glyph& g);
+		bool AddGlyph(ieWord chr, const Glyph& g, const Sprite2D* hi);
+		void EnsureSheet();
 		const Glyph& GlyphForChr(ieWord chr) const;
 
 		// we need a non-const version of Draw here that will call the base const version
@@ -153,6 +162,9 @@ public:
 	const int Baseline = 0;
 
 private:
+	friend class FontHiResTest;
+	void EnsurePages();
+	const Sprite2D* FirstPage() const;
 	void CreateGlyphIndex(ieWord chr, ieWord pageIdx, const Glyph*);
 	// Blit to the sprite or screen if canvas is NULL
 	size_t RenderText(const String&, Region&, ieByte alignment, const PrintColors*,
@@ -170,6 +182,9 @@ public:
 	virtual ~Font() = default;
 
 	const Glyph& CreateGlyphForCharSprite(ieWord chr, const Holder<Sprite2D>&);
+	// Build page sprites now. Printing does this on demand; tests call it directly.
+	void FinishPages();
+	const Sprite2D* PageSprite(size_t index) const;
 	// BAM fonts use alisases a lot so this saves quite a bit of space
 	// Aliases are 2 glyphs that share identical frames such as 'ā' and 'a'
 	void CreateAliasForChar(ieWord chr, ieWord alias);

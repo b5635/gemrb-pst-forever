@@ -796,8 +796,9 @@ void GLVideoDriver::BlitGameSprite(const Holder<Sprite2D>& spr, const Point& p, 
 	DrawSprite(spr, src, dst, flags, tint);
 }
 
-bool GLVideoDriver::PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags, GLBatchState& st, float& pal, float& ckey)
+bool GLVideoDriver::PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags, GLBatchState& st, float& pal, float& ckey, float& texelScale)
 {
+	texelScale = 1.0f;
 	const GLSprite2D* gspr = dynamic_cast<const GLSprite2D*>(spr.get());
 	if (!gspr) {
 		Log(WARNING, "GLVideo", "Skipping a sprite not created by this driver");
@@ -811,6 +812,60 @@ bool GLVideoDriver::PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags,
 
 	pal = -1;
 	ckey = -1;
+	// A twin is display-only. UVs stay in low-res texels and callers multiply by texelScale,
+	// so the shader's fwidth still means "texels covered by this fragment".
+	// An indexed twin keeps the palette of the sprite being drawn: font pages invert that
+	// palette for the second pass, and both passes sample the same hi-res indices.
+	const GLSprite2D* hi = spr->hiRes ? dynamic_cast<const GLSprite2D*>(spr->hiRes.get()) : nullptr;
+	if (hi && spr->Frame.w > 0 && spr->Frame.h > 0 &&
+	    hi->Frame.w >= spr->Frame.w * 2 && hi->Frame.h >= spr->Frame.h * 2 &&
+	    hi->Frame.w % spr->Frame.w == 0 && hi->Frame.h % spr->Frame.h == 0 &&
+	    hi->Frame.w / spr->Frame.w == hi->Frame.h / spr->Frame.h) {
+		if (hi->NeedsReupload()) Flush();
+		bool uploaded = false;
+		GLuint tex = hi->GetTexture(uploaded);
+		if (tex && hi->IsIndexed()) {
+			const Holder<Palette>& palette = spr->GetPalette();
+			if (palette) {
+				texelScale = float(hi->Frame.w / spr->Frame.w);
+				if (hi->HasTransparency()) flags |= BlitFlags::BLENDED;
+				if (flags & (BlitFlags::ONE_MINUS_DST | BlitFlags::DST | BlitFlags::SRC)) {
+					Color ck = palette->GetColorAt(0);
+					if (ck != ColorBlack) {
+						Palette tmp(*palette);
+						tmp.SetColor(0, ColorBlack);
+						if (nextPaletteRow >= PaletteRows) {
+							Flush();
+							paletteRows.clear();
+							nextPaletteRow = 0;
+						}
+						int row = nextPaletteRow++;
+						glBindTexture(GL_TEXTURE_2D, paletteTex);
+						glTexSubImage2D(GL_TEXTURE_2D, 0, 0, row, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE, tmp.ColorData());
+						pal = float(row);
+					} else {
+						pal = float(PaletteRow(palette.get()));
+					}
+				} else {
+					pal = float(PaletteRow(palette.get()));
+				}
+				if (spr->Format().HasColorKey) ckey = float(spr->GetColorKey());
+				st.texMode = 2;
+				st.texture = tex;
+				st.blend = BlendForFlags(flags);
+				SetupStencil(st, flags);
+				return true;
+			}
+		} else if (tex) {
+			texelScale = float(hi->Frame.w / spr->Frame.w);
+			if (hi->HasTransparency()) flags |= BlitFlags::BLENDED;
+			st.texMode = 1;
+			st.texture = tex;
+			st.blend = BlendForFlags(flags);
+			SetupStencil(st, flags);
+			return true;
+		}
+	}
 	if (gspr->IsIndexed()) {
 		const Holder<Palette>& palette = spr->GetPalette();
 		if (!palette) return false;
@@ -873,8 +928,11 @@ void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, c
 	if (st.scissor.w <= 0 || st.scissor.h <= 0) return;
 	if (!XfRegion(dst).IntersectsRegion(st.scissor)) return;
 
-	float pal, ckey;
-	if (!PrepareSprite(spr, flags, st, pal, ckey)) return;
+	float pal, ckey, texelScale;
+	if (!PrepareSprite(spr, flags, st, pal, ckey, texelScale)) return;
+
+	// Font pages ask for this. Their grey ramp is already the edge; bilinear fattens it.
+	if (flags & BlitFlags::NEAREST) st.smooth = false;
 
 	Color c = SpriteVertexColor(flags, tint);
 	float grey = 0;
@@ -884,15 +942,17 @@ void GLVideoDriver::DrawSprite(const Holder<Sprite2D>& spr, const Region& src, c
 		grey = 2;
 	}
 
-	float u0 = float(src.x), u1 = float(src.x + src.w);
-	float v0 = float(src.y), v1 = float(src.y + src.h);
+	// smooth filtering is already on (GLBatchState.smooth). Scaling the UVs keeps the
+	// outline width in logical pixels the same when the texture is the hi-res twin.
+	float u0 = float(src.x) * texelScale, u1 = float(src.x + src.w) * texelScale;
+	float v0 = float(src.y) * texelScale, v1 = float(src.y + src.h) * texelScale;
 	if (flags & BlitFlags::MIRRORX) std::swap(u0, u1);
 	if (flags & BlitFlags::MIRRORY) std::swap(v0, v1);
 
 	// phase 5 hover outline: the quad grown by the outline width, drawn under the sprite
 	if (SceneAppliesToTarget() && scene.objectOutline.a && xf.sx > 0.0f && (st.blend == GLBlend::Alpha || st.blend == GLBlend::None)) {
 		const GLVideoBuffer* target = static_cast<const GLVideoBuffer*>(drawingBuffer);
-		float texPerUnit = float(src.w) / float(dst.w);
+		float texPerUnit = float(src.w) * texelScale / float(dst.w);
 		float e = scene.outlineWidth * target->scale / xf.sx; // drawing units
 		GLBatchState ost = st;
 		ost.blend = GLBlend::Alpha;
@@ -918,18 +978,24 @@ bool GLVideoDriver::BlitSpriteQuad(const Holder<Sprite2D>& spr, const Holder<Pal
 	st.depthWrite = false;
 
 	Holder<Palette> oldPal;
+	// SetPalette drops the twin. This swap is only for this draw, so put the twin back after.
+	Holder<Sprite2D> savedHi;
 	if (palOverride) {
+		savedHi = spr->hiRes;
 		oldPal = spr->GetPalette();
 		spr->SetPalette(palOverride);
 	}
-	float pal, ckey;
-	bool ok = PrepareSprite(spr, flags, st, pal, ckey);
-	if (palOverride) spr->SetPalette(oldPal);
+	float pal, ckey, texelScale;
+	bool ok = PrepareSprite(spr, flags, st, pal, ckey, texelScale);
+	if (palOverride) {
+		spr->SetPalette(oldPal);
+		spr->hiRes = std::move(savedHi);
+	}
 	if (!ok) return true;
 	if (st.blend == GLBlend::None) st.blend = GLBlend::Alpha;
 	SetBatch(st);
 
-	float u0 = 0, u1 = float(spr->Frame.w), v0 = 0, v1 = float(spr->Frame.h);
+	float u0 = 0, u1 = float(spr->Frame.w) * texelScale, v0 = 0, v1 = float(spr->Frame.h) * texelScale;
 	if (flags & BlitFlags::MIRRORX) std::swap(u0, u1);
 	if (flags & BlitFlags::MIRRORY) std::swap(v0, v1);
 	const float uv[4][2] = { { u0, v0 }, { u1, v0 }, { u0, v1 }, { u1, v1 } };
@@ -1348,7 +1414,9 @@ void GLVideoDriver::DrawSceneLighting(const SceneLighting& lighting)
 	glDisable(GL_SCISSOR_TEST);
 	glDisable(GL_BLEND);
 
-	// 1. copy of the scene region (also the normal map's source)
+	// 1. copy of the scene region (also the normal map's source).
+	// Hi-res twins are display-only: this pass samples the framebuffer copy and coverage
+	// depth, not the source sprite or tile textures.
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, target->fbo);
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, copyFbo);

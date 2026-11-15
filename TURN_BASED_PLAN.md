@@ -481,9 +481,10 @@ Built, in `gemrb/core/TurnBasedCombat/CombatDirector.*` (TurnManager renamed and
   acting. Right click (or `GemRB.CancelTurnMove`) stops a walk; the unwalked movement stays.
 - **Event feed (U2):** `GemRB.GetCombatEvents()` (CombatStart/End, RoundStart, TurnStart,
   Swing, Death, Intent, Reaction).
-- **Pacing:** each swing has a wind-up (standing ready, the dice roll) and a beat after it
-  before the next swing of the round; `Turn Based Combat Speed` (percent, 100 normal) scales
-  both. 3/2 APR alternates 2 and 1 attacks per attack round (GemRB's `InitRound`); the bar
+- **Pacing:** a beat after each swing before the next one of the round (6 ticks, 0.4 s at
+  normal speed). Swings have no pause before the animation. A trip or knockdown plays that
+  attack animation as a pull-back (half speed on the early frames) then a punch (2.2x).
+  `Turn Based Combat Speed` (percent, 100 normal) scales the pause between swings. 3/2 APR alternates 2 and 1 attacks per attack round (GemRB's `InitRound`); the bar
   shows the coming round's count (`GetTurnBudget()['Attacks']`).
 - **End Turn** (button and Space) ends the selected character's turn; the next party member
   adjacent in the order takes over (selected, camera on it), the last one passes the turn on.

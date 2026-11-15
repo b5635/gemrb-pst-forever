@@ -6,6 +6,7 @@
 
 #include "RGBAColor.h"
 
+#include "HiResArt.h"
 #include "Interface.h"
 #include "Sprite2D.h"
 
@@ -16,6 +17,7 @@ using namespace GemRB;
 
 TISImporter::~TISImporter(void)
 {
+	HiResArt::Flush();
 	delete str;
 }
 
@@ -24,6 +26,7 @@ bool TISImporter::Open(DataStream* stream)
 	if (stream == NULL) {
 		return false;
 	}
+	HiResArt::Flush();
 	delete str;
 	str = stream;
 	char Signature[8];
@@ -101,7 +104,14 @@ Holder<Sprite2D> TISImporter::GetTilePVR(int index)
 	PixelFormat fmt = PixelFormat::ARGB32Bit();
 	Region region { 0, 0, static_cast<int>(TileSize), static_cast<int>(TileSize) };
 
-	return { VideoDriver->CreateSprite(region, imageData, fmt) };
+	auto spr = VideoDriver->CreateSprite(region, imageData, fmt);
+	if (spr && HiResArt::Enabled(HiResCategory::Areas)) {
+		auto stem = HiResArt::Stem(str->filename.c_str());
+		if (!stem.empty()) {
+			HiResArt::Attach(spr, fmt::format("areas/{}/{}.png", stem, index));
+		}
+	}
+	return spr;
 }
 
 void TISImporter::Blit(const TISPVRBlock& dataBlock, uint8_t* frameData)
@@ -206,6 +216,12 @@ Holder<Sprite2D> TISImporter::GetTilePaletted(int index)
 	}
 
 	spr->UnlockSprite();
+	if (HiResArt::Enabled(HiResCategory::Areas)) {
+		auto stem = HiResArt::Stem(str->filename.c_str());
+		if (!stem.empty()) {
+			HiResArt::Attach(spr, fmt::format("areas/{}/{}.png", stem, index));
+		}
+	}
 	return spr;
 }
 

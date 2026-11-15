@@ -312,8 +312,13 @@ private:
 	int swingLastFrame = -1;
 	unsigned int swingTicks = 0;
 	unsigned int swingPause = 0; // the beat between two swings of a round
-	unsigned int swingWindup = 0; // standing ready, squaring up, before the swing animation
 	bool swingPausing = false;
+	// a takedown slows then speeds the attack animation, and this puts the fps back
+	float swingBaseFps = 0;
+	ieDword swingSpeedActor = 0;
+	unsigned char swingSpeedStance = 0;
+	unsigned char swingSpeedFace = 0;
+	bool takedownPunched = false;
 	// the attack of opportunity in progress
 	ieDword reactorID = 0;
 	std::vector<ieDword> pendingReactors;
@@ -361,6 +366,8 @@ private:
 	void SwingStep(Actor* actor, Combatant& combatant);
 	void StartSwing(Actor* actor, Actor* target);
 	void BeginSwingAnimation(Actor* actor);
+	/** Puts a takedown's attack animation back to the speed it had before the punch. */
+	void RestoreSwingSpeed(Actor* actor);
 	void FinishRound(Actor* actor, Combatant& combatant);
 	bool Decide(Actor* actor, Combatant& combatant);
 	bool TacticsFallback(Actor* actor);

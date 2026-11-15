@@ -69,6 +69,7 @@ FILE(GLOB gemrb_core_LIB_SRCS
 	Spell.cpp
 	Spellbook.cpp
 	Sprite2D.cpp
+	HiResArt.cpp
 	SpriteCover.cpp
 	SrcMgr.cpp
 	Store.cpp

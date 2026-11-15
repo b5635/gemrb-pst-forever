@@ -63,6 +63,8 @@ public:
 	void MirrorAnimation(BlitFlags flags);
 	/** sets frame index */
 	void SetFrame(index_t index);
+	/** Sets the playback rate and starts a fresh frame duration, so a speed change does not skip frames. */
+	void SetFPS(float next);
 	/** returns the frame count */
 	index_t GetFrameCount() const { return frames.size(); }
 	/** returns the current frame's index */

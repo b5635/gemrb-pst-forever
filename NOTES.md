@@ -219,9 +219,12 @@ quad, per-corner colour) and `DrawScenePost`. Presentation only: own RNG, never 
 
 - Order in `Map::DrawMap`: scene lights are now collected before objects (shadows need them) → per actor
   `Actor::DrawPolishShadows` before the sprite → weather → particles → lighting → fog → post pass → text.
-- **Shadows**: soft contact blob under every standing creature (`ContactShadows`); silhouettes cast away from the two
-  strongest lights at the feet, flattened onto the ground with a parallelogram, fading towards the tip
-  (`LightShadows`, needs `Lighting=1`). Skipped for the dead, lying stances, birds, invisible enemies.
+- **Shadows**: soft oval under the feet (`ContactShadows`, default off). Silhouettes fall the same
+  way from a fixed up-screen light, flattened onto the ground (`LightShadows`, needs `Lighting=1`).
+  A nearby fire, spell or projectile adds a second cast away from itself. Party lights only brighten
+  the scene. Skipped for the dead, lying stances, birds, invisible enemies.
+  `SpriteShadows=0` clears the baked palette-index-1 oval on world sprites. A few creatures painted that
+  oval in ordinary black (the abishai) and keep it. Spell effects and paperdolls are unchanged.
 - **Rings** (`SelectionRings`): antialiased ellipse in the creature's colour with a dark backing ring; selected =
   thicker + glow, hovered = pulsing glow. Off = PST's bitmap circles.
 - **Hover outline** (`HoverOutline`): outline pass in the sprite shader (12-direction alpha dilation in texels,
@@ -247,6 +250,17 @@ quad, per-corner colour) and `DrawScenePost`. Presentation only: own RNG, never 
 - Dev: `tools\dev.ps1 move X Y` hovers; toggles can be flipped live with `GemRB.SetVar('Bloom', 0)` via `dev.ps1 py`.
 - Shots: `shots/phase5_on.png`, `phase5_hover.png`, `phase5_hit.png` (save 0).
 - Not done: per-area grading/ambience overrides from a table, particles behind walls aren't stencilled.
+
+## Upscaled art
+
+Offline 2x RGBA twins for GUI and area art (`UPSCALE_PLAN.md`, `tools/upscale`). The sprite keeps its
+original pixels for hit tests, palettes and scripts. Only the OpenGL driver draws the twin, at the
+original logical size, so a larger window or a zoomed map looks sharper. `UpscaledGUI`,
+`UpscaledAreas` and `UpscaledSprites` are the toggles (sprites stay off until recolour is decided).
+Fonts are indexed pages, not colour bitmaps: the palette tint and the inverted pass still run,
+on a 2× index image.
+`UpscalePath` defaults to `<GemRB exe dir>/upscaled` and is never the game install. `build_install.bat`
+does not touch that folder.
 
 ## Decisions
 

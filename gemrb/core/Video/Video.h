@@ -117,6 +117,8 @@ struct SceneLight {
 	float z = 0.0f; // height above the ground at (x, y), map units
 	float radius = 100.0f; // map units, horizontal; vertical is squashed (isometric ground)
 	float r = 1.0f, g = 1.0f, b = 1.0f; // linear multiplier contributed at the centre
+	// fires, spells and projectiles aim a cast shadow. The party light only brightens.
+	bool castsShadow = false;
 };
 
 // one raster row of a wall polygon (scene coordinates), with the ground line
@@ -239,6 +241,8 @@ public:
 
 	// see SceneTransform; drivers without support ignore all of this
 	virtual bool SupportsSceneTransform() const { return false; }
+	// True when this driver can draw a sprite's hi-res twin (plugins/GLVideo only).
+	virtual bool SupportsHiResArt() const { return false; }
 	void BeginScene(float zoom, float offsetX, float offsetY, const Region& rect);
 	void EndScene();
 	// big UI text and shapes: draws scaled by zoom with (0,0) at 'at', clipped to rect,

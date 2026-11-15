@@ -5,8 +5,11 @@
 #include "MOSImporter.h"
 
 #include "GameData.h"
+#include "HiResArt.h"
 
 #include "Video/Video.h"
+
+#include "fmt/format.h"
 
 using namespace GemRB;
 
@@ -76,11 +79,15 @@ void MOSImporter::Blit(const MOSV2DataBlock& dataBlock, uint8_t* frameData)
 
 Holder<Sprite2D> MOSImporter::GetSprite2D()
 {
-	if (version == MOSVersion::V2) {
-		return GetSprite2Dv2();
-	} else {
-		return GetSprite2Dv1();
+	Holder<Sprite2D> spr = version == MOSVersion::V2 ? GetSprite2Dv2() : GetSprite2Dv1();
+	if (spr && HiResArt::Enabled(HiResCategory::GUI) && str) {
+		auto stem = HiResArt::Stem(str->filename.c_str());
+		if (!stem.empty()) {
+			HiResArt::Attach(spr, fmt::format("gui/mos/{}.png", stem));
+		}
 	}
+	HiResArt::Flush();
+	return spr;
 }
 
 Holder<Sprite2D> MOSImporter::GetSprite2Dv2()

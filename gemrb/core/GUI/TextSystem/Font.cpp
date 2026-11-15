@@ -11,6 +11,8 @@
 #include "Strings/StringConversion.h"
 #include "Video/Video.h"
 
+#include <cstdlib>
+#include <cstring>
 #include <cwctype>
 #include <utility>
 
@@ -65,7 +67,102 @@ Font::GlyphAtlasPage::GlyphAtlasPage(Size pageSize, Font* font)
 	pageData = (ieByte*) calloc(pageSize.h, pageSize.w * (font->palette ? 1 : 4));
 }
 
-bool Font::GlyphAtlasPage::AddGlyph(ieWord chr, const Glyph& g)
+static int IndexedScale(const Glyph& g, const Sprite2D* hi)
+{
+	if (!hi || g.bytesPerPx != 1 || g.size.w <= 0 || g.size.h <= 0) return 0;
+	// an RGBA bake can't follow a font's palette tint or its inverted pass
+	if (hi->Format().Bpp != 1 || !hi->Format().palette) return 0;
+	if (hi->Frame.w < g.size.w * 2 || hi->Frame.h < g.size.h * 2) return 0;
+	if (hi->Frame.w % g.size.w || hi->Frame.h % g.size.h) return 0;
+	if (hi->Frame.w / g.size.w != hi->Frame.h / g.size.h) return 0;
+	return hi->Frame.w / g.size.w;
+}
+
+void Font::GlyphAtlasPage::GrowHi(int oldH, int newH)
+{
+	if (!hiPageData || hiScale < 2 || newH <= oldH) return;
+	size_t stride = size_t(SheetRegion.w) * hiScale;
+	ieByte* grown = (ieByte*) calloc(stride, size_t(newH) * hiScale);
+	if (!grown) return;
+	memcpy(grown, hiPageData, stride * size_t(oldH) * hiScale);
+	free(hiPageData);
+	hiPageData = grown;
+}
+
+void Font::GlyphAtlasPage::BlitHi(const Glyph& g, const Sprite2D* hi)
+{
+	if (g.bytesPerPx != 1 || !font->palette || g.size.w <= 0 || g.size.h <= 0) return;
+	int k = IndexedScale(g, hi);
+	Point at(pageXPos - g.pos.x, (g.pos.y < 0) ? -g.pos.y : 0);
+	if (at.x < 0 || at.y < 0) return;
+
+	if (!hiPageData && Sheet && Sheet->hiRes && hiScale >= 2) {
+		// the page sprite already owns the twin; paint this glyph into it
+		ieByte* dest = static_cast<ieByte*>(Sheet->hiRes->LockSprite());
+		int pitch = Sheet->hiRes->GetPitch();
+		int dx = at.x * hiScale;
+		int dy = at.y * hiScale;
+		if (k == hiScale && hi) {
+			const ieByte* src = static_cast<const ieByte*>(static_cast<const Sprite2D*>(hi)->LockSprite());
+			int spitch = hi->GetPitch();
+			for (int y = 0; y < g.size.h * hiScale; ++y) {
+				memcpy(dest + size_t(dy + y) * pitch + dx, src + y * spitch, size_t(g.size.w) * hiScale);
+			}
+		} else {
+			for (int y = 0; y < g.size.h; ++y) {
+				for (int x = 0; x < g.size.w; ++x) {
+					ieByte v = g.pixels[y * g.pitch + x];
+					for (int row = 0; row < hiScale; ++row) {
+						memset(dest + size_t(dy + y * hiScale + row) * pitch + dx + x * hiScale, v, hiScale);
+					}
+				}
+			}
+		}
+		Sheet->hiRes->UnlockSprite();
+		return;
+	}
+	if (!hiPageData) {
+		if (k < 2) return;
+		hiScale = k;
+		hiPageData = (ieByte*) calloc(size_t(SheetRegion.w) * hiScale, size_t(SheetRegion.h) * hiScale);
+		if (!hiPageData) return;
+		// glyphs already on the page had no twin; keep them legible at the new scale
+		for (int y = 0; y < SheetRegion.h; ++y) {
+			for (int x = 0; x < SheetRegion.w; ++x) {
+				ieByte v = pageData[y * SheetRegion.w + x];
+				for (int dy = 0; dy < hiScale; ++dy) {
+					ieByte* row = hiPageData + (size_t(y * hiScale + dy) * SheetRegion.w * hiScale) + size_t(x * hiScale);
+					memset(row, v, hiScale);
+				}
+			}
+		}
+	} else if (k != hiScale) {
+		k = 0;
+	}
+
+	int pitch = SheetRegion.w * hiScale;
+	int dx = at.x * hiScale;
+	int dy = at.y * hiScale;
+	if (k == hiScale && hi) {
+		const ieByte* src = static_cast<const ieByte*>(static_cast<const Sprite2D*>(hi)->LockSprite());
+		int spitch = hi->GetPitch();
+		for (int y = 0; y < g.size.h * hiScale; ++y) {
+			memcpy(hiPageData + size_t(dy + y) * pitch + dx, src + y * spitch, size_t(g.size.w) * hiScale);
+		}
+		return;
+	}
+	for (int y = 0; y < g.size.h; ++y) {
+		for (int x = 0; x < g.size.w; ++x) {
+			ieByte v = g.pixels[y * g.pitch + x];
+			for (int row = 0; row < hiScale; ++row) {
+				ieByte* dest = hiPageData + size_t(dy + y * hiScale + row) * pitch + dx + x * hiScale;
+				memset(dest, v, hiScale);
+			}
+		}
+	}
+}
+
+bool Font::GlyphAtlasPage::AddGlyph(ieWord chr, const Glyph& g, const Sprite2D* hi)
 {
 	assert(glyphs.find(chr) == glyphs.end());
 	int newX = pageXPos + g.size.w;
@@ -76,27 +173,43 @@ bool Font::GlyphAtlasPage::AddGlyph(ieWord chr, const Glyph& g)
 	int glyphH = g.size.h + std::abs(g.pos.y);
 	if (glyphH > SheetRegion.h) {
 		// must grow to accommodate this glyph
+		int oldH = SheetRegion.h;
 		if (Sheet) {
 			// if we already have a sheet we need to destroy it before we can add more glyphs
+			ieByte* savedHi = nullptr;
+			if (Sheet->hiRes && hiScale >= 2) {
+				const Sprite2D* oldHi = Sheet->hiRes.get();
+				size_t bytes = size_t(oldHi->GetPitch()) * oldHi->Frame.h;
+				savedHi = (ieByte*) malloc(bytes);
+				if (savedHi) {
+					memcpy(savedHi, static_cast<const Sprite2D*>(oldHi)->LockSprite(), bytes);
+				}
+			}
 			pageData = (ieByte*) calloc(SheetRegion.w, size_t(glyphH) * g.bytesPerPx);
-			const ieByte* pixels = static_cast<const ieByte*>(Sheet->LockSprite());
+			const ieByte* pixels = static_cast<const ieByte*>(static_cast<const Sprite2D*>(Sheet.get())->LockSprite());
 			std::copy(pixels, pixels + (Sheet->Frame.w * Sheet->Frame.h) * g.bytesPerPx, pageData);
-			Sheet->UnlockSprite();
 			Sheet = nullptr;
+			free(hiPageData);
+			hiPageData = savedHi;
+			GrowHi(oldH, glyphH);
 		} else {
 			pageData = (ieByte*) realloc(pageData, size_t(SheetRegion.w * glyphH) * g.bytesPerPx);
+			GrowHi(oldH, glyphH);
 		}
 
 		assert(pageData);
 		SheetRegion.h = glyphH;
 	} else if (Sheet) {
 		// we need to lock/unlock the sprite because we are updating its pixels
+		Holder<Sprite2D> savedHi = Sheet->hiRes;
 		const void* pixels = Sheet->LockSprite();
+		Sheet->hiRes = std::move(savedHi);
 		assert(pixels == pageData);
 	}
 
 	// have to adjust the x because BlitGlyphToCanvas will use g.pos.x, but we dont want that here.
 	BlitGlyphToCanvas(g, Point(pageXPos - g.pos.x, (g.pos.y < 0) ? -g.pos.y : 0), pageData, SheetRegion.size);
+	BlitHi(g, hi);
 	MapSheetSegment(chr, Region(pageXPos, (g.pos.y < 0) ? 0 : g.pos.y, g.size.w, g.size.h));
 	// make the non-temporary glyph from our own data
 	const ieByte* pageLoc = pageData + pageXPos;
@@ -121,48 +234,71 @@ const Glyph& Font::GlyphAtlasPage::GlyphForChr(ieWord chr) const
 	return blank;
 }
 
-void Font::GlyphAtlasPage::Draw(ieWord chr, const Region& dest, const PrintColors* colors)
+void Font::GlyphAtlasPage::EnsureSheet()
 {
-	// ensure that we have a sprite!
-	if (Sheet == NULL) {
-		PixelFormat fmt = PixelFormat::ARGB32Bit();
-		if (font->palette) {
-			fmt = PixelFormat::Paletted8Bit(font->palette, true, 0);
-		}
-
-		Sheet = VideoDriver->CreateSprite(SheetRegion, pageData, fmt);
-		// FIXME: allow inverting non-paletted fonts (see #2224)
-		if (font->background && font->palette) {
-			invertedSheet = Sheet->copy();
-			auto invertedPalette = MakeHolder<Palette>(*font->palette);
-
-			Palette::Colors buffer;
-			for (size_t i = 0; i < buffer.size(); ++i) {
-				auto c = invertedPalette->GetColorAt(i);
-				c.r = 255 - c.r;
-				c.g = 255 - c.g;
-				c.b = 255 - c.b;
-				buffer[i] = c;
-			}
-			invertedPalette->CopyColors(buffer);
-			invertedSheet->SetPalette(invertedPalette);
-		}
+	if (Sheet) return;
+	PixelFormat fmt = PixelFormat::ARGB32Bit();
+	if (font->palette) {
+		fmt = PixelFormat::Paletted8Bit(font->palette, true, 0);
 	}
 
+	if (VideoDriver) {
+		Sheet = VideoDriver->CreateSprite(SheetRegion, pageData, fmt);
+	} else {
+		Sheet = MakeHolder<Sprite2D>(SheetRegion, pageData, fmt);
+	}
+	if (hiPageData && hiScale >= 2 && font->palette) {
+		Region hiFrame(0, 0, SheetRegion.w * hiScale, SheetRegion.h * hiScale);
+		PixelFormat hfmt = PixelFormat::Paletted8Bit(font->palette, true, 0);
+		if (VideoDriver) {
+			Sheet->hiRes = VideoDriver->CreateSprite(hiFrame, hiPageData, hfmt);
+		} else {
+			Sheet->hiRes = MakeHolder<Sprite2D>(hiFrame, hiPageData, hfmt);
+		}
+		hiPageData = nullptr;
+	}
+	// FIXME: allow inverting non-paletted fonts (see #2224)
+	if (font->background && font->palette) {
+		Holder<Sprite2D> savedHi = Sheet->hiRes;
+		invertedSheet = Sheet->copy();
+		auto invertedPalette = MakeHolder<Palette>(*font->palette);
+
+		Palette::Colors buffer;
+		for (size_t i = 0; i < buffer.size(); ++i) {
+			auto c = invertedPalette->GetColorAt(i);
+			c.r = 255 - c.r;
+			c.g = 255 - c.g;
+			c.b = 255 - c.b;
+			buffer[i] = c;
+		}
+		invertedPalette->CopyColors(buffer);
+		// a different palette drops the twin; both passes sample the same indices
+		invertedSheet->SetPalette(invertedPalette);
+		invertedSheet->hiRes = std::move(savedHi);
+	}
+}
+
+void Font::GlyphAtlasPage::Draw(ieWord chr, const Region& dest, const PrintColors* colors)
+{
+	EnsureSheet();
+
+	// A bitmap twin already carries its edge. Smoothing it again fattens the stroke.
+	// Vector fonts have no twin; their grey coverage wants the normal filter.
+	const BlitFlags sharp = (Sheet && Sheet->hiRes) ? BlitFlags::NEAREST : BlitFlags::NONE;
 	if (colors) {
 		if (font->background) {
-			SpriteSheet<ieWord>::Draw(chr, dest, BlitFlags::BLENDED | BlitFlags::COLOR_MOD, colors->bg);
+			SpriteSheet<ieWord>::Draw(chr, dest, BlitFlags::BLENDED | BlitFlags::COLOR_MOD | sharp, colors->bg);
 			// no point in BlitFlags::ADD with black so let's optimize away some blits
 			if (colors->fg != ColorBlack && font->palette) {
 				std::swap(Sheet, invertedSheet);
-				SpriteSheet<ieWord>::Draw(chr, dest, BlitFlags::ADD | BlitFlags::COLOR_MOD, colors->fg);
+				SpriteSheet<ieWord>::Draw(chr, dest, BlitFlags::ADD | BlitFlags::COLOR_MOD | sharp, colors->fg);
 				std::swap(Sheet, invertedSheet);
 			}
 		} else {
-			SpriteSheet<ieWord>::Draw(chr, dest, BlitFlags::BLENDED | BlitFlags::COLOR_MOD, colors->fg);
+			SpriteSheet<ieWord>::Draw(chr, dest, BlitFlags::BLENDED | BlitFlags::COLOR_MOD | sharp, colors->fg);
 		}
 	} else {
-		SpriteSheet<ieWord>::Draw(chr, dest, BlitFlags::BLENDED, ColorWhite);
+		SpriteSheet<ieWord>::Draw(chr, dest, BlitFlags::BLENDED | sharp, ColorWhite);
 	}
 }
 
@@ -190,6 +326,19 @@ void Font::CreateGlyphIndex(ieWord chr, ieWord pageIdx, const Glyph* g)
 	AtlasIndex[chr] = GlyphIndexEntry(chr, pageIdx, g);
 }
 
+void Font::EnsurePages()
+{
+	for (auto& page : Atlas) {
+		page->EnsureSheet();
+	}
+}
+
+const Sprite2D* Font::FirstPage() const
+{
+	if (Atlas.empty()) return nullptr;
+	return Atlas.front()->Sheet.get();
+}
+
 const Glyph& Font::CreateGlyphForCharSprite(ieWord chr, const Holder<Sprite2D>& spr)
 {
 	assert(AtlasIndex.size() <= chr || AtlasIndex[chr].pageIdx == static_cast<ieWord>(-1));
@@ -199,14 +348,17 @@ const Glyph& Font::CreateGlyphForCharSprite(ieWord chr, const Holder<Sprite2D>& 
 	// FIXME: should we adjust for spr->Frame.x too?
 	Point pos(0, Baseline - spr->Frame.y);
 
+	// a writable lock drops the twin, and the atlas still needs those indices
+	Holder<Sprite2D> hi = spr->hiRes;
 	Glyph tmp = Glyph(size, pos, (ieByte*) spr->LockSprite(), spr->Frame.w, spr->GetPalette() ? 1 : 4);
 	spr->UnlockSprite(); // FIXME: this is assuming it is ok to hang onto to pixel buffer returned from LockSprite()
+	spr->hiRes = hi;
 	// adjust the location for the glyph
-	if (!CurrentAtlasPage || !CurrentAtlasPage->AddGlyph(chr, tmp)) {
+	if (!CurrentAtlasPage || !CurrentAtlasPage->AddGlyph(chr, tmp, hi.get())) {
 		// page is full, make a new one
 		CurrentAtlasPage = MakeHolder<GlyphAtlasPage>(Size(1024, LineHeight), this);
 		Atlas.push_back(CurrentAtlasPage);
-		bool ok = CurrentAtlasPage->AddGlyph(chr, tmp);
+		bool ok = CurrentAtlasPage->AddGlyph(chr, tmp, hi.get());
 		assert(ok);
 	}
 	assert(CurrentAtlasPage);

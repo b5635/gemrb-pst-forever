@@ -1286,7 +1286,7 @@ namespace {
 	}
 
 	// (x, y) is the ground point under the light, z its height
-	void AddLight(SceneLighting& out, const Region& vp, float x, float y, float z, float radius, float r, float g, float b)
+	void AddLight(SceneLighting& out, const Region& vp, float x, float y, float z, float radius, float r, float g, float b, bool cast = false)
 	{
 		// cull against the viewport with a margin of the light's radius (and its reach up walls)
 		if (x + radius < vp.x || y + radius < vp.y || x - radius > vp.x + vp.w || y - z - 2 * radius > vp.y + vp.h) return;
@@ -1298,6 +1298,7 @@ namespace {
 		l.r = r;
 		l.g = g;
 		l.b = b;
+		l.castsShadow = cast;
 		out.lights.push_back(l);
 	}
 
@@ -1305,7 +1306,7 @@ namespace {
 	{
 		if (glow.strength <= 0.01f) return;
 		float k = std::min(0.9f, std::max(0.12f, glow.strength * gain));
-		AddLight(out, vp, float(ground.x), float(ground.y), z, radius, glow.r * k, glow.g * k, glow.b * k);
+		AddLight(out, vp, float(ground.x), float(ground.y), z, radius, glow.r * k, glow.g * k, glow.b * k, true);
 	}
 }
 
@@ -1423,7 +1424,7 @@ void Map::CollectSceneLights(const Region& viewport, SceneLighting& out, const W
 		float z = float(std::max(30, pro->GetZPos()));
 		if (col.a) {
 			const float k = 0.55f / 255.0f;
-			AddLight(out, viewport, float(c.x), float(c.y), z, float(radius), col.r * k, col.g * k, col.b * k);
+			AddLight(out, viewport, float(c.x), float(c.y), z, float(radius), col.r * k, col.g * k, col.b * k, true);
 		} else {
 			AddGlowLight(out, viewport, c, z, float(radius), GetSpriteGlow(frame), 3.0f);
 		}

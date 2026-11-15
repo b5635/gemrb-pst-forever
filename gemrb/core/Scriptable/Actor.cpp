@@ -109,6 +109,8 @@ struct ConfigCache {
 	int difficultyDamageMod = 0;
 	int difficultySaveMod = 0;
 	ieDword translucentShadows = 0;
+	// 1 draws the baked palette-index-1 ground shadow. 0 clears it (contact/light shadows stay).
+	ieDword spriteShadows = 1;
 	int fistStat = IE_CLASS;
 	Actor::stat_t stateInvisible = STATE_INVISIBLE; // used in many places, but different in engines
 	ieDword spellStatesSize = 0; // the spellStates bitfield was stored as a sequence of ints
@@ -1631,6 +1633,7 @@ GEM_EXPORT void UpdateActorConfig()
 	// iwd has a config option for leniency
 	CFGCache.noExtraDifficultyDmg = core->GetDictionary().Get("Suppress Extra Difficulty Damage", 0);
 	CFGCache.translucentShadows = core->GetDictionary().Get("Translucent Shadows", 0);
+	CFGCache.spriteShadows = core->GetDictionary().Get("SpriteShadows", 1);
 }
 
 static void ReadModalStates()
@@ -3573,13 +3576,22 @@ ieStrRef Actor::GetVerbalConstant(Verbal start, int count) const
 {
 	auto beg = EnumIterator<Verbal>(start);
 	auto end = beg + count;
+	// -1 ends the run. 0 is an empty slot: the dialog file returns no text and no
+	// sound for it, so it must not count as a line (PST stores blanks that way).
 	end = std::find_if(beg, end, [this](Verbal vc) {
 		return GetVerbalConstant(vc) == ieStrRef::INVALID;
 	});
 
-	count = beg.distance(end);
-	if (count > 0) {
-		return GetVerbalConstant(*(beg + RAND(0, count - 1)));
+	int usable = 0;
+	for (auto it = beg; it != end; ++it) {
+		if (GetVerbalConstant(*it) != ieStrRef(0)) ++usable;
+	}
+	if (usable <= 0) return ieStrRef::INVALID;
+
+	int pick = RAND(0, usable - 1);
+	for (auto it = beg; it != end; ++it) {
+		if (GetVerbalConstant(*it) == ieStrRef(0)) continue;
+		if (pick-- == 0) return GetVerbalConstant(*it);
 	}
 	return ieStrRef::INVALID;
 }
@@ -4162,24 +4174,33 @@ void Actor::DialogInterrupt() const
 	}
 }
 
+// The spoken damage slot, or the animation's pain grunt when that slot is empty.
+// PST keeps the grunt in RESDATA (NAM020* for the Nameless One) and leaves the
+// damage slot blank, so the grunt is the pain sound. Party grunts go out on the
+// character's own voice channel; everyone else is a positioned voice.
+static void PlayPainSound(const Actor* actor)
+{
+	static int beingHitCount = gamedata->GetVBData("BEING_HIT_COUNT");
+	if (actor->VerbalConstant(Verbal::Damage, beingHitCount)) return;
+
+	ResRef sound;
+	if (!actor->GetSoundFromFile(sound, Verbal::Damage) || sound.IsEmpty()) return;
+	if (actor->InParty > 0) {
+		auto channel = SFXChannel(ieByte(SFXChannel::Char0) + actor->InParty - 1);
+		core->GetAudioPlayback().Play(sound, AudioPreset::EnvVoice, channel);
+	} else {
+		core->GetAudioPlayback().Play(sound, AudioPreset::SpatialVoice, SFXChannel::Monster, actor->Pos);
+	}
+}
+
 void Actor::GetHit(int damage, bool killingBlow)
 {
 	const bool prone = core->GetGame() && core->GetGame()->combat.IsProne(this);
 	if (!Immobile() && !(InternalFlags & IF_REALLYDIED) && !killingBlow && !prone) {
 		SetStance(IE_ANI_DAMAGE);
-		static int beingHitCount = gamedata->GetVBData("BEING_HIT_COUNT");
-		if (!VerbalConstant(Verbal::Damage, beingHitCount)) {
-			ResRef sound;
-			GetSoundFromFile(sound, Verbal::Damage);
-			core->GetAudioPlayback().Play(sound, AudioPreset::Spatial, SFXChannel::Monster, Pos);
-		}
+		PlayPainSound(this);
 	} else if (prone && !killingBlow) {
-		static int beingHitCount = gamedata->GetVBData("BEING_HIT_COUNT");
-		if (!VerbalConstant(Verbal::Damage, beingHitCount)) {
-			ResRef sound;
-			GetSoundFromFile(sound, Verbal::Damage);
-			core->GetAudioPlayback().Play(sound, AudioPreset::Spatial, SFXChannel::Monster, Pos);
-		}
+		PlayPainSound(this);
 	}
 
 	if (Modified[IE_STATE_ID] & STATE_SLEEP) {
@@ -7592,6 +7613,30 @@ void Actor::SetStanceAnimationSpeed(float multiplier)
 	apply(currentStance.shadow);
 }
 
+float Actor::GetStanceAnimationFPS() const
+{
+	if (currentStance.anim.empty() || !currentStance.anim[0].first) return ANI_DEFAULT_FRAMERATE;
+	return currentStance.anim[0].first->fps;
+}
+
+void Actor::SetStanceAnimationFPS(unsigned char stance, orient_t face, float fps)
+{
+	if (!anims) return;
+	fps = std::max(1.0f, fps);
+	const unsigned char current = GetStance();
+	const orient_t currentFace = GetNextFace();
+	auto apply = [fps](const CharAnimations::PartAnim* parts) {
+		if (!parts) return;
+		for (const auto& part : *parts) {
+			if (part) part->SetFPS(fps);
+		}
+	};
+	// asking for a stance rewrites the sequencing flags, so put the one on screen back after
+	apply(anims->GetAnimation(stance, face));
+	apply(anims->GetShadowAnimation(stance, face));
+	anims->GetAnimation(current, currentFace);
+}
+
 int Actor::StanceAnimationTicks(unsigned char stance)
 {
 	if (!anims) return 0;
@@ -8626,12 +8671,16 @@ void Actor::DrawActorSprite(const Point& p, BlitFlags flags,
 
 		Holder<Sprite2D> currentFrame = anim->CurrentFrame();
 		if (currentFrame) {
+			// index 1 is the baked ground shadow. SpriteShadows=0 makes it transparent.
 			if (palette) {
-				palette->TranslucentShadowColor(CFGCache.translucentShadows);
-				VideoDriver->BlitGameSpriteWithPalette(currentFrame, palette, p, flags, tint);
-			} else {
-				VideoDriver->BlitGameSpriteWithPalette(currentFrame, palette, p, flags, tint);
+				const uint8_t shadowAlpha = CFGCache.spriteShadows ? (CFGCache.translucentShadows ? 128 : 255) : 0;
+				Color shadow = palette->GetColorAt(1);
+				if (shadow.a != shadowAlpha) {
+					shadow.a = shadowAlpha;
+					palette->SetColor(1, shadow);
+				}
 			}
+			VideoDriver->BlitGameSpriteWithPalette(currentFrame, palette, p, flags, tint);
 		}
 	}
 }
@@ -9080,7 +9129,8 @@ void Actor::Draw(const Region& vp, Color baseTint, Color tint, BlitFlags flags) 
 		}
 	}
 
-	if (!currentStance.shadow.empty()) {
+	// separate shadow BAM (animation type 6). PST does not use it; hidden with the baked oval.
+	if (!currentStance.shadow.empty() && CFGCache.spriteShadows) {
 		DrawActorSprite(drawPos, flags, currentStance.shadow, tint);
 	}
 
@@ -9164,7 +9214,7 @@ void Actor::DrawPolishShadows(const Region& vp, BlitFlags flags, float ox, float
 			if (part.first) parts.push_back({ part.first->CurrentFrame(), part.second, drawPos });
 		}
 	}
-	float contact = std::max(12.0f, float(CircleSize2Radius()) * sizeFactor * 4.0f * 0.8f);
+	float contact = std::max(14.0f, float(CircleSize2Radius()) * sizeFactor * 4.0f * 1.15f);
 	ScenePolish& polish = ScenePolish::Get();
 	polish.DrawShadows(parts, feet, float(feet.x) + ox, float(feet.y) + oy, contact, alpha, polish.FrameLights(),
 			   flags & BlitFlags::STENCIL_MASK);

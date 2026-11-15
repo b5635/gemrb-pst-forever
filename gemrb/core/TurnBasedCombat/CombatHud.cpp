@@ -242,6 +242,9 @@ Color Faded(Color c, float alpha)
 	return c;
 }
 
+// the attack die and the save die share this bone; a save stains it once the face has landed
+const Color kDieBone(226, 212, 176, 255);
+
 void PushTri(std::vector<float>& v, std::vector<Color>& col, float ax, float ay, float bx, float by, float cx, float cy, const Color& c)
 {
 	v.insert(v.end(), { ax, ay, bx, by, cx, cy });
@@ -517,7 +520,8 @@ void CombatHud::Draw(const Region& screen) const
 		return; // never resolved
 	}
 
-	const Region panel(screen.x + 16, screen.y + screen.h * 28 / 100, 290, 118);
+	// wide enough for the die (radius 28) on the left and the sum beside it
+	const Region panel(screen.x + 16, screen.y + screen.h * 28 / 100, 328, 142);
 	DrawPanel(panel, alpha);
 
 	Holder<Font> font = HudFont();
@@ -529,8 +533,8 @@ void CombatHud::Draw(const Region& screen) const
 		font->Print(Region(panel.x + 10, panel.y + 7, panel.w - 20, line + 2), header, IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, colors);
 	}
 
-	const Point dieCenter(panel.x + 42, panel.y + 52);
-	float radius = 20.0f;
+	const Point dieCenter(panel.x + 50, panel.y + 60);
+	float radius = 28.0f;
 	const bool landed = roll.hasResult && now >= Landed();
 	const bool special = roll.hasResult && Special(roll.roll, roll.critical);
 	const bool verdict = roll.hasResult && now >= VerdictAt();
@@ -556,7 +560,7 @@ void CombatHud::Draw(const Region& screen) const
 		radius *= 1.0f + 0.03f * std::sin(spinTime * 11.0f);
 	}
 
-	Color tint(226, 212, 176, 255);
+	Color tint = kDieBone;
 	if (special && verdict) {
 		bool good = roll.hit;
 		tint = good ? Color(255, 214, 110, 255) : Color(196, 86, 64, 255);
@@ -570,12 +574,12 @@ void CombatHud::Draw(const Region& screen) const
 		DrawD20(dieCenter, radius, spinTime, settle, face, tint, alpha);
 	} else if (landed) {
 		std::string n = std::to_string(roll.roll);
-		DrawStrokeText(n, Point(dieCenter.x - StrokeTextWidth(n, 30) / 2, dieCenter.y - 15), 30, Faded(Theme::text, alpha));
+		DrawStrokeText(n, Point(dieCenter.x - StrokeTextWidth(n, 42) / 2, dieCenter.y - 21), 42, Faded(Theme::text, alpha));
 	}
 
 	// the sum, a step at a time
 	const int textH = 28;
-	Point at(dieCenter.x + 32, dieCenter.y - textH / 2);
+	Point at(dieCenter.x + 42, dieCenter.y - textH / 2);
 	const Color plain = Faded(Theme::text, alpha);
 	const Color outcome = Faded(roll.hit ? Theme::hit : Theme::miss, alpha);
 	String verdictText;
@@ -682,8 +686,10 @@ void CombatHud::DrawSaves(const std::function<Point(const Point&)>& toScreen, fl
 		const Point head = toScreen(actor->Pos) - Point(0, int(95.0f / std::max(0.2f, scale)));
 		const bool landed = t >= SAVE_SPIN;
 		const float settle = Clamp(float(t) / float(SAVE_SPIN), 0.0f, 1.0f);
-		Color tint(226, 212, 176, 255);
-		if (landed) tint = s.success ? Color(150, 226, 120, 255) : Color(226, 104, 84, 255);
+		// bone while it spins, the same as the attack die; green or red eases in after the face lands
+		const Color outcome = s.success ? Theme::hit : Theme::miss;
+		const float turn = landed ? Smooth(std::min(1.0f, float(t - SAVE_SPIN) / 200.0f)) : 0.0f;
+		const Color tint = Mix(kDieBone, outcome, turn);
 		float radius = 13.0f;
 		if (landed) radius *= 1.0f + 0.2f * std::sin(std::min(1.0f, float(t - SAVE_SPIN) / 160.0f) * 3.14159f);
 		if (VideoDriver->CanDrawRawGeometry()) {

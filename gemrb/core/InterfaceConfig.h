@@ -52,6 +52,8 @@ struct CoreSettings {
 
 	path_t GemRBPath = GemDataPath();
 	path_t AbsoluteGemRBPath;
+	// Empty means <exe dir>/upscaled. Hi-res PNGs live here, never in the game data.
+	path_t UpscalePath;
 	path_t GemRBOverridePath;
 	path_t GemRBUnhardcodedPath;
 	path_t PluginsPath;

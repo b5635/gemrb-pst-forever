@@ -41,6 +41,7 @@ enum BlitFlags : uint32_t {
 	ALPHA_MOD = 0x2000, // srcA = srcA * (alpha / 255)
 	MIRRORX = 0x10000,
 	MIRRORY = 0x20000,
+	NEAREST = 0x40000, // sample texels at their centres; the art already holds the edge
 	GREY = 0x80000, // timestop palette
 	SEPIA = 0x02000000, // dream scene palette
 	// stencil flags operate on the stencil buffer
@@ -83,6 +84,9 @@ protected:
 
 public:
 	Region Frame;
+	// Optional RGBA twin drawn by the GL driver. Null means there is no upscale.
+	// Copies share it. A non-const lock, a real palette swap, or a format conversion drops it.
+	Holder<Sprite2D> hiRes;
 	BlitFlags renderFlags = BlitFlags::NONE;
 
 	Sprite2D(const Region&, void* pixels, const PixelFormat& fmt, uint16_t pitch) noexcept;

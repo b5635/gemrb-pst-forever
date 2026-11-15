@@ -8,14 +8,31 @@
 #include "plugindef.h"
 
 #include "GameData.h"
+#include "HiResArt.h"
 #include "ImageMgr.h"
 #include "Palette.h"
+
+#include "fmt/format.h"
 
 #include "Streams/DataStream.h"
 #include "Video/RLE.h"
 #include "Video/Video.h"
 
 using namespace GemRB;
+
+static void AttachBamFrame(const Holder<Sprite2D>& spr, const ResRef& resref, int index)
+{
+	if (!spr) return;
+	auto stem = HiResArt::Stem(resref.c_str());
+	if (stem.empty()) return;
+	// gui first, then sprites, so a button bam is not also treated as a creature
+	if (HiResArt::Enabled(HiResCategory::GUI)) {
+		HiResArt::Attach(spr, fmt::format("gui/bam/{}/{}.png", stem, index));
+	}
+	if (!spr->hiRes && HiResArt::Enabled(HiResCategory::Sprites)) {
+		HiResArt::Attach(spr, fmt::format("sprites/bam/{}/{}.png", stem, index));
+	}
+}
 
 bool BAMImporter::Import(DataStream* str)
 {
@@ -253,11 +270,14 @@ std::shared_ptr<AnimationFactory> BAMImporter::GetAnimationFactory(const ResRef&
 
 	if (version == BAMVersion::V1) {
 		auto FLT = CacheFLT();
-		for (const auto& frameInfo : frames) {
-			bool RLECompressed = allowCompression && frameInfo.RLE;
-			animframes.push_back(GetFrameInternal(frameInfo, RLECompressed));
+		for (size_t i = 0; i < frames.size(); ++i) {
+			bool RLECompressed = allowCompression && frames[i].RLE;
+			Holder<Sprite2D> spr = GetFrameInternal(frames[i], RLECompressed);
+			AttachBamFrame(spr, resref, int(i));
+			animframes.push_back(std::move(spr));
 		}
 
+		HiResArt::Flush();
 		return std::make_shared<AnimationFactory>(resref, std::move(animframes), cycles, std::move(FLT));
 	} else {
 		std::vector<index_t> FLT(frames.size());
@@ -266,10 +286,13 @@ std::shared_ptr<AnimationFactory> BAMImporter::GetAnimationFactory(const ResRef&
 			FLT[i] = i;
 		}
 
-		for (const auto& frame : frames) {
-			animframes.push_back(GetV2Frame(frame));
+		for (size_t i = 0; i < frames.size(); ++i) {
+			Holder<Sprite2D> spr = GetV2Frame(frames[i]);
+			AttachBamFrame(spr, resref, int(i));
+			animframes.push_back(std::move(spr));
 		}
 
+		HiResArt::Flush();
 		return std::make_shared<AnimationFactory>(resref, std::move(animframes), cycles, std::move(FLT));
 	}
 }

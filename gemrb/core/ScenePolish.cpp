@@ -407,50 +407,30 @@ void ScenePolish::DrawShadows(const std::vector<ShadowPart>& parts, const Point&
 {
 	if (!Enabled() || alpha <= 0.0f) return;
 
-	if (Setting("ContactShadows", 1)) {
+	if (Setting("ContactShadows", 0)) {
 		SoftShape s;
 		s.profile = SoftShape::Profile::Blob;
 		s.x = float(feet.x);
-		s.y = float(feet.y) + 1.0f;
 		s.rx = contactRadius;
-		s.ry = contactRadius * 0.45f;
-		s.color = Color(0, 0, 0, ToByte(0.5f * alpha));
+		s.ry = contactRadius * 0.5f;
+		// the back edge sits on the feet; the rest falls toward the camera
+		s.y = float(feet.y) + s.ry * 1.15f;
+		// the blob falls off as (1-d^2)^2, so a low peak disappears into the floor
+		s.color = Color(0, 0, 0, ToByte(0.9f * alpha));
 		VideoDriver->DrawSoftShapes({ s }, flags);
 	}
 
-	if (!lights || parts.empty() || !Setting("LightShadows", 1)) return;
-
-	// the two lights that light the feet the most
-	struct Cast {
-		float dirX, dirY, k, a;
-	};
-	Cast best[2] = { { 0, 0, 0, 0 }, { 0, 0, 0, 0 } };
-	for (const SceneLight& l : lights->lights) {
-		float dx = lfx - l.x;
-		float dy = (lfy - l.y) / 0.72f;
-		float dist = std::sqrt(dx * dx + dy * dy);
-		if (dist >= l.radius || dist < 18.0f) continue; // out of reach / our own light
-		float f = 1.0f - (dist / l.radius) * (dist / l.radius);
-		float intensity = f * f * (l.r + l.g + l.b) / 3.0f;
-		if (intensity < 0.04f) continue;
-		Cast c { dx / dist, dy / dist, std::max(0.35f, std::min(1.15f, dist / std::max(l.z, 20.0f))), std::min(0.42f, intensity * 1.3f) };
-		if (c.a > best[0].a) {
-			best[1] = best[0];
-			best[0] = c;
-		} else if (c.a > best[1].a) {
-			best[1] = c;
-		}
-	}
+	if (parts.empty() || !Setting("LightShadows", 1)) return;
 
 	const float fy = float(feet.y);
-	for (const Cast& c : best) {
-		if (c.a <= 0.0f) continue;
-		// height above the feet maps onto the ground away from the light;
-		// sideways casts keep a little depth so the silhouette stays readable
-		float sx = c.k * c.dirX;
-		float sy = c.k * c.dirY * 0.72f - 0.15f * (1.0f - std::abs(c.dirY));
-		uint8_t aBase = ToByte(c.a * alpha);
-		uint8_t aTip = ToByte(c.a * alpha * 0.3f);
+	// height above the feet maps onto the ground along (dirX, dirY).
+	// sideways casts keep a little depth so the silhouette stays readable
+	auto project = [&](float dirX, float dirY, float k, float a) {
+		if (a <= 0.0f) return;
+		float sx = k * dirX;
+		float sy = k * dirY * 0.72f - 0.15f * (1.0f - std::abs(dirY));
+		uint8_t aBase = ToByte(a * alpha);
+		uint8_t aTip = ToByte(a * alpha * 0.5f);
 		for (const ShadowPart& part : parts) {
 			if (!part.frame) continue;
 			const Region& fr = part.frame->Frame;
@@ -468,7 +448,31 @@ void ScenePolish::DrawShadows(const std::vector<ShadowPart>& parts, const Point&
 			const Color colors[4] = { top, top, bottom, bottom };
 			VideoDriver->BlitSpriteQuad(part.frame, part.palette, corners, colors, flags | BlitFlags::BLENDED);
 		}
+	};
+
+	// the areas are painted with the light up-screen, so the shadow falls toward the camera,
+	// out in front of the feet rather than piled on the anchor
+	project(0.0f, 1.0f, 0.85f, 0.62f);
+
+	// a real fire, spell or projectile adds one more cast, away from itself
+	if (!lights) return;
+	float bestA = 0.0f, bestK = 0.0f, bestX = 0.0f, bestY = 0.0f;
+	for (const SceneLight& l : lights->lights) {
+		if (!l.castsShadow) continue;
+		float dx = lfx - l.x;
+		float dy = (lfy - l.y) / 0.72f;
+		float dist = std::sqrt(dx * dx + dy * dy);
+		if (dist < 8.0f || dist >= l.radius) continue;
+		float f = 1.0f - (dist / l.radius) * (dist / l.radius);
+		float intensity = f * f * (l.r + l.g + l.b) / 3.0f;
+		float a = std::min(0.55f, intensity * 2.0f);
+		if (a <= bestA) continue;
+		bestA = a;
+		bestK = std::max(0.35f, std::min(1.15f, dist / std::max(l.z, 20.0f)));
+		bestX = dx / dist;
+		bestY = dy / dist;
 	}
+	project(bestX, bestY, bestK, bestA);
 }
 
 bool ScenePolish::DrawRing(const Selectable* sel, const Point& centre, const Color& color, bool selected, bool hovered) const

@@ -40,6 +40,13 @@ void Animation::SetFrame(index_t index)
 	endReached = false;
 }
 
+void Animation::SetFPS(float next)
+{
+	if (next < 1.0f) next = 1.0f;
+	fps = next;
+	starttime = 0;
+}
+
 Animation::index_t Animation::GetCurrentFrameIndex() const
 {
 	if (playReversed)

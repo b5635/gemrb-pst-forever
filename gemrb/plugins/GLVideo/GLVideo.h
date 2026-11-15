@@ -140,6 +140,7 @@ public:
 	void CopyTexture(GLuint dstFbo, Size dstSize, const Region& dstRect, GLuint srcTex, const Region& srcRect, bool smooth);
 	float RenderScale() const { return renderScale; }
 	bool SupportsSceneTransform() const override { return true; }
+	bool SupportsHiResArt() const override { return true; }
 	void DrawSceneLighting(const SceneLighting& lighting) override;
 	void SceneBegan() override;
 	void SceneEnding() override;
@@ -249,7 +250,7 @@ private:
 	void DrawTexture(const GLVideoBuffer* buf, const Region& src, const Region& dst, BlitFlags flags, const Color& tint);
 	void DrawSprite(const Holder<Sprite2D>& spr, const Region& src, const Region& dst, BlitFlags flags, const Color& tint);
 	// batch state, palette row and colour key for drawing a sprite; false = nothing to draw
-	bool PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags, GLBatchState& st, float& pal, float& ckey);
+	bool PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags, GLBatchState& st, float& pal, float& ckey, float& texelScale);
 	void UpdatePresentRect();
 	void ResizeScreenTarget();
 	static Region ToPhys(const Region& logical, float scale);

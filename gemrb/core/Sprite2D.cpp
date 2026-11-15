@@ -6,6 +6,8 @@
 
 #include "Video/RLE.h"
 
+#include <utility>
+
 namespace GemRB {
 
 const TypeID Sprite2D::ID = { "Sprite2D" };
@@ -48,6 +50,7 @@ Sprite2D::Sprite2D(const Sprite2D& obj) noexcept
 	: Sprite2D(obj.Frame, obj.pixels, obj.format, obj.pitch)
 {
 	renderFlags = obj.renderFlags;
+	hiRes = obj.hiRes;
 	freePixels = false;
 }
 
@@ -55,6 +58,7 @@ Sprite2D::Sprite2D(Sprite2D&& obj) noexcept
 	: Sprite2D(obj.Frame, obj.pixels, obj.format, obj.pitch)
 {
 	renderFlags = obj.renderFlags;
+	hiRes = std::move(obj.hiRes);
 }
 
 Sprite2D::~Sprite2D() noexcept
@@ -94,6 +98,8 @@ const void* Sprite2D::LockSprite() const
 
 void* Sprite2D::LockSprite()
 {
+	// writable access can change the pixels the twin was built from
+	hiRes.reset();
 	return pixels;
 }
 
@@ -103,6 +109,8 @@ void Sprite2D::SetPalette(const Holder<Palette>& pal)
 	assert(pal != nullptr);
 
 	if (pal == format.palette) return;
+	// a different palette means the upscale no longer matches what will be drawn
+	hiRes.reset();
 
 	if (format.RLE) {
 		format.palette = pal;
@@ -133,6 +141,7 @@ bool Sprite2D::ConvertFormatTo(const PixelFormat& newfmt) noexcept
 		}
 		format = newfmt;
 		assert(format.palette);
+		hiRes.reset();
 		return true;
 	}
 	return false;

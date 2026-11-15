@@ -59,6 +59,13 @@ Height=480
 # Choices: best (default), linear, nearest
 #ScaleQuality = best
 
+# Upscaled art (NOTES.md, UPSCALE_PLAN.md). The OpenGL driver draws it at the
+# original logical size. Default folder is <GemRB exe dir>/upscaled.
+#UpscaledGUI=1
+#UpscaledAreas=1
+#UpscaledSprites=0
+#UpscalePath=
+
 # Cap FPS, 0 = request VSync (SDL2 only, default), -1 = no limit, 30+ = cap value
 #CapFPS=0
 

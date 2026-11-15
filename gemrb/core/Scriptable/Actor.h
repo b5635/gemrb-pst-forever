@@ -921,6 +921,10 @@ public:
 	void ReverseStanceAnimation();
 	/** Speed up (or reset) the current stance's playback; 1 is normal. */
 	void SetStanceAnimationSpeed(float multiplier);
+	/** Playback rate of the stance on screen, or the default when it has no animation. */
+	float GetStanceAnimationFPS() const;
+	/** Sets the playback rate of one cached stance. The one on screen is left selected. */
+	void SetStanceAnimationFPS(unsigned char stance, orient_t face, float fps);
 	/** How many game ticks one play of a stance's animation takes (facing as now), 0 without one */
 	int StanceAnimationTicks(unsigned char stance);
 	/** Has the current stance been drawn yet? Right after a SetStance the frame above is still
