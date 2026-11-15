@@ -248,10 +248,16 @@ void Video::BlitGameSpriteWithPalette(const Holder<Sprite2D>& spr, const Holder<
 				      BlitFlags flags, Color tint)
 {
 	if (pal) {
+		// SetPalette drops a hi-res twin when the holder differs. Creature draws
+		// swap in a recolour palette for this blit only, so put the twin back:
+		// the upscale stays visible, and the next draw still has it.
 		Holder<Palette> oldpal = spr->GetPalette();
+		Holder<Sprite2D> savedHi = spr->hiRes;
 		spr->SetPalette(pal);
+		spr->hiRes = savedHi;
 		BlitGameSprite(spr, p, flags, tint);
 		spr->SetPalette(oldpal);
+		spr->hiRes = std::move(savedHi);
 	} else {
 		BlitGameSprite(spr, p, flags, tint);
 	}

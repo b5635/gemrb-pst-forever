@@ -817,6 +817,13 @@ bool GLVideoDriver::PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags,
 	// An indexed twin keeps the palette of the sprite being drawn: font pages invert that
 	// palette for the second pass, and both passes sample the same hi-res indices.
 	const GLSprite2D* hi = spr->hiRes ? dynamic_cast<const GLSprite2D*>(spr->hiRes.get()) : nullptr;
+	if (spr->hiRes && !hi) {
+		static bool warnedCast = false;
+		if (!warnedCast) {
+			Log(WARNING, "GLVideo", "hi-res twin is not a GL sprite; drawing the original.");
+			warnedCast = true;
+		}
+	}
 	if (hi && spr->Frame.w > 0 && spr->Frame.h > 0 &&
 	    hi->Frame.w >= spr->Frame.w * 2 && hi->Frame.h >= spr->Frame.h * 2 &&
 	    hi->Frame.w % spr->Frame.w == 0 && hi->Frame.h % spr->Frame.h == 0 &&
@@ -863,7 +870,20 @@ bool GLVideoDriver::PrepareSprite(const Holder<Sprite2D>& spr, BlitFlags& flags,
 			st.texture = tex;
 			st.blend = BlendForFlags(flags);
 			SetupStencil(st, flags);
+			static bool loggedTwin = false;
+			if (!loggedTwin) {
+				Log(MESSAGE, "GLVideo", "Drawing hi-res twin {}x{} (from {}x{}, scale {}).",
+				    hi->Frame.w, hi->Frame.h, spr->Frame.w, spr->Frame.h, int(texelScale));
+				loggedTwin = true;
+			}
 			return true;
+		}
+	} else if (hi) {
+		static bool warnedSize = false;
+		if (!warnedSize) {
+			Log(WARNING, "GLVideo", "hi-res twin {}x{} is not an integer scale of {}x{}; drawing the original.",
+			    hi->Frame.w, hi->Frame.h, spr->Frame.w, spr->Frame.h);
+			warnedSize = true;
 		}
 	}
 	if (gspr->IsIndexed()) {
@@ -978,12 +998,12 @@ bool GLVideoDriver::BlitSpriteQuad(const Holder<Sprite2D>& spr, const Holder<Pal
 	st.depthWrite = false;
 
 	Holder<Palette> oldPal;
-	// SetPalette drops the twin. This swap is only for this draw, so put the twin back after.
 	Holder<Sprite2D> savedHi;
 	if (palOverride) {
 		savedHi = spr->hiRes;
 		oldPal = spr->GetPalette();
 		spr->SetPalette(palOverride);
+		spr->hiRes = savedHi;
 	}
 	float pal, ckey, texelScale;
 	bool ok = PrepareSprite(spr, flags, st, pal, ckey, texelScale);

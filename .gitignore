@@ -45,3 +45,6 @@ build_debug/
 tools/upscale/.venv/
 tools/upscale/models/
 tools/upscale/work/
+
+# lighting pipeline (review images and resumable state)
+tools/lighting/work/

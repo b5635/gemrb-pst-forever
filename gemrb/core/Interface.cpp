@@ -1284,11 +1284,6 @@ void Interface::LoadFonts()
 		ResourceHolder<FontManager> fntMgr;
 		fntMgr = gamedata->GetResourceHolder<FontManager>(font_name, true, preferBAM ? IE_BAM_CLASS_ID : IE_TTF_CLASS_ID);
 		if (fntMgr) fnt = fntMgr->GetFont(font_size, font_style, background);
-		// EXOCET.ttf is optional. Without it the row's own BAM still loads.
-		if (!fnt && ResRef(font_name) != resref) {
-			fntMgr = gamedata->GetResourceHolder<FontManager>(resref, true, IE_BAM_CLASS_ID);
-			if (fntMgr) fnt = fntMgr->GetFont(font_size, font_style, background);
-		}
 
 		if (!fnt) {
 			error("Core", "Unable to load font resource: {} for ResRef {} (check fonts.2da)", font_name, resref);

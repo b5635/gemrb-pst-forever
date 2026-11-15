@@ -84,8 +84,9 @@ protected:
 
 public:
 	Region Frame;
-	// Optional RGBA twin drawn by the GL driver. Null means there is no upscale.
-	// Copies share it. A non-const lock, a real palette swap, or a format conversion drops it.
+	// Optional RGBA (or indexed) twin drawn by the GL driver. Null means there is no upscale.
+	// Copies share it. A non-const lock or a format conversion drops it. Palette swaps keep it:
+	// creature draws recolour every blit, and the GL driver samples the live palette for indexed twins.
 	Holder<Sprite2D> hiRes;
 	BlitFlags renderFlags = BlitFlags::NONE;
 

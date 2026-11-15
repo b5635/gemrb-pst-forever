@@ -109,8 +109,10 @@ void Sprite2D::SetPalette(const Holder<Palette>& pal)
 	assert(pal != nullptr);
 
 	if (pal == format.palette) return;
-	// a different palette means the upscale no longer matches what will be drawn
-	hiRes.reset();
+	// Keep the display twin. Creature draws swap a recolour holder every blit;
+	// dropping it here made every avatar fall back to the original BAM pixels.
+	// Indexed twins sample this live palette. A baked RGBA twin keeps the colours
+	// it was upscaled with, which is still sharper than the 1x art.
 
 	if (format.RLE) {
 		format.palette = pal;

@@ -159,7 +159,7 @@ TEST(HiResArt, Attach)
 	spr->SetPalette(spr->GetPalette());
 	EXPECT_NE(spr->hiRes.get(), nullptr);
 	spr->SetPalette(MakeHolder<Palette>());
-	EXPECT_EQ(spr->hiRes.get(), nullptr);
+	EXPECT_NE(spr->hiRes.get(), nullptr);
 
 	EXPECT_EQ(HiResArt::Stem("ar0202.tis"), "AR0202");
 	EXPECT_EQ(HiResArt::Stem("  Foo.BAM  "), "FOO");

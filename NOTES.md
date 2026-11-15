@@ -256,7 +256,8 @@ quad, per-corner colour) and `DrawScenePost`. Presentation only: own RNG, never 
 Offline 2x RGBA twins for GUI and area art (`UPSCALE_PLAN.md`, `tools/upscale`). The sprite keeps its
 original pixels for hit tests, palettes and scripts. Only the OpenGL driver draws the twin, at the
 original logical size, so a larger window or a zoomed map looks sharper. `UpscaledGUI`,
-`UpscaledAreas` and `UpscaledSprites` are the toggles (sprites stay off until recolour is decided).
+`UpscaledAreas` and `UpscaledSprites` are the toggles. Sprites are on for a trial of the
+Nameless One's default body (`DNOFB`: walk, stand, attack, and the other stances).
 Fonts are indexed pages, not colour bitmaps: the palette tint and the inverted pass still run,
 on a 2× index image.
 `UpscalePath` defaults to `<GemRB exe dir>/upscaled` and is never the game install. `build_install.bat`
