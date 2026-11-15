@@ -191,6 +191,8 @@ public:
 
 	// returns an array of animations of size GetTotalPartCount()
 	const PartAnim* GetAnimation(unsigned char Stance, orient_t Orient);
+	/** PST gup BAM exists for this avatar (not ghosts/statics; not BG death-reversed get-up). */
+	bool HasGetUpAnimation() const;
 	int GetTotalPartCount() const;
 	const int* GetZOrder(unsigned char Orient) const;
 	const PartAnim* GetShadowAnimation(unsigned char Stance, orient_t OXrient);

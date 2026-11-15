@@ -16,6 +16,8 @@
 #include "Logging/Logging.h"
 #include "Scriptable/Actor.h"
 
+#include <array>
+
 namespace GemRB {
 
 GEM_EXPORT std::unique_ptr<DisplayMessage> displaymsg;
@@ -92,20 +94,7 @@ ieStrRef DisplayMessage::StrRefs::Get(HCStrings idx, const Scriptable* speaker) 
 		}
 
 		// handle flags mode 1 and 2
-		// figure out PC index (TNO, Morte, Annah, Dakkon, FFG, Nordom, Ignus, Vhailor), anyone else
-		// then use it to calculate personalized feedback strings
-		int pcOffset;
-		int specific = gabber->GetStat(IE_SPECIFIC);
-		const std::array<int, 8> spec2offset = { 0, 7, 5, 6, 4, 3, 2, 1 };
-		if (specific >= 2 && specific <= 9) {
-			pcOffset = spec2offset[specific - 2];
-		} else if (flags[idx] == 2) {
-			pcOffset = spec2offset.size();
-		} else { // rare, but could happen
-			pcOffset = 6; // use Ignus as fallback
-		}
-
-		return ieStrRef(int(table[idx]) + pcOffset);
+		return ieStrRef(int(table[idx]) + DisplayMessage::PstFeedbackOffset(gabber->GetStat(IE_SPECIFIC), flags[idx]));
 	}
 	return ieStrRef::INVALID;
 }
@@ -122,6 +111,29 @@ void DisplayMessage::LoadStringRefs()
 ieStrRef DisplayMessage::GetStringReference(HCStrings idx, const Scriptable* speaker)
 {
 	return SRefs.Get(idx, speaker);
+}
+
+int DisplayMessage::PstFeedbackOffset(int specific, int flag)
+{
+	static constexpr std::array<int, 8> spec2offset = { 0, 7, 5, 6, 4, 3, 2, 1 };
+	if (specific >= 2 && specific <= 9) {
+		return spec2offset[specific - 2];
+	}
+	if (flag == 2) {
+		return static_cast<int>(spec2offset.size());
+	}
+	return 6; // Ignus as fallback
+}
+
+void DisplayMessage::PlayAssociatedSound(HCStrings strIdx, const Scriptable* speaker) const
+{
+	const Actor* actor = Scriptable::As<Actor>(speaker);
+	if (actor && (actor->GetStat(IE_STATE_ID) & STATE_CANTLISTEN)) return;
+
+	ieStrRef msg = GetStringReference(strIdx, speaker);
+	if (msg == ieStrRef::INVALID) return;
+	Log(COMBAT, "Attack", "crit voice strref {}", ieDword(msg));
+	core->GetString(msg, STRING_FLAGS::SOUND | STRING_FLAGS::SPEECH);
 }
 
 bool DisplayMessage::HasStringReference(HCStrings idx)

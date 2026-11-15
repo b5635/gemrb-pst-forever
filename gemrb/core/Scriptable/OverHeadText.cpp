@@ -61,11 +61,25 @@ void OverHeadText::SetText(String newText, bool display, bool append, const Colo
 	}
 }
 
+tick_t OverHeadText::DurationAtLeast(tick_t voiceMs)
+{
+	return voiceMs > DefaultDurationMs ? voiceMs : DefaultDurationMs;
+}
+
+void OverHeadText::SetMinDuration(tick_t ms, size_t idx)
+{
+	if (idx >= messages.size()) {
+		return;
+	}
+	messages[idx].minDuration = DurationAtLeast(ms);
+}
+
 bool OverHeadText::Display(bool show, size_t idx)
 {
 	if (show) {
 		isDisplaying = true;
 		messages[idx].timeStartDisplaying = core->Time.Ticks2Ms(core->GetGame()->GameTime);
+		messages[idx].minDuration = 0;
 		return true;
 	} else if (isDisplaying) {
 		// is this the last displaying message?
@@ -130,11 +144,14 @@ void OverHeadText::Draw()
 // OverHeadMsg methods
 bool OverHeadMsg::Draw(int heightOffset, const Point& fallbackPos, int ownerType)
 {
-	static constexpr tick_t maxDelay = 6000;
+	static constexpr tick_t maxDelay = OverHeadText::DefaultDurationMs;
 	tick_t delay = maxDelay;
 	if (core->HasFeature(GFFlags::ONSCREEN_TEXT) && !scrollOffset.IsInvalid()) {
 		// empirically determined estimate to get the right speed and distance and 2px/tick
 		delay = 1800 * core->Time.ticksPerSec / core->Time.defaultTicksPerSec;
+	}
+	if (minDuration > delay) {
+		delay = minDuration;
 	}
 
 	tick_t time = core->Time.Ticks2Ms(core->GetGame()->GameTime);

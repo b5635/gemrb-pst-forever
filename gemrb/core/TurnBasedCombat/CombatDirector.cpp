@@ -20,6 +20,7 @@
 #include "ScenePolish.h"
 
 #include "Audio/Playback.h"
+#include "CharAnimations.h"
 #include "GUI/GameControl.h"
 #include "GameScript/GSUtils.h"
 #include "GameScript/GameScript.h"
@@ -256,6 +257,34 @@ String CombatDirector::TakedownResultText(TakedownKind kind, bool success)
 			   success ? u"Success" : u"Failure");
 }
 
+unsigned char CombatDirector::ProneAnimStance(bool hasGetUp)
+{
+	return hasGetUp ? IE_ANI_GET_UP : IE_ANI_DIE;
+}
+
+bool CombatDirector::ProneFallReversed(bool hasGetUp)
+{
+	return hasGetUp;
+}
+
+bool CombatDirector::ProneRiseReversed(bool hasGetUp)
+{
+	return !hasGetUp;
+}
+
+bool CombatDirector::HasGetUpAnimation(const Actor* actor)
+{
+	return actor && actor->GetAnims() && actor->GetAnims()->HasGetUpAnimation();
+}
+
+void CombatDirector::PlayProneAnimation(Actor* actor, bool rising)
+{
+	if (!actor) return;
+	const bool hasGetUp = HasGetUpAnimation(actor);
+	actor->SetStance(ProneAnimStance(hasGetUp));
+	actor->SetStancePlayback(rising ? ProneRiseReversed(hasGetUp) : ProneFallReversed(hasGetUp));
+}
+
 Path CombatDirector::ClipPath(const Point& start, const Path& path, int budget)
 {
 	Path clipped;
@@ -283,13 +312,52 @@ Path CombatDirector::ClipPath(const Point& start, const Path& path, int budget)
 	return clipped;
 }
 
+// PST treats a missing runscale as "no run animation" (RUN remaps to WALK).
+static bool HasRunAnim(const Actor* actor)
+{
+	if (!actor) return true;
+	ieDword animid = actor->GetBase(IE_ANIMATION_ID);
+	if (core->HasFeature(GFFlags::ONE_BYTE_ANIMID)) {
+		animid &= 0xff;
+	}
+	if (animid >= ieDword(CharAnimations::GetAvatarsCount())) return true;
+	return CharAnimations::GetAvatarStruct(animid).RunScale != 0;
+}
+
+static bool PartyAlwaysRuns(const Actor* actor)
+{
+	const GameControl* gc = core->GetGameControl();
+	return actor && actor->InParty && gc && gc->ShouldRun(actor);
+}
+
+// combat walks keep their own speed; Always Run still applies to the party, and
+// creatures with no run animation cover ground at a typical run (walk frames).
+static void PrepareCombatMoveSpeed(Actor* actor)
+{
+	if (!actor) return;
+	if (!HasRunAnim(actor) || PartyAlwaysRuns(actor)) {
+		actor->SetInternalFlag(IF_RUNNING, BitOp::OR);
+		actor->SetSpeed(false);
+	}
+}
+
 // how far the actor would walk in a round of real time
 static int MovementAllowance(const Actor* actor)
 {
-	int walkScale = actor->CalculateSpeed(false);
-	if (walkScale <= 0) return 0;
+	int scale = actor->CalculateSpeed(false);
+	if (!HasRunAnim(actor)) {
+		int run = CombatDirector::RunSpeedFromWalk(actor->CalculateSpeed(false, false));
+		if (run > 0) scale = run;
+	}
+	if (scale <= 0) return 0;
 	int percent = core->GetDictionary().Get("Turn Based Movement Percent", 100);
-	return int(core->Time.round_size * gamedata->GetStepTime() / walkScale) * percent / 100;
+	return int(core->Time.round_size * gamedata->GetStepTime() / scale) * percent / 100;
+}
+
+int CombatDirector::RunSpeedFromWalk(int walkScale)
+{
+	if (walkScale <= 0) return 0;
+	return std::max(1, walkScale / 3);
 }
 
 static bool IsAliveCombatant(const Actor* actor)
@@ -386,6 +454,7 @@ Combatant CombatDirector::MakeCombatant(Actor* actor) const
 	if (state & STATE_SLOWED) initiative += 2;
 	combatant.initiative = initiative;
 
+	PrepareCombatMoveSpeed(actor);
 	ResetBudget(combatant, MovementAllowance(actor));
 	Log(COMBAT, "CombatDirector", "{} rolls initiative {} (d10: {})", fmt::WideToChar { Name(actor) }, initiative, combatant.roll);
 	return combatant;
@@ -575,6 +644,11 @@ void CombatDirector::HandBack(Actor* actor, Combatant* combatant)
 		combatant->clockTime = 0;
 	}
 	actor->SetInternalFlag(IF_COMBAT_OWNED, BitOp::NAND);
+	actor->SetInternalFlag(IF_RUNNING, BitOp::NAND);
+	if (PartyAlwaysRuns(actor)) {
+		actor->SetInternalFlag(IF_RUNNING, BitOp::OR);
+	}
+	actor->SetSpeed(false);
 	actor->ClearPath(true);
 	actor->ResetBackoff();
 	// prone ends with the fight, or SetStance below would keep them lying there
@@ -742,6 +816,7 @@ void CombatDirector::BeginTurn(size_t idx)
 	}
 	for (size_t i = groupStart; i <= groupEnd; ++i) {
 		Actor* member = combatMap->GetActorByGlobalID(order[i].globalID);
+		PrepareCombatMoveSpeed(member);
 		ResetBudget(order[i], member ? MovementAllowance(member) : 0);
 	}
 	ActivateMember(idx);
@@ -1271,6 +1346,7 @@ void CombatDirector::ActStep(Actor* actor, Combatant& combatant)
 	if (combatant.standTicks > 0) {
 		--combatant.standTicks;
 		if (combatant.standTicks == 0) {
+			combatant.prone = false;
 			actor->SetStance(IE_ANI_READY);
 		}
 		return;
@@ -1424,14 +1500,14 @@ void CombatDirector::RequestPath(Actor* actor, const Point& source, const Point&
 		actor->FailCombatPath(destination);
 		return;
 	}
-	Log(COMBAT, "CombatDirector", "{} walks {} of {} units toward {}", fmt::WideToChar { Name(actor) },
-	    std::min(combatant->movePx, PathFinder::PathCost(actor->Pos, path)), PathFinder::PathCost(actor->Pos, path), destination);
 	Path clipped = ClipPath(actor->Pos, path, combatant->movePx);
 	if (!clipped) {
 		wantedMore = true;
 		return;
 	}
 	ApplyMovementFlags(actor, *combatant);
+	Log(COMBAT, "CombatDirector", "{} walks {} of {} units toward {} (speed {})", fmt::WideToChar { Name(actor) },
+	    std::min(combatant->movePx, PathFinder::PathCost(actor->Pos, path)), PathFinder::PathCost(actor->Pos, path), destination, actor->GetSpeed());
 	walkBudget = combatant->movePx;
 	walkCost = PathFinder::PathCost(actor->Pos, clipped);
 	walkEnd = clipped.GetLastStep().point;
@@ -1859,7 +1935,9 @@ void CombatDirector::ReactionStep(Actor* mover)
 		if (!reactor) {
 			// everyone had their go: back to walking, or the turn is over for the dead
 			step = IsAliveCombatant(mover) ? Step::Walk : Step::Over;
-			if (step == Step::Walk) mover->SetStance(IE_ANI_WALK);
+			if (step == Step::Walk) {
+				mover->SetStance((mover->GetInternalFlag() & IF_RUNNING) ? IE_ANI_RUN : IE_ANI_WALK);
+			}
 			return;
 		}
 		Log(COMBAT, "CombatDirector", "{} gets an attack of opportunity on {}", fmt::WideToChar { Name(reactor) }, fmt::WideToChar { Name(mover) });
@@ -2045,9 +2123,10 @@ void CombatDirector::ApplyMovementFlags(Actor* actor, const Combatant& combatant
 	if (!actor) return;
 	if (combatant.withdrawn) {
 		actor->SetInternalFlag(IF_RUNNING, BitOp::NAND);
-	} else if (combatant.ran) {
+	} else if (combatant.ran || !HasRunAnim(actor) || PartyAlwaysRuns(actor)) {
 		actor->SetInternalFlag(IF_RUNNING, BitOp::OR);
 	}
+	actor->SetSpeed(false);
 }
 
 bool CombatDirector::HasFighterClass(const Actor* actor)
@@ -2360,8 +2439,9 @@ bool CombatDirector::ResolveTakedown(Actor* attacker, Actor* target, TakedownKin
 void CombatDirector::KnockProne(Actor* target, Combatant& combatant)
 {
 	combatant.prone = true;
-	target->SetStance(IE_ANI_DIE);
-	Log(COMBAT, "CombatDirector", "{} is knocked prone", fmt::WideToChar { Name(target) });
+	PlayProneAnimation(target, false);
+	Log(COMBAT, "CombatDirector", "{} is knocked prone ({})", fmt::WideToChar { Name(target) },
+	    HasGetUpAnimation(target) ? "get-up reversed" : "death");
 }
 
 void CombatDirector::CloseOnEnemy(Actor* actor, Actor* enemy)
@@ -2375,14 +2455,14 @@ void CombatDirector::CloseOnEnemy(Actor* actor, Actor* enemy)
 
 void CombatDirector::StandUp(Actor* actor, Combatant& combatant)
 {
-	combatant.prone = false;
 	combatant.mainActionUsed = true;
 	combatant.remainingAttacks = 0;
-	actor->SetStance(IE_ANI_EMERGE);
-	int ticks = actor->StanceAnimationTicks(IE_ANI_EMERGE);
-	if (ticks <= 0) ticks = actor->StanceAnimationTicks(IE_ANI_GET_UP);
+	const bool hasGetUp = HasGetUpAnimation(actor);
+	PlayProneAnimation(actor, true);
+	int ticks = actor->StanceAnimationTicks(ProneAnimStance(hasGetUp));
 	combatant.standTicks = unsigned(std::max(6, ticks));
-	Log(COMBAT, "CombatDirector", "{} stands up and loses an action", fmt::WideToChar { Name(actor) });
+	Log(COMBAT, "CombatDirector", "{} stands up ({}) and loses an action", fmt::WideToChar { Name(actor) },
+	    hasGetUp ? "get-up" : "death reversed");
 }
 
 void CombatDirector::ChooseAIManeuvers(Actor* actor, Combatant& combatant)

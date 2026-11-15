@@ -473,8 +473,10 @@ Built, in `gemrb/core/TurnBasedCombat/CombatDirector.*` (TurnManager renamed and
 - **Combat maneuvers:** `Attack of Opportunity!` floats over the reactor. Withdraw (action +
   half movement, AoO immune, walk, dust + `withdraw`); Run (action, remaining += max, smoke +
   `sprint`, AI closes distance); Block (fighters except Morte, spend an attack, no action, vs
-  AC 4 then compare rolls, shield glow / parry sparks); Trip (fighters, first swing -2, no
+  AC 4 then compare rolls, shield glow / parry sparks);   Trip (fighters, first swing -2, no
   damage, save vs death or prone) and Knockdown (enemies THAC0 15-, same without the -2).
+  Prone fall/rise uses the get-up BAM when the creature has one (reversed to fall, forward
+  to stand); otherwise the death fall, reversed to stand.
   Sounds in `sounds/`, copied to `override/pst`.
 - **Reactions and 2e extras (C8):** each a setting, all on in `dev_settings.ini`.
   `Turn Based Opportunity Attacks`: walking out of an enemy's melee reach gives it one swing
@@ -524,8 +526,9 @@ Built, in `gemrb/core/TurnBasedCombat/CombatDirector.*` (TurnManager renamed and
   `Turn Based Save Dice`. The WAV reader now skips LIST and other chunks before `data`.
 - **Fonts:** the new HUD and the bar/timeline labels use FONTDLG; TRMTFONT dropped there.
 - **Floating text:** `Turn Based Floating Text` draws white stay-and-drift numbers and
-  labels just above the head (same map-space as PST overhead text): Miss/Fumble over the
-  attacker, damage / saves / trip results / Blocked over the creature they apply to.
+  labels at the old save-die height (80 map-px above the feet, on the crown; the d20 sits
+  95 map-px up): Miss/Fumble over the attacker, damage / saves / trip results / Blocked
+  over the creature they apply to.
   Everyone who joins a fight shows "Initiative: N". They sit a few seconds, drift a pixel
   or two, stack so a new one doesn't cover the last, then fade. No flying-up PST overhead.
   A trip/knockdown shows only the result, not "Trip!" as it starts. GemRB's attack-roll

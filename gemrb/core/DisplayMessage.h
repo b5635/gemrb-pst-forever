@@ -90,6 +90,8 @@ private:
 public:
 	static ieStrRef GetStringReference(HCStrings idx, const Scriptable* = nullptr);
 	static bool HasStringReference(HCStrings idx);
+	// PST strings.2da flags 1/2: TNO, Morte, Annah, Dak'kon, Grace, Nordom, Ignus, Vhailor, then anyone else
+	static int PstFeedbackOffset(int specific, int flag);
 
 	DisplayMessage();
 	Color GetColor(const GUIColors color) const;
@@ -122,6 +124,8 @@ public:
 	void DisplayString(ieStrRef stridx, const Color& color, STRING_FLAGS flags) const;
 	void DisplayMsgAtLocation(HCStrings strIdx, int type, Scriptable* owner, const Scriptable* trigger = nullptr, GUIColors color = GUIColors::LIGHTGREY) const;
 	void DisplayMsgCentered(HCStrings strIdx, int type, GUIColors color = GUIColors::LIGHTGREY) const;
+	// play the TLK wav for a strings.2da line without floating the text (PST crit barks are developer comments)
+	void PlayAssociatedSound(HCStrings strIdx, const Scriptable* speaker) const;
 	/** iwd2 hidden roll debugger */
 	template<typename... ARGS>
 	void DisplayRollStringName(ieStrRef stridx, GUIColors color, const Scriptable* speaker, ARGS&&... args) const

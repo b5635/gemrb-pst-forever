@@ -1,5 +1,6 @@
 @echo off
 rem Sync VVE_Builder voice lines into C:\Program Files (x86)\Black Isle\Torment (safe to rerun any time).
+rem Default audio search: pst_revoice/audio_fish, then audio_omnivoice, then audio.
 rem   sync_vve_voices.bat              sync
 rem   sync_vve_voices.bat --dry-run    show what would change
 rem   sync_vve_voices.bat --uninstall  remove all synced voices

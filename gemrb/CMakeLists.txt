@@ -209,8 +209,10 @@ IF (BUILD_TESTING)
     tests/core/Test_PathFinder.cpp
     tests/core/Test_SaveGame.cpp
     tests/core/Test_TurnBasedCombat.cpp
+    tests/core/Test_DisplayMessage.cpp
     tests/core/Test_HitMaterial.cpp
     tests/core/Test_InfoPoint.cpp
+    tests/core/Test_OverHeadText.cpp
     tests/core/Test_HiResArt.cpp
     tests/core/Test_AreaSceneData.cpp
     tests/core/Test_FontHiRes.cpp

@@ -17,6 +17,7 @@ struct OverHeadMsg {
 	Point scrollOffset { -1, -1 };
 	Color color = ColorBlack;
 	tick_t timeStartDisplaying = 0;
+	tick_t minDuration = 0;
 	String text;
 
 	bool Draw(int heightOffset, const Point& fallbackPos, int ownerType);
@@ -32,6 +33,8 @@ class GEM_EXPORT OverHeadText {
 	std::vector<OverHeadMsg> messages { 1 };
 
 public:
+	static constexpr tick_t DefaultDurationMs = 6000;
+
 	explicit OverHeadText(const Scriptable* head)
 		: owner(head) {};
 	const String& GetText(size_t idx = 0) const;
@@ -39,6 +42,9 @@ public:
 	bool Empty(size_t idx = 0) const { return messages[idx].text.empty(); }
 	bool IsDisplaying() const { return isDisplaying; }
 	bool Display(bool show, size_t idx = 0);
+	// Keep this showing at least `ms` (the default 6s floor still applies).
+	void SetMinDuration(tick_t ms, size_t idx = 0);
+	static tick_t DurationAtLeast(tick_t voiceMs);
 	void FixPos(const Point& pos, size_t idx = 0);
 	int GetHeightOffset() const;
 	void Draw();

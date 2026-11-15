@@ -605,7 +605,7 @@ private:
 	void UpdateModalState(ieDword gameTime);
 
 	int CalculateSpeedFromRate(bool feedback) const;
-	int CalculateSpeedFromINI(bool feedback) const;
+	int CalculateSpeedFromINI(bool feedback, bool running) const;
 	/* give kill xp if appropriate */
 	bool ProcessKillXP(const Actor* killerActor, bool grantXP);
 
@@ -729,6 +729,7 @@ public:
 	int GetEncumbranceFactor(bool feedback) const;
 	/* calculates speed, encumbrance etc */
 	int CalculateSpeed(bool feedback) const;
+	int CalculateSpeed(bool feedback, bool running) const;
 	int GetSpeed() const { return walkScale; }
 	void SetSpeed(bool feedback) { walkScale = CalculateSpeed(feedback); }
 	/* checks on death of actor, returns true if it should be removed*/
@@ -922,6 +923,8 @@ public:
 	void FreezeStanceAnimation(bool freeze);
 	/** Play the current stance backwards from where it is (a block that held). */
 	void ReverseStanceAnimation();
+	/** Rewind the current stance and play it forward (false) or the whole way backwards (true). */
+	void SetStancePlayback(bool reversed);
 	/** Speed up (or reset) the current stance's playback; 1 is normal. */
 	void SetStanceAnimationSpeed(float multiplier);
 	/** Playback rate of the stance on screen, or the default when it has no animation. */

@@ -4,21 +4,23 @@ Safe to run any time, as often as you like: each run makes the game match what
 VVE_Builder has generated right now.
 
   * Reads <vve>/pst_revoice/plan.csv (strref -> sound resref) and takes the audio from
-    the first audio folder that has it (default: audio_omnivoice, then audio).
-    Info-point examine lines use the same plan rows (Speaker=Narrator, VV<strref>);
-    dump them with tools/vve_infopoints.py.
+    the first audio folder that has it (default: audio_fish, then audio_omnivoice, then audio).
+    Production TTS is Fish Audio Drama 3; OmniVoice is kept as a fallback. Info-point
+    examine lines use the same plan rows (Speaker=Narrator, VV<strref>); dump them with
+    tools/vve_infopoints.py.
   * Copies new/changed WAVs into <game>/override; removes ones it put there earlier
     that are no longer generated.
-  * In Dialog.tlk and dialogF.tlk it changes only the sound resref of each line,
+  * In Dialog.tlk and dialogF.tlk it changes only the sound resref (flag + VV<strref>),
     never the text (keeps Fixpack/UB fixes), and only when the plan's text still
-    matches the installed line. Lines that already have original voice acting keep it.
+    matches the installed line. Empty original sound slots get the new resref; lines
+    that already have original voice acting keep it.
   * "restore" rows of the plan (original voice acting) are applied as-is.
   * First run backs the tlk files up to <game>/vve_voices_backup; --uninstall puts
     everything back.
 
 Usage:
   python tools/sync_vve_voices.py [--dry-run] [--vve D:/VVE_Builder-main] [--game C:/Program Files (x86)/Black Isle/Torment]
-                                  [--audio-dir audio_omnivoice --audio-dir audio]
+                                  [--audio-dir audio_fish --audio-dir audio_omnivoice --audio-dir audio]
   python tools/sync_vve_voices.py --uninstall
 """
 
@@ -35,6 +37,7 @@ import sys
 
 TLKS = ["Dialog.tlk", "dialogF.tlk"]
 STATE_DIR = "vve_voices_backup"
+DEFAULT_AUDIO_DIRS = ["audio_fish", "audio_omnivoice", "audio"]
 HEADER = 18
 ENTRY = 26
 
@@ -161,7 +164,7 @@ def main():
 	ap.add_argument("--vve", default=r"D:\VVE_Builder-main")
 	ap.add_argument("--game", default=r"C:\Program Files (x86)\Black Isle\Torment")
 	ap.add_argument("--audio-dir", action="append",
-	                help="audio folder under <vve>/pst_revoice, in priority order (default: audio_omnivoice, audio)")
+	                help="audio folder under <vve>/pst_revoice, in priority order (default: audio_fish, audio_omnivoice, audio)")
 	ap.add_argument("--min-match", type=float, default=0.75, help="text similarity needed to voice a line")
 	ap.add_argument("--dry-run", action="store_true", help="report what would change, touch nothing")
 	ap.add_argument("--uninstall", action="store_true")
@@ -171,7 +174,7 @@ def main():
 	if args.uninstall:
 		return uninstall(game)
 
-	audio_dirs = [os.path.join(vve_dir(args.vve), d) for d in (args.audio_dir or ["audio_omnivoice", "audio"])]
+	audio_dirs = [os.path.join(vve_dir(args.vve), d) for d in (args.audio_dir or DEFAULT_AUDIO_DIRS)]
 	audio_dirs = [d for d in audio_dirs if os.path.isdir(d)]
 	available = {}
 	for d in reversed(audio_dirs):  # earlier folders win

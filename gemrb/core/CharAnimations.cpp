@@ -1044,8 +1044,12 @@ const CharAnimations::PartAnim* CharAnimations::GetAnimation(unsigned char stanc
 				break;
 			case IE_ANI_EMERGE:
 			case IE_ANI_GET_UP:
-				newanim->playReversed = true;
 				newanim->flags |= Animation::Flags::Once;
+				// BG/IWD reuse the death sequence for get-up, so they play it backwards.
+				// PST has a dedicated gup BAM stored lying-to-standing; play that forward.
+				if (AnimType < IE_ANI_PST_ANIMATION_1) {
+					newanim->playReversed = true;
+				}
 				break;
 		}
 		switch (AnimType) {
@@ -1485,6 +1489,19 @@ void CharAnimations::AddPSTSuffix(ResRef& dest, unsigned char stance,
 			break;
 	}
 	dest.Format("{}{}{}", ResRefBase[0], Prefix, ResRefBase.begin() + 1);
+}
+
+bool CharAnimations::HasGetUpAnimation() const
+{
+	const int type = GetAnimType();
+	if (type != IE_ANI_PST_ANIMATION_1 && type != IE_ANI_PST_ANIMATION_2 && type != IE_ANI_PST_ANIMATION_3) {
+		return false;
+	}
+	if (AvatarsRowNum == ~0u || !ResRefBase[0]) return false;
+	ResRef dest;
+	unsigned char cycle = 0;
+	AddPSTSuffix(dest, IE_ANI_GET_UP, cycle, S);
+	return gamedata->Exists(dest, IE_BAM_CLASS_ID, true);
 }
 
 void CharAnimations::AddVHR2Suffix(ResRef& dest, unsigned char stance,

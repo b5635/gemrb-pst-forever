@@ -10,7 +10,9 @@
 #include "Game.h"
 #include "GameData.h"
 #include "Interface.h"
+#include "Map.h"
 #include "Polygon.h"
+#include "TileMap.h"
 
 #include "GameScript/GameScript.h"
 #include "Scriptable/Actor.h"
@@ -62,13 +64,28 @@ ResRef InfoPoint::ExamineFallbackResRef(ieStrRef strref)
 	return sound;
 }
 
-void InfoPoint::PlayExamineSound() const
+void InfoPoint::DismissOtherExamineText() const
 {
-	if (!core || !core->GetDictionary().Get("InfoPointSounds", 1)) {
+	const Map* map = GetCurrentArea();
+	if (!map || !map->TMap) {
 		return;
 	}
+	for (const auto& other : map->TMap->GetInfoPoints()) {
+		InfoPoint* ip = other.get();
+		if (ip && ip != this && ip->overHead.IsDisplaying()) {
+			ip->overHead.Display(false);
+		}
+	}
+}
+
+tick_t InfoPoint::PlayExamineSound() const
+{
+	if (!core || !core->GetDictionary().Get("InfoPointSounds", 1)) {
+		return 0;
+	}
+	core->GetAudioPlayback().StopSpeech();
 	if (StrRef == ieStrRef::INVALID || !ieDword(StrRef)) {
-		return;
+		return 0;
 	}
 
 	ResRef sound;
@@ -79,15 +96,15 @@ void InfoPoint::PlayExamineSound() const
 	if (sound.IsEmpty()) {
 		sound = ExamineFallbackResRef(StrRef);
 		if (sound.IsEmpty() || !gamedata) {
-			return;
+			return 0;
 		}
 		if (!gamedata->Exists(sound, IE_WAV_CLASS_ID, true) && !gamedata->Exists(sound, IE_OGG_CLASS_ID, true)) {
-			return;
+			return 0;
 		}
 	}
 
 	auto config = core->GetAudioSettings().ConfigPresetDialog(SFXChannel::Dialog);
-	core->GetAudioPlayback().PlaySpeech(sound, config, true);
+	return static_cast<tick_t>(core->GetAudioPlayback().PlaySpeech(sound, config, true));
 }
 
 ieDword InfoPoint::GetUsePoint() const

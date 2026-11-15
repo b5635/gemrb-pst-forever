@@ -671,9 +671,14 @@ void CombatHud::NotifyFloater(ieDword actor, String text)
 	floaters.push_back({ actor, std::move(text), now, stack, std::cos(ang) * spd, std::sin(ang) * spd });
 }
 
-static Point HeadAnchor(const Actor* actor, const Region& vp)
+// Same lift as the original save die / "Save failed" label: 95 map-px above the
+// feet for the die, and the text a bit below that so it sits on the crown.
+static constexpr int DIE_LIFT = 95;
+static constexpr int TEXT_LIFT = 80;
+
+static Point Lifted(const Actor* actor, const Region& vp, int lift)
 {
-	return actor->Pos - Point(0, actor->overHead.GetHeightOffset()) - vp.origin;
+	return actor->Pos - Point(0, lift) - vp.origin;
 }
 
 static void WithDrawOffset(const Actor* actor, const std::function<void()>& draw)
@@ -744,7 +749,7 @@ void CombatHud::DrawWorldOverlays()
 			core->GetAudioPlayback().Play(StringView(s.success ? "tbsaveok" : "tbsavefl"), AudioPreset::Spatial, SFXChannel::Actions, actor->Pos);
 		}
 		float alpha = t > SAVE_SHOWN - 300 ? float(SAVE_SHOWN - t) / 300.0f : 1.0f;
-		const Point head = HeadAnchor(actor, vp) + Point(0, 8);
+		const Point head = Lifted(actor, vp, DIE_LIFT);
 		const bool landed = t >= SAVE_SPIN;
 		const float settle = Clamp(float(t) / float(SAVE_SPIN), 0.0f, 1.0f);
 		const Color outcome = s.success ? Theme::hit : Theme::miss;
@@ -774,7 +779,7 @@ void CombatHud::DrawWorldOverlays()
 		}
 		const float alpha = t > FLOATER_SHOWN - FLOATER_FADE ? float(FLOATER_SHOWN - t) / float(FLOATER_FADE) : 1.0f;
 		const float sec = float(t) / 1000.0f;
-		const Point head = HeadAnchor(actor, vp);
+		const Point head = Lifted(actor, vp, TEXT_LIFT);
 		const Point at(head.x + int(f.vx * sec), head.y - f.stack * (line + FLOATER_GAP) + int(f.vy * sec));
 		const Size size = font->StringSize(f.text);
 		const int w = std::max(24, size.w + 8);

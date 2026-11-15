@@ -962,6 +962,7 @@ void GameControl::DrawTurnPreview() const
 	static const Color shadeColor(0, 0, 0, 64);
 	static const Color inReach(90, 230, 90, 230);
 	static const Color outOfReach(230, 60, 60, 230);
+	static const Color overBudget(168, 168, 168, 230);
 	static const Color pendingColor(250, 220, 80, 255);
 	const Point& origin = viewport.origin;
 	constexpr int TW = SEARCHMAP_TILE_WIDTH;
@@ -1014,7 +1015,7 @@ void GameControl::DrawTurnPreview() const
 
 	const int budget = preview.budget;
 	if (preview.path) {
-		// the path as a line: green as far as we can afford it, red beyond
+		// the path as a line: green as far as we can afford it this turn, gray beyond
 		const Point stop = PathFinder::PointAlongPath(actor->Pos, preview.path, budget);
 		std::vector<Point> affordable { actor->Pos - origin };
 		std::vector<Point> beyond;
@@ -1045,11 +1046,10 @@ void GameControl::DrawTurnPreview() const
 			}
 		};
 		thickLine(affordable, inReach);
-		thickLine(beyond, outOfReach);
+		thickLine(beyond, overBudget);
 
-		// exactly where the actor would stop
-		const bool getsThere = !preview.path.partial && preview.pathCost <= budget;
-		const Color& stopColor = preview.pending ? pendingColor : (getsThere ? inReach : outOfReach);
+		// where this turn's walk actually stops (always a legal move)
+		const Color& stopColor = preview.pending ? pendingColor : inReach;
 		DrawTargetReticle(actor->CircleSize2Radius(), stopColor, stop - origin);
 		if (preview.path.partial && !preview.attackPreview) {
 			// and where it was asked to go, which it can't reach
@@ -3670,7 +3670,12 @@ void GameControl::SetCutSceneMode(bool active)
 //Multiple texts are possible, as this code copies the text to a new object
 void GameControl::DisplayString(Scriptable* target) const
 {
-	if (!target || target->overHead.Empty() || target->overHead.IsDisplaying()) {
+	if (!target || target->overHead.Empty()) {
+		return;
+	}
+
+	InfoPoint* ip = Scriptable::As<InfoPoint>(target);
+	if (!ip && target->overHead.IsDisplaying()) {
 		return;
 	}
 
@@ -3679,9 +3684,12 @@ void GameControl::DisplayString(Scriptable* target) const
 	if (lookup) {
 		displaymsg->DisplayString(target->overHead.GetText());
 	}
+	if (ip) {
+		ip->DismissOtherExamineText();
+	}
 	target->overHead.Display(true, 0);
-	if (InfoPoint* ip = Scriptable::As<InfoPoint>(target)) {
-		ip->PlayExamineSound();
+	if (ip) {
+		target->overHead.SetMinDuration(ip->PlayExamineSound());
 	}
 }
 

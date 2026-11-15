@@ -246,6 +246,14 @@ public:
 	static int TakedownPenalty(TakedownKind kind);
 	/** "Trip: Success" / "Knockdown: Failure" — the only floater a takedown shows. */
 	static String TakedownResultText(TakedownKind kind, bool success);
+	/** Fall/rise stance: get-up BAM if the creature has one, otherwise death. */
+	static unsigned char ProneAnimStance(bool hasGetUp);
+	/** Get-up reversed looks like a fall; death plays forward. */
+	static bool ProneFallReversed(bool hasGetUp);
+	/** Get-up plays forward to stand; death reversed stands them up. */
+	static bool ProneRiseReversed(bool hasGetUp);
+	/** Inverted scale (smaller is faster). PST run is typically ~3x walk when resdata omitted runscale. */
+	static int RunSpeedFromWalk(int walkScale);
 
 	// hooks from GemRB's actions, for owned actors
 	/** AttackCore has the target in reach: run (or refuse) a round of swings. */
@@ -408,6 +416,8 @@ private:
 	void FinishBlockAnimation(const Actor* attacker, Actor* target, bool blocked);
 	void KnockProne(Actor* target, Combatant& combatant);
 	void StandUp(Actor* actor, Combatant& combatant);
+	void PlayProneAnimation(Actor* actor, bool rising);
+	static bool HasGetUpAnimation(const Actor* actor);
 	bool ResolveTakedown(Actor* attacker, Actor* target, TakedownKind kind);
 	static bool HasFighterClass(const Actor* actor);
 	static bool IsMorte(const Actor* actor);

@@ -8,6 +8,7 @@
 #include "SearchMapBuilder.h"
 
 #include "../../core/PathFinder.h"
+#include "../../core/CharAnimations.h"
 #include "../../core/TurnBasedCombat/CombatDirector.h"
 
 #include "ie_stats.h"
@@ -140,6 +141,17 @@ TEST(CombatDirectorTest, RunAddsMaxMovementWithoutRaisingTheCap)
 	EXPECT_EQ(combatant.maxMovePx, 31);
 }
 
+TEST(CombatDirectorTest, MissingRunAnimStillUsesTypicalRunSpeed)
+{
+	EXPECT_EQ(CombatDirector::RunSpeedFromWalk(0), 0);
+	EXPECT_EQ(CombatDirector::RunSpeedFromWalk(-10), 0);
+	// inverted scales: walkscale 5 stores 200, typical runscale 15 stores 66
+	EXPECT_EQ(CombatDirector::RunSpeedFromWalk(200), 66);
+	EXPECT_EQ(CombatDirector::RunSpeedFromWalk(1), 1);
+	// zombie walkscale 2.4 stores 416; 3x is still a run, not a walk
+	EXPECT_LT(CombatDirector::RunSpeedFromWalk(416), 416);
+}
+
 TEST(CombatDirectorTest, WithdrawHalvesRemainingMovement)
 {
 	Combatant combatant = MakeCombatant(1, 1, 10, true);
@@ -178,6 +190,17 @@ TEST(CombatDirectorTest, TakedownResultTextNamesTheManeuverAndTheOutcome)
 	EXPECT_EQ(CombatDirector::TakedownResultText(TakedownKind::Trip, false), u"Trip: Failure");
 	EXPECT_EQ(CombatDirector::TakedownResultText(TakedownKind::Knockdown, true), u"Knockdown: Success");
 	EXPECT_EQ(CombatDirector::TakedownResultText(TakedownKind::Knockdown, false), u"Knockdown: Failure");
+}
+
+TEST(CombatDirectorTest, ProneUsesGetUpWhenPresentOtherwiseDeath)
+{
+	EXPECT_EQ(CombatDirector::ProneAnimStance(true), IE_ANI_GET_UP);
+	EXPECT_TRUE(CombatDirector::ProneFallReversed(true));
+	EXPECT_FALSE(CombatDirector::ProneRiseReversed(true));
+
+	EXPECT_EQ(CombatDirector::ProneAnimStance(false), IE_ANI_DIE);
+	EXPECT_FALSE(CombatDirector::ProneFallReversed(false));
+	EXPECT_TRUE(CombatDirector::ProneRiseReversed(false));
 }
 
 TEST(TurnMovementTest, CostIsTheSameAcrossAndDown)

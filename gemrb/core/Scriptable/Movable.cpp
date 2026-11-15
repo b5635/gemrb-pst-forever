@@ -55,11 +55,12 @@ void Movable::SetStance(unsigned int arg)
 			Log(WARNING, "Movable", "Stance overridden by death");
 			return;
 		}
-		Actor* proneActor = Scriptable::As<Actor>(this);
-		if (proneActor && core->GetGame() && core->GetGame()->combat.IsProne(proneActor) &&
-		    arg != IE_ANI_DIE && arg != IE_ANI_EMERGE && arg != IE_ANI_GET_UP) {
-			return;
-		}
+	}
+
+	Actor* proneActor = Scriptable::As<Actor>(this);
+	if (proneActor && core->GetGame() && core->GetGame()->combat.IsProne(proneActor) &&
+	    arg != IE_ANI_DIE && arg != IE_ANI_TWITCH && arg != IE_ANI_EMERGE && arg != IE_ANI_GET_UP) {
+		return;
 	}
 
 	if (arg >= MAX_ANIMS) {

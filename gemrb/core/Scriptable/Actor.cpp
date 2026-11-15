@@ -2439,6 +2439,7 @@ void Actor::PlayCritDamageAnimation(int type)
 	TableMgr::index_t row = tm->FindTableValue(1, type);
 	if (row != TableMgr::npos) {
 		//the animations are listed in column 0
+		Log(COMBAT, "Actor", "personal crit animation {}", tm->QueryField(row, 0));
 		AddAnimation(tm->QueryField(row, 0), -1, 45, AA_PLAYONCE | AA_BLEND);
 	}
 }
@@ -2446,6 +2447,18 @@ void Actor::PlayCritDamageAnimation(int type)
 void Actor::PlayDamageAnimation(int type, bool hit)
 {
 	if (!anims) return;
+
+	// PST personal criticals: high byte is the crits.2da ID (must run before the 19-slot tables)
+	if ((type & 255) == DL_CRITICAL && (type & 0xff00)) {
+		PlayCritDamageAnimation(type >> 8);
+		return;
+	}
+
+	type &= 255;
+	if (type >= DAMAGE_LEVELS) {
+		Log(ERROR, "Actor", "Unknown damage animation type: {}!", type);
+		return;
+	}
 
 	int flags = AA_PLAYONCE;
 	int height = 22;
@@ -2460,20 +2473,15 @@ void Actor::PlayDamageAnimation(int type, bool hit)
 	const Effect* fx;
 	int sparkType = 0;
 	int gradientType = damageGradients[type];
-	switch (type & 255) {
+	switch (type) {
 		case 0:
-			//PST specific personal criticals
-			if (type & 0xff00) {
-				PlayCritDamageAnimation(type >> 8);
-				break;
-			}
-			//fall through
+			//fall through to blood (BLOODCR)
 		case 1:
 		case 2:
 		case 3: //blood
 			// our material effects (blood, sparks, bone dust, ...) replace the blood animations
 			if (ScenePolish::CustomBlood()) {
-				if (hit) ScenePolish::Get().OnPhysicalHit(this, type & 255);
+				if (hit) ScenePolish::Get().OnPhysicalHit(this, type);
 				return;
 			}
 			gradientType = anims->GetBloodColor();
@@ -4651,7 +4659,9 @@ int Actor::Damage(int damage, int damagetype, Scriptable* hitter, int modtype, i
 	} else if (damagetype & (DAMAGE_MAGIC | DAMAGE_DISINTEGRATE)) {
 		PlayDamageAnimation(DL_DISINTEGRATE + damagelevel);
 	} else {
-		if (chp < -10) {
+		// PST personal crit BAMs (ch01nuke, critanna, ...) live in the high byte.
+		// Original GemRB only played them on overkill (HP < -10); they belong on the critical hit.
+		if (chp < -10 || (pstflags && critical)) {
 			PlayDamageAnimation(critical << 8);
 		} else {
 			PlayDamageAnimation(DL_BLOOD + damagelevel);
@@ -5427,11 +5437,15 @@ int Actor::GetEncumbranceFactor(bool feedback) const
 
 int Actor::CalculateSpeed(bool feedback) const
 {
+	return CalculateSpeed(feedback, bool(GetInternalFlag() & IF_RUNNING));
+}
+
+int Actor::CalculateSpeed(bool feedback, bool running) const
+{
 	if (core->HasFeature(GFFlags::RESDATA_INI)) {
-		return CalculateSpeedFromINI(feedback);
-	} else {
-		return CalculateSpeedFromRate(feedback);
+		return CalculateSpeedFromINI(feedback, running);
 	}
+	return CalculateSpeedFromRate(feedback);
 }
 
 // NOTE: for ini-based speed users this will only update their encumbrance, speed will be 0
@@ -5451,7 +5465,7 @@ int Actor::CalculateSpeedFromRate(bool feedback) const
 	}
 }
 
-int Actor::CalculateSpeedFromINI(bool feedback) const
+int Actor::CalculateSpeedFromINI(bool feedback, bool running) const
 {
 	int encumbranceFactor = GetEncumbranceFactor(feedback);
 	ieDword animid = BaseStats[IE_ANIMATION_ID];
@@ -5461,8 +5475,11 @@ int Actor::CalculateSpeedFromINI(bool feedback) const
 	assert(animid < (ieDword) CharAnimations::GetAvatarsCount());
 	const AvatarStruct& avatar = CharAnimations::GetAvatarStruct(animid);
 	int newSpeed = 0;
-	if (avatar.RunScale && (GetInternalFlag() & IF_RUNNING)) {
+	if (running && avatar.RunScale) {
 		newSpeed = avatar.RunScale;
+	} else if (running && (GetInternalFlag() & IF_COMBAT_OWNED) && avatar.WalkScale) {
+		// no run animation: still cover the ground at a typical run, walking frames
+		newSpeed = CombatDirector::RunSpeedFromWalk(int(avatar.WalkScale));
 	} else if (avatar.WalkScale) {
 		newSpeed = avatar.WalkScale;
 	} else {
@@ -7615,6 +7632,25 @@ void Actor::ReverseStanceAnimation()
 	apply(currentStance.shadow);
 }
 
+void Actor::SetStancePlayback(bool reversed)
+{
+	if (!anims) return;
+	const unsigned char stance = GetStance();
+	const orient_t face = GetNextFace();
+	auto apply = [reversed](const CharAnimations::PartAnim* parts) {
+		if (!parts) return;
+		for (const auto& part : *parts) {
+			if (!part) continue;
+			part->frozen = false;
+			part->playReversed = reversed;
+			part->endReached = false;
+			part->SetFrame(0);
+		}
+	};
+	apply(anims->GetAnimation(stance, face));
+	apply(anims->GetShadowAnimation(stance, face));
+}
+
 void Actor::SetStanceAnimationSpeed(float multiplier)
 {
 	if (multiplier <= 0.0f) multiplier = 1.0f;
@@ -7952,9 +7988,14 @@ void Actor::PerformAttack(ieDword gameTime, bool turnBased)
 		buffer.append("[Critical Miss]");
 		Log(COMBAT, "Attack", "{}", buffer);
 		if (!gc->InDialog()) {
-			// turn based: the combat HUD's dice panel already calls out the critical miss
-			if (!turnBased) displaymsg->DisplayMsgAtLocation(HCStrings::CriticalMiss, FT_COMBAT, this, this, GUIColors::WHITE);
-			VerbalConstant(Verbal::CritMiss);
+			if (pstflags) {
+				// strings.2da CRITICAL_MISS: each companion has a voiced line; the TLK text is a comment
+				displaymsg->PlayAssociatedSound(HCStrings::CriticalMiss, this);
+			} else {
+				// turn based: the combat HUD's dice panel already calls out the critical miss
+				if (!turnBased) displaymsg->DisplayMsgAtLocation(HCStrings::CriticalMiss, FT_COMBAT, this, this, GUIColors::WHITE);
+				VerbalConstant(Verbal::CritMiss);
+			}
 		}
 		ApplyCriticalEffect(this, target, wi, false);
 		if (wi.wflags & WEAPON_RANGED) { // no need for this with melee weapons!
@@ -7996,8 +8037,12 @@ void Actor::PerformAttack(ieDword gameTime, bool turnBased)
 		buffer.append("[Critical Hit]");
 		Log(COMBAT, "Attack", "{}", buffer);
 		if (!gc->InDialog()) {
-			displaymsg->DisplayMsgAtLocation(HCStrings::CriticalHit, FT_COMBAT, this, this, GUIColors::WHITE);
-			VerbalConstant(Verbal::CritHit, gamedata->GetVBData("SPECIAL_COUNT"));
+			if (pstflags) {
+				displaymsg->PlayAssociatedSound(HCStrings::CriticalHit, this);
+			} else {
+				displaymsg->DisplayMsgAtLocation(HCStrings::CriticalHit, FT_COMBAT, this, this, GUIColors::WHITE);
+				VerbalConstant(Verbal::CritHit, gamedata->GetVBData("SPECIAL_COUNT"));
+			}
 		}
 		ApplyCriticalEffect(this, target, wi, true);
 	} else {
@@ -9223,7 +9268,9 @@ void Actor::DrawPolishShadows(const Region& vp, BlitFlags flags, float ox, float
 	std::vector<ScenePolish::ShadowPart> parts;
 	int stance = GetStance();
 	// lying down: the sprite isn't standing, a cast silhouette would be wrong
-	if (stance != IE_ANI_DIE && stance != IE_ANI_TWITCH && stance != IE_ANI_SLEEP) {
+	const Game* game = core->GetGame();
+	const bool prone = game && game->combat.IsProne(this);
+	if (stance != IE_ANI_DIE && stance != IE_ANI_TWITCH && stance != IE_ANI_SLEEP && !prone) {
 		for (const auto& part : currentStance.anim) {
 			if (part.first) parts.push_back({ part.first->CurrentFrame(), part.second, drawPos });
 		}
@@ -9241,6 +9288,10 @@ bool Actor::HandleActorStance()
 	int stanceID = GetStance();
 
 	if (ca->autoSwitchOnEnd) {
+		// trip/knockdown holds the last frame of the fall until StandUp
+		if (core->GetGame() && core->GetGame()->combat.IsProne(this)) {
+			return false;
+		}
 		SetStance(ca->nextStanceID);
 		ca->autoSwitchOnEnd = false;
 		return true;
@@ -10279,7 +10330,7 @@ bool Actor::UseItem(ieDword slot, int header, const Scriptable* target, ieDword 
 		AttackEffect->CasterID = GetGlobalID();
 		AttackEffect->VariableName = scriptName;
 		if (pstflags) {
-			AttackEffect->IsVariable = GetCriticalType();
+			AttackEffect->IsVariable = (flags & UI_CRITICAL) ? GetCriticalType() : 0;
 		} else {
 			AttackEffect->IsVariable = flags & UI_CRITICAL;
 		}
