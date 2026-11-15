@@ -43,7 +43,8 @@ enum class TBAction : uint8_t {
 	UseItem,
 	Equip, // anything but the free quick weapon swap
 	Run, // forfeits the main action; remaining movement += max movement
-	Withdraw // forfeits the main action and half remaining movement; immune to attacks of opportunity
+	Withdraw, // forfeits the main action and half remaining movement; immune to attacks of opportunity
+	Block // forfeits the main action; remaining attacks become block stacks
 };
 
 /** First-swing takedown: trip (fighters, -2) and knockdown (enemies, no penalty). */
@@ -69,7 +70,7 @@ struct GEM_EXPORT Combatant {
 	int maxMovePx = 0;
 	// attacks this round (shared with Block); allocated at round start
 	int remainingAttacks = 0;
-	int blockStacks = 0; // incoming melee attacks to attempt to block, until next turn
+	int blockStacks = 0; // incoming melee hits to attempt to block, until next turn
 	TakedownKind takedown = TakedownKind::None; // first swing of the next attack round
 	int toHitMod = 0; // applied to the current swing (trip -2)
 	bool prone = false; // knocked down until the start of its next turn
@@ -223,7 +224,7 @@ public:
 	bool UseRun(Actor* actor);
 	/** Player and companions only. The AI never withdraws. */
 	bool UseWithdraw(Actor* actor);
-	bool UseBlock(Actor* actor); // no action; spends one remaining attack
+	bool UseBlock(Actor* actor); // spends the action; remaining attacks become block stacks
 	bool UseTrip(Actor* actor); // first swing of the next attack round
 	bool UseKnockdown(Actor* actor);
 	bool CancelPendingTrip(Actor* actor); // trip armed but its target pick was dropped

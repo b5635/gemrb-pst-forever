@@ -453,9 +453,9 @@ def BuildBar (Window, lay):
 		"Delay", "Delay: act after everyone else this round. Only before moving or acting.", BarDelay)
 	mx = lay['maneuvers']
 	MakeTextButton (Window, CID_WITHDRAW, {'x' : mx, 'y' : ROWS_Y, 'w' : MANEUVER_W, 'h' : SLOT},
-		"Withdraw", "Withdraw: spend your action and half your remaining movement. Immune to attacks of opportunity until your next turn; you walk.", BarWithdraw)
+		"Withdraw", "Withdraw: spend your action and half your remaining movement. Immune to attacks of opportunity until your next turn; you walk. Needs movement left.", BarWithdraw)
 	MakeTextButton (Window, CID_BLOCK, {'x' : mx + MANEUVER_W, 'y' : ROWS_Y, 'w' : MANEUVER_W, 'h' : SLOT},
-		"Block", "Block: click once per incoming hit you want to stop. Each click spends one remaining attack. Fighters only (not Morte). No action.", BarBlock)
+		"Block", "Block: spend your action. All remaining attacks become blocks. Fighters only (not Morte).", BarBlock)
 	MakeTextButton (Window, CID_TRIP, {'x' : mx, 'y' : ROWS_Y + SLOT_STEP, 'w' : MANEUVER_W * 2, 'h' : SLOT},
 		"Trip", "Trip: click a target. First attack tries to knock them prone (-2 to hit, no damage); remaining attacks are normal. Fighters only.", BarTrip)
 	MakeTextButton (Window, CID_END, {'x' : lay['end'], 'y' : ROWS_Y, 'w' : END_W, 'h' : ROWS_H},
@@ -676,7 +676,7 @@ def UpdateCombatBar ():
 	stacks = budget.get ('BlockStacks', 0)
 	Block = Window.GetControl (CID_BLOCK)
 	Block.SetText ("Block {}".format (stacks) if stacks else "Block")
-	Block.SetTooltip ("Block: click once per incoming hit ({} ready). Each click spends one remaining attack.".format (stacks) if stacks else "Block: click once per incoming hit you want to stop. Each click spends one remaining attack. Fighters only (not Morte).")
+	Block.SetTooltip ("Block: {} incoming hits ready. Spent your action and remaining attacks.".format (stacks) if stacks else "Block: spend your action. All remaining attacks become blocks. Fighters only (not Morte).")
 	SetSlotState (Block, fight and budget.get ('CanBlock') and not busy, False)
 	tripOn = budget.get ('Takedown') == 'Trip' or SelectedMode == "trip"
 	SetSlotState (Window.GetControl (CID_TRIP), fight and budget.get ('CanTrip') and not busy, tripOn)
@@ -719,6 +719,8 @@ def UpdateCombatBar ():
 		actionText = "Withdrawn"
 	elif budget['Ran']:
 		actionText = "Running"
+	elif budget.get ('BlockStacks', 0):
+		actionText = "Blocking"
 	elif used:
 		actionText = "Action used"
 	else:
@@ -834,7 +836,7 @@ def BarWithdraw ():
 
 def BarBlock ():
 	if GemRB.TurnBasedBlock ():
-		UpdateCombatBar ()
+		BarCancel ()
 
 def BarTrip ():
 	"""Pick a target: the first attack on it trips, the rest of the round's attacks follow."""

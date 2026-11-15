@@ -40,6 +40,59 @@ def atomic_write_json(path: Path, payload: dict) -> None:
     atomic_write_bytes(path, raw)
 
 
+def output_path(out: Path, category: str, ext: str, name: str) -> Path:
+    """Where the pipeline writes this resource. A BAM/TIS is a folder of PNGs."""
+    name = name.upper()
+    ext = ext.lower()
+    if ext == "tis":
+        return out / "areas" / name
+    if ext == "mos":
+        return out / "gui" / "mos" / f"{name}.png"
+    if ext == "bmp":
+        return out / "gui" / "bmp" / f"{name}.png"
+    bucket = "gui" if category == "gui" else "sprites"
+    return out / bucket / "bam" / name
+
+
+def png_stats(path: Path) -> tuple[int, int]:
+    """How many PNG files sit at this output path, and their total bytes."""
+    if path.suffix.lower() == ".png":
+        if not path.is_file():
+            return 0, 0
+        try:
+            return 1, path.stat().st_size
+        except OSError:
+            return 1, 0
+    if not path.is_dir():
+        return 0, 0
+    count = 0
+    size = 0
+    try:
+        with os.scandir(path) as entries:
+            for entry in entries:
+                if not entry.is_file() or not entry.name.lower().endswith(".png"):
+                    continue
+                count += 1
+                try:
+                    size += entry.stat().st_size
+                except OSError:
+                    pass
+    except OSError:
+        return 0, 0
+    return count, size
+
+
+def outputs_complete(on_disk: int, expected) -> bool:
+    """True when the finished PNG count is at least what the last run wrote."""
+    try:
+        want = int(expected or 0)
+    except (TypeError, ValueError):
+        want = 0
+    if want <= 0:
+        return True
+    return on_disk >= want
+
+
 class State:
     def __init__(self, path: Path):
         self.path = path

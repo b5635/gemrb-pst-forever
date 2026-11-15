@@ -93,16 +93,21 @@ change, and put each new toggle's "on" line in `tools/dev_settings.ini`.
 
 ## 3. Phase B: the pipeline
 
-### CLI
+### How to run
+
+Double-click `tools/upscale/Upscale.bat`. That window is the thing to use: leftover vs
+done vs stale, a green box for the next click, and buttons to continue, redo stale, or
+regenerate a category. `run_upscale.bat` with no arguments opens the same window. With
+arguments it still runs the CLI.
 
 ```
 python tools/upscale/upscale.py --categories gui,areas [--scale 2] [--limit N]
-       [--only RESREF[,RESREF]] [--force] [--dry-run] [--game "C:\...\Torment"]
+       [--only RESREF[,RESREF]] [--force] [--mode continue|stale|force]
+       [--status] [--hash-stale] [--dry-run] [--game "C:\...\Torment"]
        [--out "D:\Games\GemRB\upscaled"] [--tile 512] [--fp16]
 ```
 
-`run_upscale.bat` activates the venv and runs it with the defaults for this machine. It runs
-fine in the background, and running it again continues where it stopped.
+The pipeline is safe to stop and start again. Finished files are skipped.
 
 ### Output layout (the engine depends on this exactly)
 
@@ -304,9 +309,9 @@ Already covered by the hooks above. To turn it on:
 
 ## 9. Progress
 
-- [ ] A: environment + model choice
-- [ ] B: pipeline (index, classify, extract, upscale, resume)
+- [x] A: environment + model choice
+- [x] B: pipeline (index, classify, extract, upscale, resume)
 - [x] C: engine (Sprite2D twin, HiResArt, hooks, GLVideo, toggles, unit test)
-- [ ] D: run gui + areas
+- [x] D: run gui + areas (open `tools/upscale/Upscale.bat` to continue sprites)
 - [ ] E: in-game check
-- [ ] Sprites (later)
+- [ ] Sprites (13 TNO body BAMs done; the rest is leftover)

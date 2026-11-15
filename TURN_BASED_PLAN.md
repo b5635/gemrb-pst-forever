@@ -471,9 +471,10 @@ Built, in `gemrb/core/TurnBasedCombat/CombatDirector.*` (TurnManager renamed and
   pst-forever's 537 creature scripts). Unmapped list is empty after mapping `RunningAttack`
   (an attack through `AttackCore`, 203 uses) and short animation/facing actions.
 - **Combat maneuvers:** `Attack of Opportunity!` floats over the reactor. Withdraw (action +
-  half movement, AoO immune, walk, dust + `withdraw`); Run (action, remaining += max, smoke +
-  `sprint`, AI closes distance); Block (fighters except Morte, spend an attack, no action, vs
-  AC 4 then compare rolls, shield glow / parry sparks);   Trip (fighters, first swing -2, no
+  half remaining movement, refused at 0 movement, AoO immune, walk, dust + `withdraw`); Run
+  (action, remaining += max, smoke + `sprint`, AI closes distance); Block (fighters except
+  Morte, spends the action, remaining attacks become block stacks, vs AC 4 then compare
+  rolls, shield glow / parry sparks); Trip (fighters, first swing -2, no
   damage, save vs death or prone) and Knockdown (enemies THAC0 15-, same without the -2).
   Prone fall/rise uses the get-up BAM when the creature has one (reversed to fall, forward
   to stand); otherwise the death fall, reversed to stand.

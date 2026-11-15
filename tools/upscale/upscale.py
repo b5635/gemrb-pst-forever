@@ -1,13 +1,15 @@
 """Offline upscale of Planescape: Torment art into D:\\Games\\GemRB\\upscaled.
 
     python upscale.py --categories gui,areas [--scale 2] [--limit N]
-        [--only RESREF[,RESREF]] [--force] [--dry-run]
+        [--only RESREF[,RESREF]] [--force] [--mode continue|stale|force]
+        [--dry-run] [--status] [--hash-stale]
         [--game "C:\\Program Files (x86)\\Black Isle\\Torment"]
         [--out "D:\\Games\\GemRB\\upscaled"] [--tile 512] [--fp16]
         [--model-areas PATH] [--model-gui PATH] [--model-sprites PATH]
         [--compare]
 
-Dry-run only classifies. It does not import PyTorch. Models are never downloaded.
+The friendly window is tools/upscale/Upscale.bat (gui.py). Dry-run only
+classifies. It does not import PyTorch. Models are never downloaded.
 """
 
 from __future__ import annotations
@@ -21,7 +23,16 @@ from pathlib import Path
 
 import ie_formats
 from classify import classify
-from state import State, atomic_write_bytes, atomic_write_json, cleanup_tmp, sha1
+from state import (
+    State,
+    atomic_write_bytes,
+    atomic_write_json,
+    cleanup_tmp,
+    output_path,
+    outputs_complete,
+    png_stats,
+    sha1,
+)
 
 # numpy, Pillow and extract are imported by _need() so --dry-run stays stdlib-only.
 np = None
@@ -482,13 +493,19 @@ def _run_category(args, index, report, category: str, model: Path, state: State)
     current = 0
     failed = 0
     ran = 0
+    use_tqdm = False
     try:
-        from tqdm import tqdm
+        if sys.stderr.isatty():
+            from tqdm import tqdm
 
-        progress = tqdm(rows, desc=category, unit="res")
+            progress = tqdm(rows, desc=category, unit="res")
+            use_tqdm = True
+        else:
+            progress = rows
     except Exception:
         progress = rows
-    for row in progress:
+    total = len(rows)
+    for index_no, row in enumerate(progress, 1):
         name = row["name"]
         ext = row["ext"]
         key = f"{category}:{ext}:{name}"
@@ -499,9 +516,26 @@ def _run_category(args, index, report, category: str, model: Path, state: State)
                 # which tiles share an edge lives in the WED, so it belongs in the source hash
                 extra = _wed_fingerprint(wed.get(name, []), name)
             digest = sha1(data + extra)
-            if not args.force and not state.fresh(key, digest, model.name, args.scale, used_fp16):
+            prev = state.items.get(key)
+            on_disk, _nbytes = png_stats(output_path(args.out, category, ext, name))
+            current_ok = (
+                prev is not None
+                and not state.fresh(key, digest, model.name, args.scale, used_fp16)
+                and outputs_complete(on_disk, prev.get("outputs"))
+            )
+            mode = getattr(args, "mode", "continue")
+            if mode == "force":
+                current_ok = False
+            if mode == "stale":
+                # leftover (never in the log) is not stale; Continue picks those up
+                if not (prev is not None and not current_ok):
+                    current += 1
+                    continue
+            elif current_ok:
                 current += 1
                 continue
+            if not use_tqdm:
+                print(f"{category} {index_no}/{total} {name}.{ext}", flush=True)
             if ext == "bam":
                 count = _process_bam(data, category, name, args.out, upscaler, font=row.get("reason") == "font")
             elif ext == "tis":
@@ -527,8 +561,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--only", default="")
     parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--mode",
+        choices=("continue", "stale", "force"),
+        default="continue",
+        help="continue = leftover+stale+incomplete; stale = redo outdated; force = everything",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--compare", action="store_true")
+    parser.add_argument("--status", action="store_true", help="print leftover/stale counts and exit")
+    parser.add_argument("--hash-stale", action="store_true", help="with --status, hash originals")
+    parser.add_argument("--from-game", action="store_true", help="with --status, reclassify from CHITIN.KEY")
     parser.add_argument("--game", default=str(DEFAULT_GAME))
     parser.add_argument("--out", default=str(DEFAULT_OUT))
     parser.add_argument("--tile", type=int, default=512)
@@ -541,9 +584,27 @@ def main(argv: list[str] | None = None) -> int:
     args.only = {part.strip().upper() for part in args.only.split(",") if part.strip()}
     args.game = Path(args.game)
     args.out = Path(args.out)
+    if args.force:
+        args.mode = "force"
     unknown = [name for name in args.categories if name not in CANDIDATES]
     if unknown or args.scale < 2:
         parser.error("categories are gui, areas, sprites and --scale must be >= 2")
+    if args.status:
+        import status as up_status
+
+        report = up_status.scan(
+            out=args.out,
+            game=args.game,
+            scale=args.scale,
+            # match Upscale.bat / run_upscale.bat (fp16 on)
+            fp16=True,
+            hash_sources=args.hash_stale,
+            reclassify=args.from_game,
+            progress=lambda msg: print(msg, flush=True),
+        )
+        up_status.write_name_lists(report)
+        print(up_status.format_report(report), end="")
+        return 0
     if not (args.game / "CHITIN.KEY").is_file() and not (args.game / "chitin.key").is_file():
         print(f"Game not found (no CHITIN.KEY) at {args.game}")
         return 1

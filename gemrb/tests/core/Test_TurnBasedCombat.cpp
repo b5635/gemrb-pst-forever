@@ -163,18 +163,39 @@ TEST(CombatDirectorTest, WithdrawHalvesRemainingMovement)
 	EXPECT_EQ(combatant.maxMovePx, 31);
 }
 
-TEST(CombatDirectorTest, BlockSpendsAnAttackAndCannotOverdraw)
+TEST(CombatDirectorTest, BlockConvertsAllAttacksAndSpendsTheAction)
 {
 	Combatant combatant = MakeCombatant(1, 1, 10, true);
-	combatant.remainingAttacks = 2;
-	EXPECT_TRUE(CombatDirector::ApplyBlock(combatant));
-	EXPECT_EQ(combatant.remainingAttacks, 1);
-	EXPECT_EQ(combatant.blockStacks, 1);
+	combatant.remainingAttacks = 3;
+	combatant.takedown = TakedownKind::Trip;
+	combatant.toHitMod = -2;
 	EXPECT_TRUE(CombatDirector::ApplyBlock(combatant));
 	EXPECT_EQ(combatant.remainingAttacks, 0);
-	EXPECT_EQ(combatant.blockStacks, 2);
+	EXPECT_EQ(combatant.blockStacks, 3);
+	EXPECT_TRUE(combatant.mainActionUsed);
+	EXPECT_EQ(combatant.takedown, TakedownKind::None);
+	EXPECT_EQ(combatant.toHitMod, 0);
 	EXPECT_FALSE(CombatDirector::ApplyBlock(combatant));
-	EXPECT_EQ(combatant.blockStacks, 2);
+	EXPECT_EQ(combatant.blockStacks, 3);
+}
+
+TEST(CombatDirectorTest, BlockWithOneAttackStillSpendsTheAction)
+{
+	Combatant combatant = MakeCombatant(1, 1, 10, true);
+	combatant.remainingAttacks = 1;
+	EXPECT_TRUE(CombatDirector::ApplyBlock(combatant));
+	EXPECT_EQ(combatant.remainingAttacks, 0);
+	EXPECT_EQ(combatant.blockStacks, 1);
+	EXPECT_TRUE(combatant.mainActionUsed);
+}
+
+TEST(CombatDirectorTest, BlockWithNoAttacksDoesNotSpendTheAction)
+{
+	Combatant combatant = MakeCombatant(1, 1, 10, true);
+	combatant.remainingAttacks = 0;
+	EXPECT_FALSE(CombatDirector::ApplyBlock(combatant));
+	EXPECT_EQ(combatant.blockStacks, 0);
+	EXPECT_FALSE(combatant.mainActionUsed);
 }
 
 TEST(CombatDirectorTest, TripAndKnockdownShareTheTakedownPenalty)

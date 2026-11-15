@@ -125,6 +125,16 @@ bool DialogHandler::InitDialog(Scriptable* spk, Scriptable* tgt, const ResRef& d
 		flags |= DF_FREEZE_SCRIPTS;
 	}
 	gc->SetDialogueFlags(flags, BitOp::OR);
+
+	// FloatMessage VO shares the speech channel with dialog. Cut it the moment
+	// a real conversation starts, even if the first state has no audio yet.
+	core->GetAudioPlayback().StopSpeech();
+	if (spk) {
+		spk->overHead.Display(false);
+	}
+	if (tgt) {
+		tgt->overHead.Display(false);
+	}
 	return true;
 }
 

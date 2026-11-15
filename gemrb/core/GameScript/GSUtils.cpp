@@ -27,6 +27,7 @@
 #include "WorldMap.h"
 
 #include "GUI/GameControl.h"
+#include "SClassID.h"
 #include "Scriptable/Container.h"
 #include "Scriptable/Highlightable.h"
 #include "Scriptable/InfoPoint.h"
@@ -521,6 +522,15 @@ void DisplayStringCore(Scriptable* const Sender, ieStrRef Strref, int flags, con
 		}
 	}
 
+	if ((soundpath == nullptr || soundpath[0] == '\0') && Strref != ieStrRef::INVALID && ieDword(Strref)) {
+		ResRef fallback = InfoPoint::ExamineFallbackResRef(Strref);
+		if (!fallback.IsEmpty() && gamedata &&
+			(gamedata->Exists(fallback, IE_WAV_CLASS_ID, true) || gamedata->Exists(fallback, IE_OGG_CLASS_ID, true))) {
+			buffer = fallback;
+			soundpath = buffer.c_str();
+		}
+	}
+
 	if (soundpath && soundpath[0] && !(flags & DS_SILENT)) {
 		Actor* actor = Scriptable::As<Actor>(Sender);
 		SFXChannel channel = SFXChannel::Dialog;
@@ -551,6 +561,10 @@ void DisplayStringCore(Scriptable* const Sender, ieStrRef Strref, int flags, con
 
 		if (actor && length > 0 && flags & DS_CIRCLE) {
 			actor->SetAnimatedTalking(length);
+		}
+
+		if ((flags & (DS_HEAD | DS_AREA)) && length > 0) {
+			Sender->overHead.SetMinDuration(length);
 		}
 
 		if ((counter != 0) && (flags & DS_WAIT))

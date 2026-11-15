@@ -241,8 +241,11 @@ void CombatDirector::ApplyWithdraw(Combatant& combatant)
 bool CombatDirector::ApplyBlock(Combatant& combatant)
 {
 	if (combatant.remainingAttacks <= 0) return false;
-	--combatant.remainingAttacks;
-	++combatant.blockStacks;
+	combatant.blockStacks += combatant.remainingAttacks;
+	combatant.remainingAttacks = 0;
+	combatant.mainActionUsed = true;
+	combatant.takedown = TakedownKind::None;
+	combatant.toHitMod = 0;
 	return true;
 }
 
@@ -2053,13 +2056,16 @@ bool CombatDirector::CanAfford(const Actor* actor, TBAction action) const
 
 	switch (action) {
 		case TBAction::Attack:
+		case TBAction::Block:
 			return !combatant->mainActionUsed && !combatant->ran && !combatant->withdrawn && combatant->remainingAttacks > 0;
 		case TBAction::Run:
-		case TBAction::Withdraw:
 		case TBAction::CastSpell:
 		case TBAction::UseItem:
 		case TBAction::Equip:
 			return !combatant->mainActionUsed && !combatant->ran && !combatant->withdrawn;
+		case TBAction::Withdraw:
+			// walking away is the point; standing still with no movement left is a wasted action
+			return !combatant->mainActionUsed && !combatant->ran && !combatant->withdrawn && combatant->movePx > 0;
 	}
 	return false;
 }
@@ -2074,6 +2080,8 @@ void CombatDirector::Spend(const Actor* actor, TBAction action)
 		ApplyRun(*combatant);
 	} else if (action == TBAction::Withdraw) {
 		ApplyWithdraw(*combatant);
+	} else if (action == TBAction::Block) {
+		ApplyBlock(*combatant);
 	} else {
 		combatant->mainActionUsed = true;
 	}
@@ -2229,20 +2237,20 @@ bool CombatDirector::CanBlock(const Actor* actor) const
 {
 	if (!IsRunning() || !actor || !HasFighterClass(actor) || IsMorte(actor)) return false;
 	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
-	return combatant && !combatant->dead && !combatant->prone && combatant->remainingAttacks > 0;
+	if (!combatant || combatant->dead || combatant->prone) return false;
+	return CanAfford(actor, TBAction::Block);
 }
 
 bool CombatDirector::UseBlock(Actor* actor)
 {
 	if (!CanBlock(actor)) return false;
-	Combatant* combatant = FindCombatant(actor->GetGlobalID());
-	if (!combatant || !ApplyBlock(*combatant)) return false;
+	Spend(actor, TBAction::Block);
+	const Combatant* combatant = FindCombatant(actor->GetGlobalID());
 	PlayCombatSound(actor, "block");
 	ScenePolish::Get().SpawnShieldGlow(actor);
 	ShowFloater(actor, u"Block!");
-	Log(COMBAT, "CombatDirector", "{} prepares to block ({} stacks, {} attacks left)", fmt::WideToChar { Name(actor) },
-	    combatant->blockStacks, combatant->remainingAttacks);
-	NotifyGUI();
+	Log(COMBAT, "CombatDirector", "{} prepares to block ({} stacks)", fmt::WideToChar { Name(actor) },
+	    combatant ? combatant->blockStacks : 0);
 	return true;
 }
 
@@ -2487,11 +2495,6 @@ void CombatDirector::ChooseAIManeuvers(Actor* actor, Combatant& combatant)
 		const unsigned int gap = PersonalDistance(actor, enemy);
 		const unsigned int budget = unsigned(std::max(0, combatant.movePx));
 		if (gap > reach + budget) UseRun(actor);
-	}
-
-	// Fighters (not Morte) sometimes put an extra attack into Block
-	if (melee && CanBlock(actor) && combatant.remainingAttacks > 1 && RAND(1, 100) <= 25) {
-		UseBlock(actor);
 	}
 
 	// First swing: trip (fighters) or knockdown (THAC0 15-) at random when already in melee

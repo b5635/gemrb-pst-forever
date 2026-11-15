@@ -12330,7 +12330,7 @@ static PyObject* GemRB_GetTurnBudget(PyObject* /*self*/, PyObject* /*args*/)
 	PyDict_SetItemString(dict, "CanEquip", DecRef(PyBool_FromLong, ownTurn && turns.CanAfford(actor, TBAction::Equip)));
 	PyDict_SetItemString(dict, "CanRun", DecRef(PyBool_FromLong, ownTurn && turns.CanAfford(actor, TBAction::Run)));
 	PyDict_SetItemString(dict, "CanWithdraw", DecRef(PyBool_FromLong, ownTurn && turns.CanAfford(actor, TBAction::Withdraw)));
-	PyDict_SetItemString(dict, "CanBlock", DecRef(PyBool_FromLong, turns.CanBlock(actor)));
+	PyDict_SetItemString(dict, "CanBlock", DecRef(PyBool_FromLong, ownTurn && turns.CanBlock(actor)));
 	PyDict_SetItemString(dict, "CanTrip", DecRef(PyBool_FromLong, ownTurn && turns.CanTrip(actor)));
 	PyDict_SetItemString(dict, "Busy", DecRef(PyBool_FromLong, busy));
 	int attacks = turns.GetRemainingAttacks(actor);
@@ -12601,7 +12601,8 @@ PyDoc_STRVAR(GemRB_TurnBasedWithdraw__doc,
 **Prototype:** GemRB.TurnBasedWithdraw ()\n\
 \n\
 **Description:** The active party member gives up its action and half its \n\
-remaining movement to become immune to attacks of opportunity until its next turn.\n\
+remaining movement to become immune to attacks of opportunity until its next \n\
+turn. Refuses if no movement is left.\n\
 \n\
 **Return value:** bool");
 
@@ -12624,8 +12625,8 @@ PyDoc_STRVAR(GemRB_TurnBasedBlock__doc,
 \n\
 **Prototype:** GemRB.TurnBasedBlock ()\n\
 \n\
-**Description:** The selected fighter (except Morte) sacrifices one remaining \n\
-attack to attempt to block an incoming melee hit. Does not use the action.\n\
+**Description:** The active fighter (except Morte) spends its action. All \n\
+remaining attacks become block stacks against incoming melee hits.\n\
 \n\
 **Return value:** bool");
 
@@ -12633,12 +12634,8 @@ static PyObject* GemRB_TurnBasedBlock(PyObject* /*self*/, PyObject* /*args*/)
 {
 	GET_GAME();
 	CombatDirector& turns = game->combat;
-	if (!turns.IsRunning()) {
-		Py_RETURN_FALSE;
-	}
-	const Actor* selected = BudgetActor(game, turns);
-	Actor* actor = selected ? game->GetActorByGlobalID(selected->GetGlobalID()) : nullptr;
-	if (!actor) {
+	Actor* actor = turns.GetActiveActor();
+	if (!turns.IsRunning() || !actor || !actor->InParty) {
 		Py_RETURN_FALSE;
 	}
 	if (!turns.UseBlock(actor)) {
