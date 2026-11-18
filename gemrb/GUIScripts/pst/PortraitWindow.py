@@ -89,6 +89,10 @@ def CreatePortraitSlot (Window, i):
 
 def FitPortraitWindow (Window):
 	"""Widens (or shrinks back) the strip to the slot count and keeps it centered."""
+	if EEHudActive ():
+		import EEHud
+		EEHud.LayoutPortraits (Window)
+		return
 	slotW = Window.GetControl (0).GetFrame ()['w']
 	frame = Window.GetFrame ()
 	width = slotW * SlotCount ()
@@ -130,8 +134,16 @@ def SetupButtonBorders (Button):
 	Button.SetBorder (0, green, 0, 0, Button.GetInsetFrame (1, 1, 2, 2))
 	Button.SetBorder (1, yellow, 0, 0, Button.GetInsetFrame (3, 3, 4, 4))
 
+def EEHudActive ():
+	import EEHud
+	return EEHud.Active ()
+
 def OpenPortraitWindow (pos=WINDOW_RIGHT|WINDOW_VCENTER):
-	Window = GemRB.LoadWindow (1, "GUIWORLD", pos)
+	if EEHudActive ():
+		import EEHud
+		Window = EEHud.OpenPortraitWindow ()
+	else:
+		Window = GemRB.LoadWindow (1, "GUIWORLD", pos)
 	Window.AddAlias("PORTWIN")
 	Window.SetFlags(WF_BORDERLESS|IE_GUI_VIEW_IGNORE_EVENTS, OP_OR)
 

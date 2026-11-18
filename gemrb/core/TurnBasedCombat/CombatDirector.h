@@ -80,7 +80,6 @@ struct GEM_EXPORT Combatant {
 
 	bool done = false; // had its turn this round
 	bool dead = false;
-	bool delayed = false; // gave its slot up this round, acts after everyone else
 	bool surprised = false; // caught unaware: loses the first round
 	bool reactionUsed = false; // one attack of opportunity per round
 
@@ -175,7 +174,6 @@ public:
 	/** Ends the active combatant's turn; the next member of its party group, if any, takes over. */
 	void EndTurn();
 	/** The active combatant gives up its slot and acts after everyone else this round. */
-	bool DelayTurn();
 	/** Stops the active combatant's walk where it is; the movement not walked stays. */
 	bool CancelMove();
 

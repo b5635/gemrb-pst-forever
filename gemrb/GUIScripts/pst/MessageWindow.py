@@ -29,19 +29,30 @@ def OnLoad():
 	# the original doesn't hide them and it looks like there is a map drawing bug at the bottom of the screen due to the bottom
 	# row of tiles getting squished for not fitting perfectly on screen (tho I havent seen this in BG2, but maybe wasnt paying attention)
 
-	ActionsWindow = GemRB.LoadWindow(0, GUICommon.GetWindowPack(), WINDOW_BOTTOM|WINDOW_LEFT)
+	import EEHud
+	ee = EEHud.Active ()
+	if ee:
+		ActionsWindow = EEHud.OpenActionsWindow ()
+	else:
+		ActionsWindow = GemRB.LoadWindow(0, GUICommon.GetWindowPack(), WINDOW_BOTTOM|WINDOW_LEFT)
 	ActionsWindow.AddAlias("ACTWIN")
 	#ActionsWindow.AddAlias("HIDE_CUT", 1)
 	ActionsWindow.AddAlias("NOT_DLG", 0)
 	ActionsWindow.SetFlags(WF_BORDERLESS|IE_GUI_VIEW_IGNORE_EVENTS, OP_OR)
 
-	OptionsWindow = GemRB.LoadWindow(2, GUICommon.GetWindowPack(), WINDOW_BOTTOM|WINDOW_RIGHT)
+	if ee:
+		OptionsWindow = EEHud.OpenOptionsWindow ()
+	else:
+		OptionsWindow = GemRB.LoadWindow(2, GUICommon.GetWindowPack(), WINDOW_BOTTOM|WINDOW_RIGHT)
 	OptionsWindow.AddAlias("OPTWIN")
 	#OptionsWindow.AddAlias("HIDE_CUT", 2)
 	OptionsWindow.AddAlias("NOT_DLG", 1)
 	OptionsWindow.SetFlags(WF_BORDERLESS|IE_GUI_VIEW_IGNORE_EVENTS, OP_OR)
 
-	MWindow = GemRB.LoadWindow(7, GUICommon.GetWindowPack(), WINDOW_BOTTOM|WINDOW_HCENTER)
+	if ee:
+		MWindow = EEHud.OpenDialogWindow ()
+	else:
+		MWindow = GemRB.LoadWindow(7, GUICommon.GetWindowPack(), WINDOW_BOTTOM|WINDOW_HCENTER)
 	MWindow.SetFlags(WF_DESTROY_ON_CLOSE, OP_NAND)
 	MWindow.AddAlias("MSGWIN")
 	MWindow.AddAlias("HIDE_CUT", 0)
@@ -51,9 +62,10 @@ def OnLoad():
 	PortraitWin.AddAlias("NOT_DLG", 2)
 	PortraitWin.SetFlags(WF_BORDERLESS|IE_GUI_VIEW_IGNORE_EVENTS, OP_OR)
 
-	pframe = PortraitWin.GetFrame()
-	pframe['x'] -= 16
-	PortraitWin.SetFrame(pframe)
+	if not ee:
+		pframe = PortraitWin.GetFrame()
+		pframe['x'] -= 16
+		PortraitWin.SetFrame(pframe)
 
 	MessageTA = MWindow.GetControl (1)
 	MessageTA.SetFlags (IE_GUI_TEXTAREA_AUTOSCROLL|IE_GUI_TEXTAREA_HISTORY)
@@ -77,7 +89,12 @@ def OnLoad():
 
 	# the hotbar above the portraits, always up (it refreshes itself from here on)
 	import TurnOrder
+	if ee:
+		TurnOrder.GetBarWindow ().SetVisible (False) # created now, so it stacks above the plate
 	TurnOrder.UpdateCombatBar ()
+	if ee:
+		# new windows stack behind the older ones: the plate goes last, right above the game view
+		EEHud.OpenPlate ()
 
 def SetupClockWindowControls (Window):
 	# time button
@@ -108,6 +125,9 @@ def SetupClockWindowControls (Window):
 	return
 
 def UpdateControlStatus ():
+	import EEHud
+	if EEHud.Active ():
+		EEHud.UpdateDialogMode (bool (GemRB.GetGUIFlags() & (GS_DIALOGMASK|GS_DIALOG)))
 	if GemRB.GetGUIFlags() & (GS_DIALOGMASK|GS_DIALOG):
 		Label = MWindow.GetControl (0x10000003)
 		Label.SetText (str (GemRB.GameGetPartyGold ()))

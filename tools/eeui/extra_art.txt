@@ -26,3 +26,6 @@ LOADROWB
 LOADROWC
 STRROW
 ABLROW
+# World HUD (phase 18): portrait slot backs picked by Lua (getPortraitBg)
+PRTRTBG.mos
+PRTRTNO*.mos

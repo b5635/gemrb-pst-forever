@@ -284,9 +284,10 @@ def StartAnimation ():
 # hotbar
 #
 # Always up (real time too), just above pst's portrait strip. Everything the selected
-# character can do is on it at once, like a modern tactics game: attack, talk, inventory,
-# weapon quick slots, quick items, thief skills, every memorized spell and
-# ability, then Run, Delay and End Turn (those three only in a turn based fight). Click a
+# character can do is on it at once, like a modern tactics game: attack, talk and the turn
+# based moves (Run, Withdraw, Block, Trip), weapon quick slots, quick items, thief skills, every
+# memorized spell and ability, then the round End Turn button; moves and End Turn are greyed
+# out of a turn based fight. Click a
 # slot to pick the action, then click a target; Escape, right click or Cancel drops it.
 # With nothing picked, clicking the ground moves. Icons are pst's own (radial menu BAMs,
 # item and spell icons).
@@ -300,22 +301,35 @@ PAD = 6
 INFO_H = 18
 ROWS_Y = PAD + INFO_H + 2
 ROWS_H = SLOT_STEP + SLOT
-SIDE_W = 58 # Run / Delay
-MANEUVER_W = 62 # Withdraw / Block / Trip
-END_W = 66
+END_W = 64 # the round End Turn button (TBENDTRN), like Baldur's Gate 3's
 REFRESH_INTERVAL = 250 # selection, gear, spells and the cursor mode change outside of the bar
 
+# EE look (EEHud): the bar lives in the bottom strip, on EE's plate, with EE's quick slot frame
+# (EEQSLOT) and the info line on a plate tab above the strip
+import EEHud
+EE_LOOK = EEHud.Active ()
+SLOT_BAM = "AMGENS"
+INFO_Y = PAD
+if EE_LOOK:
+	SLOT = 36
+	SLOT_STEP = SLOT + 2
+	GROUP_GAP = 8
+	PAD = 4
+	INFO_H = 20
+	INFO_Y = 0
+	ROWS_Y = INFO_H + (EEHud.STRIP_H - 2 * SLOT - 2) // 2
+	ROWS_H = SLOT_STEP + SLOT
+	SLOT_BAM = "EEQSLOT"
+	CID_TAB = 91
+
 CID_ATTACK = 0
-CID_INVENTORY = 1
 CID_TALK = 2
-CID_COMMON_EMPTY = 3
 CID_WEAPONS = 10 # 4
 CID_ITEMS = 20 # 5
 CID_SPELLS = 30 # SPELL_PAGE
 CID_SPELL_PREV = 60
 CID_SPELL_NEXT = 61
 CID_RUN = 62
-CID_DELAY = 63
 CID_END = 64
 CID_CANCEL = 65
 CID_WITHDRAW = 66
@@ -331,17 +345,16 @@ CID_ATTACKS = 76
 CID_PANELS = 80 # group backgrounds
 CID_EDGE = 90
 
-MOVE_BAR_W = 110
+MOVE_BAR_W = 138 # TBMOVBAR: EE's remade health bar, red to green (tools/eeui/icons.py)
+MOVE_BAR_H = 19
 
 ColorPanel = {'r' : 28, 'g' : 22, 'b' : 16, 'a' : 235}
 ColorGroup = {'r' : 52, 'g' : 41, 'b' : 28, 'a' : 200}
 ColorEdge = {'r' : 150, 'g' : 112, 'b' : 62, 'a' : 255}
-ColorMoveBack = {'r' : 70, 'g' : 58, 'b' : 40, 'a' : 255}
-ColorMoveFill = {'r' : 200, 'g' : 160, 'b' : 60, 'a' : 255}
-ColorMoveRan = {'r' : 90, 'g' : 190, 'b' : 90, 'a' : 255}
 ColorPipReady = {'r' : 80, 'g' : 200, 'b' : 90, 'a' : 255}
 ColorPipUsed = {'r' : 70, 'g' : 60, 'b' : 50, 'a' : 255}
-ColorEndTurn = {'r' : 70, 'g' : 46, 'b' : 22, 'a' : 240}
+ColorEEButton = {'r' : 30, 'g' : 26, 'b' : 20, 'a' : 235} # EE look: DIABG's dark panel, rust rim
+ColorEERim = {'r' : 137, 'g' : 56, 'b' : 27, 'a' : 255}
 
 # thief skills lead the spell grid, as in pst's radial menu
 ThiefSkills = [
@@ -366,16 +379,14 @@ def BarLayout ():
 	"""x of each group, left to right, and the window width."""
 	x = PAD
 	lay = {}
-	lay['common'] = x; x += 2 * SLOT_STEP - 2 + GROUP_GAP
+	lay['common'] = x; x += 3 * SLOT_STEP - 2 + GROUP_GAP
 	lay['weapons'] = x; x += 2 * SLOT_STEP - 2 + GROUP_GAP
 	lay['items'] = x; x += 3 * SLOT_STEP - 2 + GROUP_GAP
 	lay['spells'] = x; x += SPELL_COLS * SLOT_STEP - 2 + 2
 	lay['pager'] = x; x += 28 + GROUP_GAP
-	lay['side'] = x; x += SIDE_W + 4
-	lay['maneuvers'] = x; x += MANEUVER_W * 2 + 4
 	lay['end'] = x; x += END_W + PAD
 	lay['width'] = x
-	lay['height'] = ROWS_Y + ROWS_H + PAD
+	lay['height'] = INFO_H + EEHud.STRIP_H if EE_LOOK else ROWS_Y + ROWS_H + PAD
 	return lay
 
 def SlotFrame (gx, col, row):
@@ -383,7 +394,7 @@ def SlotFrame (gx, col, row):
 
 def MakeSlot (Window, cid, frame, handler):
 	Button = Window.CreateButton (cid, frame['x'], frame['y'], frame['w'], frame['h'])
-	Button.SetSprites ("AMGENS", 0, 0, 1, 0, 0)
+	Button.SetSprites (SLOT_BAM, 0, 0, 1, 0, 0)
 	Button.SetFlags (IE_GUI_BUTTON_ALIGN_RIGHT | IE_GUI_BUTTON_ALIGN_BOTTOM, OP_OR)
 	Button.SetFont ("NORMAL")
 	Button.OnPress (handler)
@@ -391,7 +402,13 @@ def MakeSlot (Window, cid, frame, handler):
 
 def MakeIconButton (Window, cid, frame, bam, tip, handler):
 	Button = Window.CreateButton (cid, frame['x'], frame['y'], frame['w'], frame['h'])
-	Button.SetSprites (bam, 0, 0, 1, 2, 3)
+	if EE_LOOK:
+		# the radial menu icon centred on an EE slot frame
+		Button.SetSprites (SLOT_BAM, 0, 0, 1, 0, 0)
+		Button.SetFlags (IE_GUI_BUTTON_PICTURE, OP_OR)
+		Button.SetPicture (GemRB.GetSprite (bam, -1, 0, 0))
+	else:
+		Button.SetSprites (bam, 0, 0, 1, 2, 3)
 	Button.SetTooltip (tip)
 	Button.OnPress (handler)
 	return Button
@@ -402,8 +419,10 @@ def MakeTextButton (Window, cid, frame, text, tip, handler, back = ColorGroup):
 	Button.SetFont ("NORMAL")
 	Button.SetText (text)
 	Button.SetTooltip (tip)
+	if EE_LOOK and back is ColorGroup:
+		back = ColorEEButton
 	Button.SetBackground (back)
-	Button.SetBorder (2, ColorEdge, 1, 0)
+	Button.SetBorder (2, ColorEERim if EE_LOOK else ColorEdge, 1, 0)
 	Button.OnPress (handler)
 	return Button
 
@@ -427,6 +446,10 @@ def GetBarWindow ():
 
 def PlaceBar (Window, lay):
 	"""Just above pst's portrait strip, so the portraits stay visible and clickable."""
+	if EE_LOOK:
+		# in the bottom strip, between its two end caps; the info tab rides above it
+		Window.SetPos (EEHud.MIDDLE_X + (EEHud.MIDDLE_W - lay['width']) // 2, EEHud.STRIP_Y - INFO_H)
+		return
 	bottom = GemRB.GetSystemVariable (SV_HEIGHT)
 	portraits = GemRB.GetView ("PORTWIN")
 	if portraits:
@@ -438,19 +461,30 @@ def BuildBar (Window, lay):
 	Window.SetFlags (WF_DESTROY_ON_CLOSE, OP_NAND)
 	# like pst's own hud windows: never the keyboard focus, so keys (Escape, Space, ...) reach the game view
 	Window.SetFlags (WF_ALPHA_CHANNEL | WF_BORDERLESS | IE_GUI_VIEW_IGNORE_EVENTS, OP_OR)
-	Window.SetBackground (ColorPanel)
-	MakePanel (Window, CID_EDGE, {'x' : 0, 'y' : 0, 'w' : lay['width'], 'h' : 2}, ColorEdge)
+	if not EE_LOOK:
+		Window.SetBackground (ColorPanel)
+		MakePanel (Window, CID_EDGE, {'x' : 0, 'y' : 0, 'w' : lay['width'], 'h' : 2}, ColorEdge)
 
 	# thin bronze rules between the groups (panels under the slots would draw over them)
-	for i, key in enumerate (('weapons', 'items', 'spells', 'side')):
+	for i, key in enumerate (('weapons', 'items', 'spells', 'end')):
 		MakePanel (Window, CID_PANELS + i, {'x' : lay[key] - GROUP_GAP // 2 - 1, 'y' : ROWS_Y, 'w' : 1, 'h' : ROWS_H}, ColorEdge)
 
 	# the radial menu's own actions
 	common = lay['common']
 	MakeIconButton (Window, CID_ATTACK, SlotFrame (common, 0, 0), "AMATTCK", "Attack", BarAttack)
 	MakeIconButton (Window, CID_TALK, SlotFrame (common, 1, 0), "AMTLK", "Talk to someone.", BarTalk)
-	MakeIconButton (Window, CID_INVENTORY, SlotFrame (common, 0, 1), "AMINVNT", "Inventory", BarInventory)
-	ClearSlot (MakeSlot (Window, CID_COMMON_EMPTY, SlotFrame (common, 1, 1), None))
+	# with the turn based moves (icons in pst's radial menu style, tools/eeui/icons.py); the
+	# moves are always there, greyed out of a fight
+	MakeIconButton (Window, CID_RUN, SlotFrame (common, 2, 0), "TBRUN",
+		"Run: give up your action; gain movement equal to your maximum. Turn based only.", BarRun)
+	MakeIconButton (Window, CID_WITHDRAW, SlotFrame (common, 0, 1), "TBWITHDR",
+		"Withdraw: spend your action and half your remaining movement. Immune to attacks of opportunity until your next turn; you walk. Needs movement left.", BarWithdraw)
+	Button = MakeIconButton (Window, CID_BLOCK, SlotFrame (common, 1, 1), "TBBLOCK",
+		"Block: spend your action. All remaining attacks become blocks. Fighters only (not Morte).", BarBlock)
+	Button.SetFlags (IE_GUI_BUTTON_ALIGN_RIGHT | IE_GUI_BUTTON_ALIGN_BOTTOM, OP_OR) # ready blocks
+	Button.SetFont ("NORMAL")
+	MakeIconButton (Window, CID_TRIP, SlotFrame (common, 2, 1), "TBTRIP",
+		"Trip: click a target. First attack tries to knock them prone (-2 to hit, no damage); remaining attacks are normal. Fighters only.", BarTrip)
 
 	for i in range (4):
 		MakeSlot (Window, CID_WEAPONS + i, SlotFrame (lay['weapons'], i % 2, i // 2), BarWeapon)
@@ -468,39 +502,40 @@ def BuildBar (Window, lay):
 	Button.SetTooltip ("More spells")
 	Button.OnPress (lambda: TurnSpellPage (1))
 
-	MakeTextButton (Window, CID_RUN, {'x' : lay['side'], 'y' : ROWS_Y, 'w' : SIDE_W, 'h' : SLOT},
-		"Run", "Run: give up your action; gain movement equal to your maximum. Turn based only.", BarRun)
-	MakeTextButton (Window, CID_DELAY, {'x' : lay['side'], 'y' : ROWS_Y + SLOT_STEP, 'w' : SIDE_W, 'h' : SLOT},
-		"Delay", "Delay: act after everyone else this round. Only before moving or acting.", BarDelay)
-	mx = lay['maneuvers']
-	MakeTextButton (Window, CID_WITHDRAW, {'x' : mx, 'y' : ROWS_Y, 'w' : MANEUVER_W, 'h' : SLOT},
-		"Withdraw", "Withdraw: spend your action and half your remaining movement. Immune to attacks of opportunity until your next turn; you walk. Needs movement left.", BarWithdraw)
-	MakeTextButton (Window, CID_BLOCK, {'x' : mx + MANEUVER_W, 'y' : ROWS_Y, 'w' : MANEUVER_W, 'h' : SLOT},
-		"Block", "Block: spend your action. All remaining attacks become blocks. Fighters only (not Morte).", BarBlock)
-	MakeTextButton (Window, CID_TRIP, {'x' : mx, 'y' : ROWS_Y + SLOT_STEP, 'w' : MANEUVER_W * 2, 'h' : SLOT},
-		"Trip", "Trip: click a target. First attack tries to knock them prone (-2 to hit, no damage); remaining attacks are normal. Fighters only.", BarTrip)
-	MakeTextButton (Window, CID_END, {'x' : lay['end'], 'y' : ROWS_Y, 'w' : END_W, 'h' : ROWS_H},
-		"End\nTurn", "End this character's turn (Space): the next party member in the order goes on.", BarEndTurn, ColorEndTurn)
+	Button = Window.CreateButton (CID_END, lay['end'], ROWS_Y + (ROWS_H - END_W) // 2, END_W, END_W)
+	Button.SetSprites ("TBENDTRN", 0, 0, 1, 2, 3)
+	Button.SetTooltip ("End Turn (Space): this character is done; the next party member in the order goes on.")
+	Button.OnPress (BarEndTurn)
 
 	# info line: who, movement, action, attacks, cancel
-	Label = Window.CreateLabel (CID_NAME, PAD, PAD, 290, INFO_H, "NORMAL", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_MIDDLE)
+	Label = Window.CreateLabel (CID_NAME, PAD, INFO_Y, 290, INFO_H, "NORMAL", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_MIDDLE)
 	Label.SetColor (ColorTitle, TA_COLOR_NORMAL)
 	mx = PAD + 296
 	# the bar is two panels side by side, filled part and the rest: views overlapping in this
 	# window don't redraw in order. Under 10 px tall they don't draw at all.
-	MakePanel (Window, CID_MOVE_FILL, {'x' : mx, 'y' : PAD + 3, 'w' : MOVE_BAR_W, 'h' : 12}, ColorMoveFill)
-	MakePanel (Window, CID_MOVE_BACK, {'x' : mx, 'y' : PAD + 3, 'w' : MOVE_BAR_W, 'h' : 12}, ColorMoveBack)
-	Label = Window.CreateLabel (CID_MOVE_TEXT, mx + MOVE_BAR_W + 6, PAD, 68, INFO_H, "NORMAL", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_MIDDLE)
+	# the fill over its trough (first created draws on top), clipped to the movement left
+	by = INFO_Y + (INFO_H - MOVE_BAR_H) // 2
+	for cid, frame in ((CID_MOVE_FILL, 0), (CID_MOVE_BACK, 1)):
+		Bar = Window.CreateButton (cid, mx, by, MOVE_BAR_W, MOVE_BAR_H)
+		Bar.SetFlags (IE_GUI_BUTTON_PICTURE, OP_SET)
+		Bar.SetBAM ("TBMOVBAR", 0, frame, -1)
+		Bar.SetState (IE_GUI_BUTTON_LOCKED)
+	Label = Window.CreateLabel (CID_MOVE_TEXT, mx + MOVE_BAR_W + 6, INFO_Y, 68, INFO_H, "NORMAL", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_MIDDLE)
 	Label.SetColor (ColorInfo, TA_COLOR_NORMAL)
 	ax = mx + MOVE_BAR_W + 76
-	Pip = MakePanel (Window, CID_ACTION_PIP, {'x' : ax, 'y' : PAD + 4, 'w' : 10, 'h' : 10}, ColorPipReady)
+	Pip = MakePanel (Window, CID_ACTION_PIP, {'x' : ax, 'y' : INFO_Y + 4, 'w' : 10, 'h' : 10}, ColorPipReady)
 	Pip.SetBorder (0, ColorEdge, 1, 0)
-	Label = Window.CreateLabel (CID_ACTION_TEXT, ax + 14, PAD, 80, INFO_H, "NORMAL", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_MIDDLE)
+	Label = Window.CreateLabel (CID_ACTION_TEXT, ax + 14, INFO_Y, 80, INFO_H, "NORMAL", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_MIDDLE)
 	Label.SetColor (ColorInfo, TA_COLOR_NORMAL)
-	Label = Window.CreateLabel (CID_ATTACKS, ax + 96, PAD, 70, INFO_H, "NORMAL", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_MIDDLE)
+	Label = Window.CreateLabel (CID_ATTACKS, ax + 96, INFO_Y, 70, INFO_H, "NORMAL", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_MIDDLE)
 	Label.SetColor (ColorInfo, TA_COLOR_NORMAL)
-	Button = MakeTextButton (Window, CID_CANCEL, {'x' : lay['width'] - PAD - 96, 'y' : PAD - 2, 'w' : 96, 'h' : INFO_H + 2},
+	Button = MakeTextButton (Window, CID_CANCEL, {'x' : lay['width'] - PAD - 96, 'y' : max (0, INFO_Y - 2), 'w' : 96, 'h' : INFO_H + (0 if EE_LOOK else 2)},
 		"Cancel", "Drop the picked action (also Escape or right click).", BarCancel)
+
+	if EE_LOOK:
+		# the info line's plate tab, created last so it stays under everything
+		Tab = Window.CreateLabel (CID_TAB, 0, 0, lay['width'], INFO_H, "NORMAL", "", 0)
+		Tab.SetBackground ("EEBARTAB")
 
 ###################################################
 # what the character has
@@ -572,7 +607,7 @@ def SetSlotState (Button, usable, selected):
 	Button.SetBorder (0, ColorSelected, usable and selected, 0, Button.GetInsetFrame (0))
 
 def ClearSlot (Button):
-	Button.SetSprites ("AMGENS", 0, 0, 1, 0, 0)
+	Button.SetSprites (SLOT_BAM, 0, 0, 1, 0, 0)
 	Button.SetPicture (None)
 	Button.SetText ("")
 	Button.SetTooltip ("")
@@ -627,7 +662,6 @@ def UpdateCombatBar ():
 		tip = "Attack with {}\n{}".format (GemRB.GetString (ItemName (GemRB.GetItem (weapon['ItemResRef']))), tip)
 	Button.SetTooltip (tip)
 	SetSlotState (Button, canAttack, SelectedMode == "attack")
-	SetSlotState (Window.GetControl (CID_INVENTORY), not busy, False)
 	SetSlotState (Window.GetControl (CID_TALK), realTime, SelectedMode == "talk") # no talking in a fight
 
 	# weapon quick slots: click to take it in hand and attack with it
@@ -689,20 +723,18 @@ def UpdateCombatBar ():
 	Window.GetControl (CID_SPELL_NEXT).SetVisible (SpellPage < pages - 1)
 
 	# turn based only: out of a fight they are not there
-	for cid in (CID_RUN, CID_DELAY, CID_END, CID_WITHDRAW, CID_BLOCK, CID_TRIP):
-		Window.GetControl (cid).SetVisible (fight)
 	ownTurn = budget.get ('OwnTurn', fight and TurnOwnerPC () != 0)
 	SetSlotState (Window.GetControl (CID_RUN), fight and budget.get ('CanRun') and not busy, False)
 	SetSlotState (Window.GetControl (CID_WITHDRAW), fight and budget.get ('CanWithdraw') and not busy, False)
 	stacks = budget.get ('BlockStacks', 0)
 	Block = Window.GetControl (CID_BLOCK)
-	Block.SetText ("Block {}".format (stacks) if stacks else "Block")
+	Block.SetText (str (stacks) if stacks else "")
 	Block.SetTooltip ("Block: {} incoming hits ready. Spent your action and remaining attacks.".format (stacks) if stacks else "Block: spend your action. All remaining attacks become blocks. Fighters only (not Morte).")
 	SetSlotState (Block, fight and budget.get ('CanBlock') and not busy, False)
 	tripOn = budget.get ('Takedown') == 'Trip' or SelectedMode == "trip"
 	SetSlotState (Window.GetControl (CID_TRIP), fight and budget.get ('CanTrip') and not busy, tripOn)
-	SetSlotState (Window.GetControl (CID_DELAY), fight and ownTurn and not busy and not budget['MainActionUsed'] and budget['Move'] == budget['MaxMove'], False)
-	SetSlotState (Window.GetControl (CID_END), fight and ownTurn and not busy, False)
+	# round: its own disabled frame instead of the square slot shading
+	Window.GetControl (CID_END).SetState (IE_GUI_BUTTON_ENABLED if fight and ownTurn and not busy else IE_GUI_BUTTON_DISABLED)
 	Window.GetControl (CID_CANCEL).SetVisible (SelectedMode is not None)
 
 	# info line
@@ -720,18 +752,7 @@ def UpdateCombatBar ():
 		return
 
 	full = max (1, budget['MaxMove'])
-	fillW = int (MOVE_BAR_W * max (0, min (budget['Move'], full)) / float (full))
-	Fill = Window.GetControl (CID_MOVE_FILL)
-	Back = Window.GetControl (CID_MOVE_BACK)
-	Fill.SetVisible (fillW > 0)
-	Back.SetVisible (fillW < MOVE_BAR_W)
-	frame = Fill.GetFrame ()
-	if frame['w'] != max (1, fillW):
-		x0 = frame['x']
-		frame['w'] = max (1, fillW)
-		Fill.SetFrame (frame)
-		Back.SetFrame ({'x' : x0 + fillW, 'y' : frame['y'], 'w' : max (1, MOVE_BAR_W - fillW), 'h' : frame['h']})
-	Fill.SetBackground (ColorMoveRan if budget['Ran'] else ColorMoveFill)
+	Window.GetControl (CID_MOVE_FILL).SetPictureClipping (max (0, min (budget['Move'], full)) / float (full))
 	Window.GetControl (CID_MOVE_TEXT).SetText ("{} / {} ft".format (budget['Move'], budget['MaxMove']))
 
 	used = budget['MainActionUsed'] or budget['Ran'] or budget.get ('Withdrawn')
@@ -871,14 +892,6 @@ def BarTrip ():
 		return
 	ActionsWindow.ActionAttackPressed ()
 	SelectMode ("trip")
-
-def BarInventory ():
-	import GUIINV
-	GUIINV.OpenInventoryWindow ()
-
-def BarDelay ():
-	SelectMode (None)
-	GemRB.DelayTurn ()
 
 def BarEndTurn ():
 	SelectMode (None)

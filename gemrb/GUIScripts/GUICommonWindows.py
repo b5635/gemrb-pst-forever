@@ -273,6 +273,11 @@ def ToggleWindow(id, pack, pos=WINDOW_CENTER):
 		return GemRB.LoadWindow(id, pack, pos)
 
 def SnapPortraitWindow (snap):
+	if GameCheck.IsPST ():
+		import EEHud
+		if EEHud.Active ():
+			EEHud.SnapPortraits (snap)
+			return
 	# prerequisites
 	if GameCheck.IsPST () or GameCheck.IsIWD2 ():
 		return # not using a vertical window

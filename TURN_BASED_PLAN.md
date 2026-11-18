@@ -483,9 +483,8 @@ Built, in `gemrb/core/TurnBasedCombat/CombatDirector.*` (TurnManager renamed and
   `Turn Based Opportunity Attacks`: walking out of an enemy's melee reach gives it one swing
   (one reaction per round); the mover is held at the edge, then walks on.
   `Turn Based Surprise`: whoever sees no enemy as the fight starts loses round 1.
-  Initiative is rolled once per combat (decided 2026-11-13; no per-round re-roll). Delay (`GemRB.DelayTurn`, a
-  Delay button on the combat bar): act after everyone else this round, before moving or
-  acting. Right click (or `GemRB.CancelTurnMove`) stops a walk; the unwalked movement stays.
+  Initiative is rolled once per combat (decided 2026-11-13; no per-round re-roll). Delay was removed
+  (owner, 2026-11-18). Right click (or `GemRB.CancelTurnMove`) stops a walk; the unwalked movement stays.
 - **Event feed (U2):** `GemRB.GetCombatEvents()` (CombatStart/End, RoundStart, TurnStart,
   Swing, Death, Intent, Reaction).
 - **Pacing:** a beat after each swing before the next one of the round (6 ticks, 0.4 s at
@@ -543,7 +542,7 @@ Built, in `gemrb/core/TurnBasedCombat/CombatDirector.*` (TurnManager renamed and
 - **Hotbar (U4):** `pst/TurnOrder.py`, always up (real time too, `Hotbar` setting), just above PST's
   portrait strip. Everything at once: Attack, Talk, Inventory; the four weapon quick slots (click =
   take in hand and attack); the five quick items; thief skills, memorized spells and abilities
-  (10x2, paged); Run, Delay, End Turn (turn based only, hidden out of a fight). Info line: name,
+  (10x2, paged); Run, Withdraw, Block, Trip icons and a round End Turn button (turn based only, hidden out of a fight). Info line: name,
   HP/AC/THAC0, movement bar in feet, action pip, attacks; Cancel while an action is picked. Icons are
   PST's (radial menu BAMs `AMATTCK`/`AMTLK`/`AMINVNT`, slot art `AMGENS`, item and spell icons); the
   war2 `bar_*.png` are gone, as are the Move button (click the ground to move) and the radial menu

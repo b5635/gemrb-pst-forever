@@ -572,6 +572,8 @@ def main():
             if line:
                 b.art_pattern(line)
 
+    import derived
+    b.log.append("derived art: " + " ".join(derived.make_all(b.root)))
     (b.root / "aliases.txt").write_text(
         "".join(f"{k} {v}\n" for k, v in sorted(b.aliases.items())))
     nb = b.bestiary(bgee)

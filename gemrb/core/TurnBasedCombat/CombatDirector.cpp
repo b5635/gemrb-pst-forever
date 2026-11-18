@@ -879,10 +879,10 @@ void CombatDirector::AdvanceTurn()
 		if (combatant) combatant->attacking = false;
 	}
 
-	if (activeIdx < order.size() && !order[activeIdx].delayed) {
+	if (activeIdx < order.size()) {
 		order[activeIdx].done = true;
 	}
-	auto waiting = [](const Combatant& c) { return !c.dead && !c.done && !c.delayed; };
+	auto waiting = [](const Combatant& c) { return !c.dead && !c.done; };
 	// first the rest of the party group, in any order the player picked
 	for (size_t i = groupStart; i <= groupEnd && i < order.size(); ++i) {
 		if (waiting(order[i])) {
@@ -893,15 +893,6 @@ void CombatDirector::AdvanceTurn()
 	for (size_t i = groupEnd + 1; i < order.size(); ++i) {
 		if (waiting(order[i])) {
 			BeginTurn(i);
-			return;
-		}
-	}
-	// then whoever delayed, in initiative order, with the budget they kept
-	for (size_t i = 0; i < order.size(); ++i) {
-		if (!order[i].dead && !order[i].done && order[i].delayed) {
-			order[i].delayed = false;
-			groupStart = groupEnd = i;
-			ActivateMember(i);
 			return;
 		}
 	}
@@ -929,7 +920,6 @@ void CombatDirector::EndRound()
 	order.erase(std::remove_if(order.begin(), order.end(), [](const Combatant& c) { return c.dead; }), order.end());
 	for (auto& combatant : order) {
 		combatant.done = false;
-		combatant.delayed = false;
 		combatant.surprised = false;
 		combatant.reactionUsed = false;
 		Actor* actor = combatMap->GetActorByGlobalID(combatant.globalID);
@@ -1062,18 +1052,10 @@ void CombatDirector::ContinueAfterDrop()
 	flightTicks = 0;
 	activeID = 0;
 	if (ShouldEndCombat()) return;
-	auto waiting = [](const Combatant& c) { return !c.dead && !c.done && !c.delayed; };
+	auto waiting = [](const Combatant& c) { return !c.dead && !c.done; };
 	for (size_t i = 0; i < order.size(); ++i) {
 		if (waiting(order[i])) {
 			BeginTurn(i);
-			return;
-		}
-	}
-	for (size_t i = 0; i < order.size(); ++i) {
-		if (!order[i].dead && !order[i].done && order[i].delayed) {
-			order[i].delayed = false;
-			groupStart = groupEnd = i;
-			ActivateMember(i);
 			return;
 		}
 	}
@@ -2012,23 +1994,6 @@ void CombatDirector::ReactionStep(Actor* mover)
 	if (!ended || !swingResolved) return;
 	reactor->SetStance(IE_ANI_READY);
 	reactionSettling = true;
-}
-
-bool CombatDirector::DelayTurn()
-{
-	if (state != State::TurnActive || activeIdx >= order.size()) return false;
-	Combatant& combatant = order[activeIdx];
-	const Actor* actor = GetActiveActor();
-	// only before doing anything, and only if someone is left to go first
-	if (!actor || combatant.delayed || combatant.mainActionUsed || combatant.movePx < combatant.maxMovePx || IsBusy(actor)) return false;
-	bool othersLeft = std::any_of(order.begin(), order.end(), [&combatant](const Combatant& c) {
-		return &c != &combatant && !c.dead && !c.done && !c.delayed;
-	});
-	if (!othersLeft) return false;
-	combatant.delayed = true;
-	Log(COMBAT, "CombatDirector", "{} delays its turn", fmt::WideToChar { Name(actor) });
-	AdvanceTurn();
-	return true;
 }
 
 bool CombatDirector::CancelMove()

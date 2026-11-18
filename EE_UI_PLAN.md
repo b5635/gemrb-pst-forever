@@ -339,9 +339,63 @@ after any screen that opens in game. Update section 11.
 | 17 | Dialog, container, party pick, death | WORLD_DIALOG, WORLD_CONTAINER, WORLD_PICKPARTY, WORLD_DEATH | DIABG/CONVWING, CONBG, REFBG | Dialog and container are world overlays: run a full staged fight afterwards (`tools\tb_fight.ps1`) |
 | 18 | World HUD | WORLD_ACTIONBAR*, WORLD_SIDEBAR_*, WORLD_FORMATION, RADWEDGE | MAINBG, ACTBG | **Stop and ask the owner before starting.** The turn-based HUD (timeline, dice panel, portraits, radial menu) sits on the classic bars. Bring a written proposal first |
 
+### 9.1 Phase 18 proposal (world HUD)
+
+Owner decisions (2026-11-18): go ahead with all of 18a-18d; revamp the hotbar with EE art
+instead of flat colours; no sidebars. Changes to the proposal below: the dialogue window is
+EE's DIABG/CONVWING look with the speaker's bestiary picture in a frame on the left; the party
+portraits are a column at the top left (like Baldur's Gate 3) and move into the bottom strip as a
+row while a full screen (inventory, ...) is open; the hotbar moves down into the strip (the
+TACTBUTT buttons are dropped: the hotbar has those actions); Run/Withdraw/Block/Trip get icons in
+the radial menu style, Delay is removed from the game, End Turn is a round button like BG3's.
+
+
+Mock-up: `shots/hud_mock1.png` (EE `WORLD_ACTIONBAR` + `WORLD_ACTIONBAR_LEFT` drawn at their
+1280x720 frames over a classic screenshot; the green boxes are the six portrait slots).
+
+**What EE has.** One 80 px strip at the bottom (y 640-720): ACTBG plate (960 wide, centred) with
+MAINWING plates filling the sides to any width. On it, left to right: clock/pause (PAUSBUTT +
+EU0007 time sequence), three CIRCBUTT (Select All, Abort, Formations), five TACTBUTT (Dialogue,
+Weapon, Spell, Item, Ability), six portrait slots (portrait 69x54, HP bar 73x15, LVLBUTT level-up
+dot), three CIRCBUTT (Open Dialogue Window, Lock View, Toggle AI), the 8-wedge RADWEDGE (Inventory,
+Map, Mage book, Rest, Statistics, Journal, Priest scroll, Options), three CIRCBUTT (Combat Log,
+Quickloot, How to Play). Also: `WORLD_SIDEBAR_LEFT/RIGHT` (vertical copies of the wedge and circle
+buttons plus Quick Save and Always Run, slide out from SIDEHNDL handles), `WORLD_FORMATION` (13
+formation buttons on a strip), `WORLD_CONTEXT_BAR` (12 QUICKSLT quick slots), `WORLD_DIALOG`
+(DIABG/CONVWING, reply list, gold).
+
+**Proposal.**
+- 18a, the bar. `EEUI=1` builds the strip from `WORLD_ACTIONBAR*` in `MessageWindow.OnLoad`,
+  split into the same windows and aliases as today so every caller keeps working unchanged:
+  `ACTWIN` = clock + Select All/Abort/Formations, `PORTWIN` = the six portrait slots (same
+  `PortraitID`/`HPButtonID` control ids, same `PortraitWindow` update and click code, only the
+  frames and art differ), `OPTWIN` = wedge + right circles wired to the existing
+  `MenuWindow.SetupMenuWindowControls` handlers. A plate window behind them (events ignored) draws
+  ACTBG + MAINWING. `NOT_DLG`/`HIDE_CUT` aliases stay. Clock keeps `Clock.CreateClockButton`.
+- TACTBUTT (Dialogue/Weapon/Spell/Item/Ability): the same actions the PST float menu offers for the
+  selected PC (talk cursor, weapon pick, spell page, item page, ability page), calling
+  `FloatMenuWindow` code, not new logic. In a turn-based fight on a PC's turn they open the matching
+  page of the turn-based hotbar instead.
+- 18b, turn-based layer. `TurnOrder` (timeline at the top) and `CombatHud` (dice, panels, drawn in
+  C++) stay as they are; only their anchors move: `TurnOrder.PlaceBar` already sits on top of
+  `PORTWIN`, so the hotbar lands just above the EE strip. Reskin the hotbar slots with QUICKSLT
+  and its panel with the CONTEXT_BAR look (art only, same ids and handlers).
+- 18c, dialog. `MSGWIN` in dialog mode becomes EE `WORLD_DIALOG` (DIABG plate, CONVWING wings,
+  reply list = the classic text area with history, gold label, Done). Outside dialog the message
+  log stays as now (opened by "Open Dialogue Window").
+- 18d, formations and party pick. `GUIWORLD.OpenFormationWindow` uses `WORLD_FORMATION` (FORM*
+  icons, same formation ids). Party reform (`WORLD_PICKPARTY`, left over from phase 17) after 18a,
+  since it needs `PortraitWindow.py`.
+- Left out by default (EE-only): Combat Log, Quickloot, How to Play, the sidebars and their
+  handles (they duplicate the bar; Quick Save and Always Run could come back as sidebar or bar
+  buttons if wanted), touch/tablet variants, RADWEDGE as a floating radial (the PST float menu
+  stays the right-click radial).
+- Rules kept: presentation only, nothing a script can observe changes. `EEUI=0` keeps today's
+  HUD exactly. Each step: build, in-game shots, Escape/right click paths, cutscene hiding,
+  `tools	b_fight.ps1` and `tools	b_autotest.ps1`, then `EEUI=0`.
+
 ## 10. Ask the owner (stop and ask; do not guess)
 
-- Phase 18, the world HUD, before any work.
 - Start-menu Continue and Options buttons (default: out).
 - Paper-doll twins for the classic inventory after the phase 2f review images.
 - Movies: EE's WebM files need a new decoder plugin (libvpx or ffmpeg). Do nothing unless asked.
@@ -554,3 +608,75 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   buttons (`shots/map1.png`), world map popup with all area art (`shots/map2.png`). Not checked:
   clicking an area to travel, scrolling the world map, Escape/X, the name-label shift (done after
   the shot), `EEUI=0`.
+- Phase 16 (stores, part 1): `GUISTORE.py` builds EE `STORE_BUYSELL` (6 rows per side, row art STRROW,
+  classic control ids so the buy/sell logic is unchanged; selected row = white text; scroll bars use
+  CGSCRL1) and the tab bar from `STORE_CHOOSER` (Done + one STRCHOOS tab per classic store action,
+  pictures scaled by the button, active tab = frame 2). `EEUI.Build(dy=...)` shifts a whole menu (store
+  menus sit 52 px low, the chooser 197 px high). Small control ids (1-7) collide with other windows'
+  ids, so tabs use 0x5100+. Seen in game at Fell's Studio (`shots/st3.png`, `st4c.png`): plate, rows,
+  icons, prices, Buy/Sell, Done, tabs; selecting an item updates the price; the Identify tab switches
+  page. NOT done: identify, heal, rent, steal, donate and drink pages are still the classic windows
+  (they float over the world without a plate), mouse clicks (dev.ps1 click lands off), buying and
+  selling for real, bag/Close Container, double-click amount window, `EEUI=0`, `tb_autotest.ps1`.
+  Nothing committed.
+- Phase 16 (stores, part 2): EE `STORE_IDENTIFY`, `STORE_HEALING` and `STORE_ROOMS` pages in
+  `GUISTORE.py` (`LoadIdentifyWindow` / `LoadHealWindow` / `LoadRentWindow`, shared `BuildRows`,
+  `EEPage`). Each page closes the old top window before it builds (EE pages reuse the classic control
+  ids and the engine refuses duplicates across live windows) and the tab bar is re-focused after every
+  page switch so it stays on top. Seen in game: identify at Fell's Studio (`shots/id1.png`), healing
+  at the Bones of the Night temple (`shots/h1.png`: spell icons, prices, selected row white,
+  description, Heal button), rooms at the INN1 test inn (`shots/r1.png`: four rooms, description,
+  price, Rent). Not done: steal, donate and drink pages are still classic windows; room icons
+  (ROOMBUTT) are left out; long store names wrap and clip in the title; actually identifying, healing
+  or renting, mouse clicks, shop after switching back from another tab, `EEUI=0`, `tb_autotest.ps1`.
+  Nothing committed.
+- Phase 16 (stores, actions checked, driven through Python since dev.ps1 clicks land off): buying
+  (-300 gold, item arrives), selling at STORE1 (+120), identify (-100, item identified), healing
+  (-50 gold; hit points not checked, the spell resolves while the game is paused), rent (Rent opens
+  the classic confirm box over the EE page; Rest not pressed), shop -> identify -> shop works.
+  `EEUI=0`: classic store pages and tab window used, buy works (restored to `EEUI=1` afterwards).
+  Still not run: `tb_autotest.ps1`, real mouse clicks.
+- Phase 17 (partial): `QuitGame.DeathWindowEnd` uses the EE info popup (`EEUI.Popup`, reason of death as
+  text, Done); `PartyReform.RemovePlayer` uses the EE two-button popup in PST (Cancel / Remove);
+  `Container.py` builds EE `WORLD_CONTAINER` as a full-width strip at the bottom (10 ground slots,
+  20 inventory slots, EE arrows scroll the ground list, gold, encumbrance, Done) with the classic
+  control ids, hides the party portrait window while it is open and shows it again on close
+  (`Container.personal_size` / `rightdiv` replace the old hard-coded 4 and 2). `EEUI.Build(bar=(y, h))`
+  makes strip windows. Seen in game: container strip with fake container items (the container API was
+  stubbed to show the layout; take/drop not exercised, `shots/k1.png`), remove-player popup
+  (`shots/k3.png`), death popup (`shots/p1.png`; the test text was a placeholder strref).
+  `tb_autotest.ps1` passed (one earlier run did not start the fights, same flake as before).
+  NOT done: dialog (`WORLD_DIALOG`: PST's dialog lives in the message window of the world HUD, so it
+  moves to phase 18), the party reform window itself (needs `PortraitWindow.py`, off limits until phase
+  18), take/drop in a real container, Escape/Done paths, `EEUI=0` container. Installed copies of
+  scripts go in `D:\Games\GemRB\GUIScripts\pst\` for pst files (a stray flat copy of `EEUI.py` and
+  `QuitGame.py` was removed). Nothing committed.
+- Phase 18 (world HUD, part 1): new `pst/EEHud.py`, wired from `MessageWindow.OnLoad`,
+  `PortraitWindow`, `GUICommonWindows.SnapPortraitWindow` and `TurnOrder`; same window aliases and
+  control ids as the classic CHU windows. Bottom strip `EEACTBAR` (ACTBG's end caps at the screen
+  edges, its plain middle repeated) with the clock/pause and Select All / Abort / Formations at the
+  left, message log / lock view / AI and the eight RADWEDGE menu buttons at the right. The hotbar
+  sits in the strip on EE quick slots (`EEQSLOT`) with its info line on a plate tab above. Portrait
+  column at the top left on PRTRTBG backs; with a full screen open it becomes a row in the strip
+  (the full screen is trimmed to end at y 640). Dialogue: DIABG + CONVWING, the reply list, gold,
+  and the speaker's bestiary picture (beast.ini name match, follows interjections via the new
+  `GemRB.GetDialogTarget`) in a frame cut from DIABG's own panel (`EEDLGPF`). Derived art is made
+  by `tools/eeui/derived.py` (run by build.py): MOS V2 block remaps of EE pages, plus small
+  classic BAMs with twins where EE art needs a size GemRB can't scale to (`EEQSLOT`, `EECIRC`).
+  `tools/eeui/icons.py` draws the move icons (TBRUN, TBWITHDR, TBBLOCK, TBTRIP) and the round End
+  Turn button (TBENDTRN) into `gemrb/override/pst/` with 2x twins. Delay removed (engine, binding,
+  bar). Learned: a window resized after it first drew stops drawing (PORTWIN keeps one 640x640
+  size and only moves); posted Escape from dev.ps1 doesn't reach the game.
+  Seen in game: strip and hotbar (`shots/hud4.png`), fight with move icons and End Turn
+  (`shots/fight1.png`), Morte dialogue with his picture (`shots/dlg1.png`), inventory with the
+  portrait row (`shots/inv11.png`) and back to the column (`shots/back2.png`), `EEUI=0` classic HUD
+  with the new icons (`shots/classic1.png`). Unit tests (24) and `tb_autotest.ps1` passed.
+  NOT done: 18d (formation window on WORLD_FORMATION, party reform), real mouse clicks on the
+  new buttons, picking a dialogue reply, an interjection changing the picture, the right cap's
+  three empty sockets (EE-only Combat Log / Quickloot / How to Play). Nothing committed.
+- Phase 18 (hotbar follow-up, owner 2026-11-18): Attack, Talk and the four moves share one 3x2
+  group; the Inventory slot is gone (the menu wedge has it). Moves and End Turn are always on the
+  bar, greyed out of a fight (Talk greys in one). The movement bar is `TBMOVBAR` (EE's remade
+  health bar FILLBAR, red to green, over a dark copy of itself; made by `tools/eeui/icons.py`),
+  clipped to the movement left. Seen in game out of a fight and in one (`shots/bar1c.png`,
+  `shots/bar2c.png`); `tb_autotest.ps1` passed. Nothing committed.

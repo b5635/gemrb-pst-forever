@@ -35,6 +35,7 @@
 #include "GUI/EventMgr.h"
 #include "GUI/GUIScriptInterface.h"
 #include "GUI/GameControl.h"
+#include "DialogHandler.h"
 #include "GUI/Label.h"
 #include "GUI/MapControl.h"
 #include "GUI/ScrollBar.h"
@@ -4944,6 +4945,29 @@ static PyObject* GemRB_GameGetPartyGold(PyObject* /*self*/, PyObject* /*args*/)
 
 	int Gold = game->PartyGold;
 	return PyLong_FromLong(Gold);
+}
+
+PyDoc_STRVAR(GemRB_GetDialogTarget__doc,
+	     "===== GetDialogTarget =====\n\
+\n\
+**Prototype:** GemRB.GetDialogTarget ()\n\
+\n\
+**Description:** The creature whose lines the running dialogue shows (it changes when another\n\
+creature interjects), for presentation only.\n\
+\n\
+**Return value:** its global ID, or 0 when no dialogue runs or the target is not a creature");
+
+static PyObject* GemRB_GetDialogTarget(PyObject* /*self*/, PyObject* /*args*/)
+{
+	const GameControl* gc = core->GetGameControl();
+	if (!gc || !gc->dialoghandler) {
+		return PyLong_FromLong(0);
+	}
+	const Scriptable* target = gc->dialoghandler->GetTarget();
+	if (!target || target->Type != ST_ACTOR) {
+		return PyLong_FromLong(0);
+	}
+	return PyLong_FromLong(target->GetGlobalID());
 }
 
 PyDoc_STRVAR(GemRB_GameSetPartyGold__doc,
@@ -12460,28 +12484,6 @@ static PyObject* GemRB_AnalyzeCombatScript(PyObject* /*self*/, PyObject* args)
 	return dict;
 }
 
-PyDoc_STRVAR(GemRB_DelayTurn__doc,
-	     "===== DelayTurn =====\n\
-\n\
-**Prototype:** GemRB.DelayTurn ()\n\
-\n\
-**Description:** The active combatant gives up its place this round and acts after \n\
-everyone else. Only before it moved or acted.\n\
-\n\
-**Parameters:** N/A\n\
-\n\
-**Return value:** bool, true if it could delay");
-
-static PyObject* GemRB_DelayTurn(PyObject* /*self*/, PyObject* /*args*/)
-{
-	GET_GAME();
-	const Actor* actor = game->combat.GetActiveActor();
-	if (!actor || !actor->InParty || !game->combat.DelayTurn()) {
-		Py_RETURN_FALSE;
-	}
-	Py_RETURN_TRUE;
-}
-
 PyDoc_STRVAR(GemRB_CancelTurnMove__doc,
 	     "===== CancelTurnMove =====\n\
 \n\
@@ -13500,6 +13502,7 @@ static PyMethodDef GemRBMethods[] = {
 	METHOD(GameGetFirstSelectedPC, METH_NOARGS),
 	METHOD(GameGetFormation, METH_VARARGS),
 	METHOD(GameGetPartyGold, METH_NOARGS),
+	METHOD(GetDialogTarget, METH_NOARGS),
 	METHOD(GameGetReputation, METH_NOARGS),
 	METHOD(GameGetSelectedPCSingle, METH_VARARGS),
 	METHOD(GameIsBeastKnown, METH_VARARGS),
@@ -13529,7 +13532,6 @@ static PyMethodDef GemRBMethods[] = {
 	METHOD(TurnBasedTrip, METH_VARARGS),
 	METHOD(GetCombatEvents, METH_NOARGS),
 	METHOD(ExecuteActionAt, METH_VARARGS),
-	METHOD(DelayTurn, METH_NOARGS),
 	METHOD(CancelTurnMove, METH_NOARGS),
 	METHOD(TurnMoveTo, METH_VARARGS),
 	METHOD(AnalyzeCombatScript, METH_VARARGS),
