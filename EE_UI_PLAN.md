@@ -542,3 +542,15 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   entries, creatures tab with Morte/Nameless One and the picture (`shots/jr1-3.png`). Not checked:
   selecting a quest/creature and its description, Assigned/Completed and PC/NPC buttons by click,
   the Done button, `EEUI=0`; list text is small and unstyled (FONTDLG white).
+- Phase 15 (maps): `GUIMA.py`. `LoadAreaMapWindow` builds EE `AREA_MAP` (plate, World Map button, X as
+  Done/Escape, map name label) and creates the `MapControl` with `win.CreateMapControl` in EE's
+  target box; right click closes as before. `OpenTravelWindow` builds the modal EE `WORLD_MAP`
+  (parchment, X) and creates the world map control with `CreateWorldMapControl` in EE's map box;
+  travel is by clicking an area as before (EE's Travel button is left out). Left out of the area map:
+  Add Note, Show Map Notes and Show Walkable toggles and the note template (script can't create a
+  text edit, and the classic note flow needs one) - map notes can still be seen, not added, with
+  the EE window. Some EE boxes (map target, name label) need the menu's vertical offset taken off
+  (`slot_dy`), same quirk as slots. Seen in game: area map of The Hive with plate, name, minimap and
+  buttons (`shots/map1.png`), world map popup with all area art (`shots/map2.png`). Not checked:
+  clicking an area to travel, scrolling the world map, Escape/X, the name-label shift (done after
+  the shot), `EEUI=0`.
