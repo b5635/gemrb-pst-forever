@@ -1,0 +1,23 @@
+# Art UI.menu only names through Lua or that screens need directly. One name or wildcard per line;
+# a bare name copies the MOS and/or BAM of that name, `.mos` / `.bam` restricts it.
+# Screen plates
+STARTBG
+CGBACK
+INVBG
+RECBG
+MGBG
+JRNBG
+LOADBG
+OPTBG
+STRBG
+STRBG2
+MAPBG
+WIRESBG
+BEASTBG
+WELCSCRN
+# Bestiary pictures (picked by entry) and the placeholder
+DEFAULT.mos
+JR*KN.mos
+# Paper dolls
+IVP*.mos
+# Save portraits: not named anywhere in UI.menu; add them here once the save screen phase finds them

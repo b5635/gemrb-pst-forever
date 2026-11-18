@@ -408,3 +408,17 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   the fight, ghouls passed; looks flaky, not tied to this change). Scratch `ee_ui` removed again.
   Not seen: the minify filter at a 2x window, SetFit on a real map screen (phase 15), 1080 mode.
   Nothing committed.
+- 2026-11-17: Phase 4 (converter). `tools/eeui/build.py` (+ `menu_parser.py`, `extra_art.txt`,
+  `run_eeui.bat`) writes `D:\Games\GemRB\ee_ui\` in ~16 s: 96 menus (94 with controls, 997 controls)
+  as `layout/<MENU>.json`, 233 art files (165 MOS, 68 BAM) with 548 PVRZ pages (174 MB), 9 aliases
+  (`EU0001..9`: STFCTION, STALIGN, CGSCRL1, CGPLUS, CGMINUS, GENBUT1, WMTIME, IVSLOT, CGCANCEL; kept
+  stable across runs), `styles.json` (13 styles, 20 colours), 94 previews, `review/bestiary.txt`
+  (89 rows). Layout JSON: `strref`/`text`(EE)/`literal` string objects (numeric keys are strrefs),
+  `plate_menu` (background menu, also inherited from the menu that pushes it), `hit` polygons,
+  `raw` Lua strings. Strings: 227 strref, 82 EE text, 15 literal/unknown (6 uppercase keys not in
+  `uiStrings`: GODBOW/GIVE_GOLD/GIVE_XP/EXPLORE_LABEL, *_CHEATS_BUTTON, all EE-only).
+  Seen: `previews/START_MAIN.png` (buttons on the STARTBG arcs, hit polygons match) and
+  `previews/CHARGEN.png` (stat boxes on the wheel). Missing in EE and classic (dead BG1 leftovers):
+  FUNC, GUIBUTNT, GUICONTB, GUIERR6, GUIOSTUR, GUIOSW, GUIPOPF, RES, START3EE, TITLE.
+  Not done: V1 BAM art is outlined only in previews; save portraits not in `extra_art.txt` yet;
+  bestiary report's "differs" column not reviewed. Committed with this entry.
