@@ -11,6 +11,7 @@ import GemRB
 import GUICommon
 import CommonTables
 import GUICommonWindows
+import EEUI
 from GUICommon import BindControlCallbackParams
 from GUIDefines import *
 from ie_stats import *
@@ -110,8 +111,20 @@ def UpdatePriestWindow (Window):
 
 	return
 
-TogglePriestWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIPR", GUICommonWindows.ToggleWindow, InitPriestWindow, UpdatePriestWindow)
-OpenPriestWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIPR", GUICommonWindows.OpenWindowOnce, InitPriestWindow, UpdatePriestWindow)
+def LoadBook (id, pack, pos, loader):
+	"""Window loader: the EE spell book when its layout exists, the CHU window otherwise."""
+	if not EEUI.Available ("SPELLS"):
+		return loader (id, pack, pos)
+	if GemRB.GetView (pack, id):
+		return loader (id, pack, pos)   # focus or toggle the open one
+	if loader is GUICommonWindows.ToggleWindow and GemRB.GetView ("WIN_STORE"):
+		return None
+	win = EEUI.BuildSpellBook ()
+	win.AddAlias (pack, id)
+	return win
+
+TogglePriestWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIPR", lambda i, p, pos: LoadBook (i, p, pos, GUICommonWindows.ToggleWindow), InitPriestWindow, UpdatePriestWindow)
+OpenPriestWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIPR", lambda i, p, pos: LoadBook (i, p, pos, GUICommonWindows.OpenWindowOnce), InitPriestWindow, UpdatePriestWindow)
 
 def PriestPrevLevelPress ():
 	global PriestSpellLevel

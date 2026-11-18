@@ -521,3 +521,13 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   window opens over it (`shots/rec4.png`). Not checked: hover help text changing (called, no visible
   change in the shot), Reform Party, Level Up, Biography from the EE button, the faction icon, level-up
   and biography windows themselves (still classic), `EEUI=0`.
+- Phase 13 (spells): `EEUI.BuildSpellBook()` builds EE `SPELLS` full-screen (`fullscreen=True`) with the
+  classic mage/priest control ids (0/1 level arrows, 2-13 memorized, 14-33 known, 0x10000027 name,
+  0x10000026 level), and `GUIMG.py`/`GUIPR.py` use it through `LoadBook`; their logic is unchanged.
+  EE's memorized grid has 20 slots, the classic scripts use 12 (the other 8 are skipped); the left
+  grid is the known spells, the right the memorized ones. Icon-sized plain buttons get the same
+  vertical correction as slots (`_slotDy`). Seen in game (`shots/spl2.png`) with three learned
+  level 1 mage spells: icons sit in the left boxes, two memorize slots are open on the right, name
+  and "Level 1 Spells" label show. Not checked: memorizing/unmemorizing by click, level arrows, spell
+  info/unmemorize windows (classic), the priest book (same code, not opened), `EEUI=0`. The empty
+  header bar over the name is as in the plate.

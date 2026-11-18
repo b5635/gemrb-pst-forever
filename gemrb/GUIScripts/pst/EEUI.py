@@ -154,8 +154,12 @@ def _Tooltip (ctl, c):
 	if tip is not None:
 		ctl.SetTooltip (tip)
 
+_slotDy = [0]
+
 def _MakeButton (win, cid, c):
 	x, y, w, h = _Frame (c)
+	if not (c.get ("bam") or c.get ("mosaic") or c.get ("text")) and w <= 60 and h <= 60:
+		y -= _slotDy[0]     # icon-sized plain buttons are slots in all but name: same offset as slots
 	b = win.CreateButton (cid, x, y, w, h)
 	if c.get ("bam") and isinstance (c.get ("sequence", 0), int):
 		# EE button cycles: 0 normal, 1 highlighted, 2 pressed, 3 disabled
@@ -242,7 +246,7 @@ def Find (menu, **match):
 			return c["index"]
 	return None
 
-def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, first=None, reverse=False):
+def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, first=None, reverse=False, fullscreen=False):
 	"""Create the window for an EE menu. Returns (window, controls).
 
 	plate: a background picture name to draw behind the controls; None uses the menu's own
@@ -253,6 +257,7 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 	there are drawn on top of all the others.
 	reverse: create controls last to first. The engine draws the first-created control on top, so use
 	this when the EE menu relies on later controls overlapping earlier ones (text over a picture).
+	fullscreen: build a modal menu as a full-screen window on its plate instead of a popup box.
 	ids: {index: control id} to give controls the id the classic script expects (default index + 1)."""
 	override = override or {}
 	ids = ids or {}
@@ -262,7 +267,9 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 	if windowId is None:
 		windowId = _nextWindow[0]
 		_nextWindow[0] += 1
-	if doc.get ("modal") and doc.get ("bbox"):
+	_slotDy[0] = doc.get ("slot_dy", 0)
+	popup = bool (doc.get ("modal") and doc.get ("bbox")) and not fullscreen
+	if popup:
 		# popups: a window the size of the menu, where EE puts it
 		bx, by, bw, bh = doc["bbox"]
 		_origin[0], _origin[1] = bx, by
@@ -280,7 +287,7 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 	controls = {}
 	if first:
 		first (win)
-	if doc.get ("modal") and doc.get ("bbox"):
+	if popup:
 		# the full-size backdrop label becomes the window background (keeps it under every control)
 		for c in doc["controls"]:
 			if c["type"] == "label" and c.get ("mosaic") and c.get ("frame") == doc["bbox"]:
@@ -435,3 +442,20 @@ def BuildRows (win, menu, listIndex, count, idBase=0x100, sel_pictures=None):
 		row["bg"] = bg
 		rows.append (row)
 	return rows, lst["frame"]
+
+
+# -- spell book (mage and priest share EE's SPELLS menu) ---------------------------------------
+
+def BuildSpellBook (arrowsAndName=True):
+	"""EE SPELLS as a full-screen window with the controls the classic mage/priest scripts expect
+	(ids: 0 previous level, 1 next level, 2-13 memorized, 14-33 known, 0x10000027 name,
+	0x10000026 level). EE's memorized grid has 20 slots; the classic scripts use 12. Returns the window."""
+	ids = {3: 0, 4: 1, 2: 0x10000027, 7: 0x10000026}
+	skip = set ()
+	for i in range (20):
+		ids[10 + i] = 2 + i if i < 12 else 0x3000 + 10 + i
+		if i >= 12:
+			skip.add (10 + i)
+		ids[30 + i] = 14 + i
+	win, ctl = Build ("SPELLS", ids=ids, skip=skip, fullscreen=True, reverse=True)
+	return win
