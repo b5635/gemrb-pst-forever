@@ -509,3 +509,15 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   picture (orange backdrop), `EEUI=0` fallback, `slot_dy` is applied to every menu with slots (check
   when containers/stores are converted), and `EEUI.Build` windows can't be rebuilt after
   `importlib.reload(EEUI)` without bumping `_nextWindow` (dev only).
+- Phase 12 (character record): `GUIREC.py` `LoadRecordsWindow` builds EE `CHARACTER` with the classic
+  control ids (`EE_REC_IDS`), so `InitRecordsWindow`/`UpdateRecordsWindow` run unchanged. EE's
+  Information, Reform Party, Level Up and Biography (strref 4247) buttons are wired; Close/Escape on
+  the X. Transparent hover buttons (ids 31-38) carry the stat/AC/HP help over the EE labels.
+  `EEUI.Build` got `reverse` (create last-to-first: the engine draws the first-created control on
+  top, EE overlaps text on pictures), `first` (callback for controls that must be on top), and
+  per-control `text align` (`ControlFlags`); lua-driven labels now get the style colour. Name/class
+  use FONTDLG (EXOFONT is capitals only). Seen in game (`shots/rec5.png`): name, class, race, gender,
+  six stats, AC, HP, portrait, help text with scroll bar, alignment icon; the classic Information
+  window opens over it (`shots/rec4.png`). Not checked: hover help text changing (called, no visible
+  change in the shot), Reform Party, Level Up, Biography from the EE button, the faction icon, level-up
+  and biography windows themselves (still classic), `EEUI=0`.

@@ -173,16 +173,25 @@ def _MakeButton (win, cid, c):
 	_Tooltip (b, c)
 	return b
 
+def ControlFlags (c, style):
+	"""IE_FONT_* alignment for a control: its own `text align h v`, else the style's."""
+	al = c.get ("text_opts", {}).get ("align")
+	if not al or not isinstance (al, list):
+		return StyleFlags (style)
+	h = {"left": IE_FONT_ALIGN_LEFT, "center": IE_FONT_ALIGN_CENTER, "right": IE_FONT_ALIGN_RIGHT}.get (al[0], IE_FONT_ALIGN_LEFT)
+	v = {"top": IE_FONT_ALIGN_TOP, "center": IE_FONT_ALIGN_MIDDLE, "bottom": IE_FONT_ALIGN_BOTTOM}.get (al[1] if len (al) > 1 else "center", IE_FONT_ALIGN_MIDDLE)
+	return h | v
+
 def _MakeLabel (win, cid, c):
 	x, y, w, h = _Frame (c)
 	style = c.get ("style", "label")
-	lab = win.CreateLabel (cid, x, y, w, h, StyleFont (style), "", StyleFlags (style))
+	lab = win.CreateLabel (cid, x, y, w, h, StyleFont (style), "", ControlFlags (c, style))
 	if c.get ("mosaic"):
 		lab.SetBackground (c["mosaic"])
 	elif c.get ("bam") and isinstance (c.get ("sequence", 0), int):
 		lab.SetBackground (GemRB.GetSprite (c["bam"], -1, c.get ("sequence", 0), 0))
+	lab.SetColor (StyleColor (style))
 	if c.get ("text"):
-		lab.SetColor (StyleColor (style))
 		lab.SetText (Text (c["text"]))
 	return lab
 
@@ -233,7 +242,7 @@ def Find (menu, **match):
 			return c["index"]
 	return None
 
-def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, first=None):
+def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, first=None, reverse=False):
 	"""Create the window for an EE menu. Returns (window, controls).
 
 	plate: a background picture name to draw behind the controls; None uses the menu's own
@@ -242,6 +251,8 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 	override: {index: 'button' | 'textarea' | 'label'} to build a control as another kind.
 	first: callable(win) run after the window exists and before any control is made; controls made
 	there are drawn on top of all the others.
+	reverse: create controls last to first. The engine draws the first-created control on top, so use
+	this when the EE menu relies on later controls overlapping earlier ones (text over a picture).
 	ids: {index: control id} to give controls the id the classic script expects (default index + 1)."""
 	override = override or {}
 	ids = ids or {}
@@ -276,7 +287,7 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 				win.SetBackground (c["mosaic"])
 				skip = set (skip) | {c["index"]}
 				break
-	for c in doc["controls"]:
+	for c in (reversed (doc["controls"]) if reverse else doc["controls"]):
 		kind = override.get (c["index"], c["type"])
 		cid = ids.get (c["index"], (0x3000 if ids else 1) + c["index"])
 		if "frame" not in c or c["index"] in skip:

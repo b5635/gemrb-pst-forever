@@ -37,6 +37,7 @@ import PartyReform
 from GUIDefines import *
 from ie_stats import *
 import GUIWORLD
+import EEUI
 import LUSkillsSelection
 
 ###################################################
@@ -242,8 +243,51 @@ def UpdateRecordsWindow (Window):
 	Text.SetText (stats_overview)
 	return
 
-ToggleRecordsWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIREC", GUICommonWindows.ToggleWindow, InitRecordsWindow, UpdateRecordsWindow, True)
-OpenRecordsWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIREC", GUICommonWindows.OpenWindowOnce, InitRecordsWindow, UpdateRecordsWindow, True)
+# EE CHARACTER control index -> classic control id (the classic code addresses CHU control ids)
+EE_REC_IDS = {
+	13: 0, 28: 2, 7: 5, 6: 6, 24: 7, 25: 8, 26: 9,
+	20: 0x1000000a, 12: 0x1000000b, 9: 0x1000000c, 10: 0x1000000d,
+	22: 0x10000014, 23: 0x10000015, 21: 0x10000016,
+}
+for _i in range (6):
+	EE_REC_IDS[_i] = 0x1000000e + _i      # EE lists STR INT WIS DEX CON CHA, as the CHU does
+
+def LoadRecordsWindow (id, pack, pos, loader):
+	"""Window loader: the EE character record when its layout exists, the CHU window otherwise."""
+	if not EEUI.Available ("CHARACTER"):
+		return loader (id, pack, pos)
+	if GemRB.GetView (pack, id):
+		return loader (id, pack, pos)   # focus or toggle the open one
+	if loader is GUICommonWindows.ToggleWindow and GemRB.GetView ("WIN_STORE"):
+		return None
+	win, ctl = EEUI.Build ("CHARACTER", ids=EE_REC_IDS, override={13: "textarea", 28: "button", 7: "button", 6: "button"}, reverse=True)
+	win.AddAlias (pack, id)
+	for i in (20, 21):
+		ctl[i].SetFont ("FONTDLG")     # EXOFONT only has capitals: names are mixed case
+	frames = {c["index"]: c["frame"] for c in EEUI.Controls ("CHARACTER")}
+	def Over (cid, *indices):
+		# transparent hover areas for the help text, as the CHU has
+		rects = [frames[i] for i in indices]
+		x0 = min (r[0] for r in rects)
+		y0 = min (r[1] for r in rects)
+		x1 = max (r[0] + r[2] for r in rects)
+		y1 = max (r[1] + r[3] for r in rects)
+		b = win.CreateButton (cid, x0 - EEUI._origin[0], y0 - EEUI._origin[1], x1 - x0, y1 - y0)
+		b.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+	for i in range (6):
+		Over (31 + i, 14 + i, i)
+	Over (37, 11, 12)
+	Over (38, 8, 9, 10)
+	for c in EEUI.Controls ("CHARACTER"):
+		if c["type"] == "button" and c.get ("bam") == "XBUTT":
+			ctl[c["index"]].OnPress (win.Close)
+			ctl[c["index"]].MakeEscape ()
+		elif c["type"] == "button" and c.get ("text", {}).get ("strref") == 4247:
+			ctl[c["index"]].OnPress (OpenBiographyWindow)
+	return win
+
+ToggleRecordsWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIREC", lambda i, p, pos: LoadRecordsWindow (i, p, pos, GUICommonWindows.ToggleWindow), InitRecordsWindow, UpdateRecordsWindow, True)
+OpenRecordsWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIREC", lambda i, p, pos: LoadRecordsWindow (i, p, pos, GUICommonWindows.OpenWindowOnce), InitRecordsWindow, UpdateRecordsWindow, True)
 
 # puts default info to textarea (overview of PC's bonuses, saves, etc.
 def OnRecordsButtonLeave ():
