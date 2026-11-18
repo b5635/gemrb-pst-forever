@@ -1245,6 +1245,39 @@ const CharAnimations::PartAnim* CharAnimations::GetShadowAnimation(unsigned char
 
 static const int one_file[MAX_ANIMS] = { 2, 1, 0, 0, 2, 3, 0, 1, 0, 4, 1, 0, 0, 0, 3, 1, 4, 4, 4 };
 
+int CharAnimations::PreloadAnimations(std::unordered_set<ResRef, CstrHashCI, CstrEqCI>& seen) const
+{
+	if (ResRefBase.IsEmpty() || GetAnimType() < IE_ANI_PST_ANIMATION_1) return 0;
+
+	// the files AddPSTSuffix picks from, named directly: it rolls the game's dice for the
+	// head turn (sf1 or sf2), and preloading must not change what a later roll gives
+	std::vector<ResRef> names;
+	if (GetAnimType() == IE_ANI_PST_STAND || GetAnimType() == IE_ANI_PST_GHOST) {
+		for (int part = 0; part < GetActorPartCount(); ++part) {
+			ResRef name = ResRefBase;
+			unsigned char cycle = 0;
+			EquipResRefData equip;
+			GetAnimResRef(IE_ANI_AWAKE, S, name, cycle, part, equip);
+			names.push_back(name);
+		}
+	} else {
+		static const char* const prefixes[] = { "at1", "hit", "gup", "std", "stc", "dfb", "run", "wlk", "sp1", "sp2", "sf1", "sf2", "ms1" };
+		for (const char* prefix : prefixes) {
+			ResRef name;
+			name.Format("{}{}{}", ResRefBase[0], prefix, ResRefBase.begin() + 1);
+			names.push_back(name);
+		}
+	}
+
+	int loaded = 0;
+	for (const ResRef& name : names) {
+		if (name.IsEmpty() || !seen.insert(name).second) continue;
+		if (!gamedata->Exists(name, IE_BAM_CLASS_ID, true)) continue;
+		if (gamedata->GetFactoryResource(name, IE_BAM_CLASS_ID, true)) ++loaded;
+	}
+	return loaded;
+}
+
 void CharAnimations::GetAnimResRef(unsigned char stance,
 				   orient_t Orient, ResRef& NewResRef, unsigned char& Cycle,
 				   int Part, EquipResRefData& EquipData) const

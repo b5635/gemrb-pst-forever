@@ -29,6 +29,8 @@
 #include "Streams/DataStream.h"
 #include "Video/Pixels.h"
 
+#include <unordered_set>
+
 #include <algorithm>
 #include <iterator>
 #include <utility>
@@ -902,6 +904,20 @@ int Game::LoadMap(const ResRef& resRef, bool loadscreen)
 	}
 
 	core->GetAudioDrv()->SetReverbProperties(newMap->GetReverbProperties());
+
+	// Load every animation the area's creatures can play now, behind the loading screen:
+	// loaded on first use instead, an upscaled one (one file per frame) froze the game for
+	// up to a second the first time someone attacked, got hit or died.
+	if (core->GetDictionary().Get("PreloadAreaSprites", 0)) {
+		tick_t start = GetMilliseconds();
+		std::unordered_set<ResRef, CstrHashCI, CstrEqCI> seen;
+		int files = 0;
+		for (const Actor* actor : newMap->GetAllActors()) {
+			const CharAnimations* anims = actor->GetAnims();
+			if (anims) files += anims->PreloadAnimations(seen);
+		}
+		Log(MESSAGE, "Game", "Preloaded {} creature animation files for {} in {} ms.", files, resRef, GetMilliseconds() - start);
+	}
 
 	core->LoadProgress(100);
 	return ret;

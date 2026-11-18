@@ -13,6 +13,7 @@
 #include "Palette.h"
 
 #include <array>
+#include <unordered_set>
 #include <memory>
 
 namespace GemRB {
@@ -193,6 +194,10 @@ public:
 	const PartAnim* GetAnimation(unsigned char Stance, orient_t Orient);
 	/** PST gup BAM exists for this avatar (not ghosts/statics; not BG death-reversed get-up). */
 	bool HasGetUpAnimation() const;
+	/** Loads every body animation file this avatar can play into the resource cache (pst
+	 * avatars only; other types abort on stances they lack). 'seen' skips files already
+	 * done for another creature. Returns how many files were loaded. */
+	int PreloadAnimations(std::unordered_set<ResRef, CstrHashCI, CstrEqCI>& seen) const;
 	int GetTotalPartCount() const;
 	const int* GetZOrder(unsigned char Orient) const;
 	const PartAnim* GetShadowAnimation(unsigned char Stance, orient_t OXrient);
