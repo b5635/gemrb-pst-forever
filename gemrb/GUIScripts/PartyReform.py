@@ -68,6 +68,14 @@ def UpdateReformWindow (Window, select):
 	return
 
 def RemovePlayer (select):
+	if GameCheck.IsPST ():
+		import EEUI
+		if EEUI.PopupAvailable (2):
+			def Confirm ():
+				GemRB.LeaveParty (select)
+				GemRB.GetView ("WIN_REFORM", 0).Close ()
+			EEUI.Popup (28071, [(4196, None, "e"), (42514, Confirm, "d")])
+			return
 	winID = 25
 	if GameCheck.IsHOW ():
 		winID = 0 # at least in guiw08, this is the correct window

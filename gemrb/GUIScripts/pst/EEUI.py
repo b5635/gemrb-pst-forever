@@ -246,7 +246,7 @@ def Find (menu, **match):
 			return c["index"]
 	return None
 
-def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, first=None, reverse=False, fullscreen=False):
+def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, first=None, reverse=False, fullscreen=False, dy=None, bar=None):
 	"""Create the window for an EE menu. Returns (window, controls).
 
 	plate: a background picture name to draw behind the controls; None uses the menu's own
@@ -258,7 +258,11 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 	reverse: create controls last to first. The engine draws the first-created control on top, so use
 	this when the EE menu relies on later controls overlapping earlier ones (text over a picture).
 	fullscreen: build a modal menu as a full-screen window on its plate instead of a popup box.
-	ids: {index: control id} to give controls the id the classic script expects (default index + 1)."""
+	ids: {index: control id} to give controls the id the classic script expects (default index + 1).
+	dy: move every control down by this many pixels (negative: up) instead of the per-kind slot_dy
+	corrections; for menus whose whole body sits off the plate (the store screens).
+	bar: (y, height) makes the window a full-width strip there instead of a full screen (the container bar);
+	control frames stay in screen coordinates."""
 	override = override or {}
 	ids = ids or {}
 	doc = Load (menu)
@@ -267,7 +271,7 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 	if windowId is None:
 		windowId = _nextWindow[0]
 		_nextWindow[0] += 1
-	_slotDy[0] = doc.get ("slot_dy", 0)
+	_slotDy[0] = doc.get ("slot_dy", 0) if dy is None else 0
 	popup = bool (doc.get ("modal") and doc.get ("bbox")) and not fullscreen
 	if popup:
 		# popups: a window the size of the menu, where EE puts it
@@ -276,8 +280,11 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 		frame = {'x': bx, 'y': by, 'w': bw, 'h': bh}
 		if plate is None:
 			plate = False
+	elif bar:
+		_origin[0], _origin[1] = 0, bar[0]
+		frame = {'x': 0, 'y': bar[0], 'w': LOGICAL_W, 'h': bar[1]}
 	else:
-		_origin[0], _origin[1] = 0, 0
+		_origin[0], _origin[1] = 0, -(dy or 0)
 		frame = {'x': 0, 'y': 0, 'w': LOGICAL_W, 'h': LOGICAL_H}
 	win = GemRB.CreateWindow (windowId, WINDOW_PACK, frame)
 	if plate is None:
@@ -305,7 +312,8 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 			x, y, w, h = _Frame (c)
 			# EE slot areas are measured from the menu's top, not the centred menu box: measured
 			# against the inventory plate they sit exactly the menu's vertical offset too low
-			y -= doc.get ("slot_dy", 0)
+			if dy is None:
+				y -= doc.get ("slot_dy", 0)
 			ctl = win.CreateButton (cid, x, y, w, h)
 			ctl.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
 		elif kind == "label":

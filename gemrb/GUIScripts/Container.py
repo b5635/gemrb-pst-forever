@@ -9,6 +9,10 @@ import InventoryCommon
 from CommonWindow import SetGameGUIHidden, IsGameGUIHidden
 from ie_stats import *
 from GUIDefines import *
+if GameCheck.IsPST ():
+	import EEUI
+else:
+	EEUI = None
 
 HideOnClose = False
 ContainerWindow = None
@@ -19,6 +23,9 @@ if GameCheck.IsIWD2():
 else:
 	leftdiv = 3
 	ground_size = 6
+personal_size = 4   # inventory buttons shown
+rightdiv = 2        # inventory buttons per row (the strip scrolls by rows)
+EEContainer = False
 
 def UpdateContainerWindow ():
 	global Container
@@ -44,7 +51,7 @@ def UpdateContainerWindow ():
 	inventory_slots = GemRB.GetSlots (pc, 0x8000)
 	RightCount = len(inventory_slots)
 	ScrollBar = Window.GetControl (53)
-	Count = max (0, (RightCount - 4 + 1) // 2)
+	Count = max (0, (RightCount - personal_size + rightdiv - 1) // rightdiv)
 	ScrollBar.SetVarAssoc ("RightTopIndex", GemRB.GetVar ("RightTopIndex"), 0, Count)
 
 	RedrawContainerWindow ()
@@ -54,7 +61,7 @@ def RedrawContainerWindow ():
 
 	# scroll in multiples of the number of columns
 	LeftTopIndex = GemRB.GetVar ("LeftTopIndex") * leftdiv
-	RightTopIndex = GemRB.GetVar ("RightTopIndex") * 2
+	RightTopIndex = GemRB.GetVar ("RightTopIndex") * rightdiv
 	pc = GemRB.GameGetFirstSelectedPC ()
 	inventory_slots = GemRB.GetSlots (pc, 0x8000)
 	RightCount = len(inventory_slots)
@@ -74,7 +81,7 @@ def RedrawContainerWindow ():
 		else:
 			InventoryCommon.UpdateInventorySlot (pc, Button, Slot, "container")
 
-	for i in range (4):
+	for i in range (personal_size):
 		if i+RightTopIndex < RightCount:
 			Slot = GemRB.GetSlotItem (pc, inventory_slots[i+RightTopIndex])
 		else:
@@ -104,6 +111,41 @@ def RedrawContainerWindow ():
 		else:
 			Button.SetState (IE_GUI_BUTTON_LOCKED)
 
+def BuildEEContainer ():
+	"""EE's WORLD_CONTAINER strip with the classic ids: ground slots 0-9, inventory slots 10-29,
+	scroll bars 52 / 53 (hidden: EE scrolls the ground list with its two arrows), container icon 50,
+	Done 51, encumbrance 54, gold label 0x10000036."""
+	ids = {41: 51, 38: 0x10000036}
+	skip = {13, 14, 15, 16, 17}
+	for i in range (10):
+		ids[3 + i] = i
+	for i in range (20):
+		ids[18 + i] = 10 + i
+	win, ctl = EEUI.Build ("WORLD_CONTAINER", ids = ids, skip = skip, bar = (642, 78), reverse = True)
+	oy = 642
+	for c in EEUI.Controls ("WORLD_CONTAINER"):
+		if c["index"] in (13, 14):
+			x, y, w, h = c["frame"]
+			b = win.CreateButton (0x4000 + c["index"], x, y - oy, w, h)
+			b.SetSprites (c["bam"], c.get ("sequence", 0), 0, 2, 0, 3)
+			step = -1 if c["index"] == 13 else 1
+			b.OnPress (lambda step = step: ScrollGround (step))
+	# the classic code writes to these
+	for cid in (52, 53):
+		win.CreateScrollBar (cid, {'x': 0, 'y': 0, 'w': 1, 'h': 1}, EEUI.Alias ("CGSCRL1")).SetVisible (False)
+	win.CreateButton (50, 0, 0, 1, 1).SetVisible (False)
+	enc = win.CreateButton (54, 498, 657 - oy, 52, 56)
+	enc.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+	enc.SetFont ("NUMBER")
+	return win
+
+def ScrollGround (step):
+	"""EE's arrows: move the ground list by one row."""
+	top = GemRB.GetVar ("LeftTopIndex") or 0
+	count = max (0, (Container['ItemCount'] - ground_size + leftdiv - 1) // leftdiv)
+	GemRB.SetVar ("LeftTopIndex", max (0, min (top + step, count)))
+	RedrawContainerWindow ()
+
 def OpenContainerWindow ():
 	global ContainerWindow, Container
 
@@ -124,7 +166,19 @@ def OpenContainerWindow ():
 		if ActWin:
 			ActWin.SetVisible (False)
 
-	ContainerWindow = Window = GemRB.LoadWindow (8, GUICommon.GetWindowPack(), WINDOW_BOTTOM|WINDOW_HCENTER)
+	global ground_size, leftdiv, personal_size, rightdiv, EEContainer
+	EEContainer = EEUI is not None and EEUI.Available ("WORLD_CONTAINER")
+	if EEContainer:
+		ContainerWindow = Window = BuildEEContainer ()
+		ground_size, leftdiv, personal_size, rightdiv = 10, 5, 20, 10
+		# the EE strip takes the party bar's place; the portraits come back when it closes
+		PortraitWindow = GemRB.GetView ("PORTWIN")
+		if PortraitWindow:
+			PortraitWindow.SetVisible (False)
+	else:
+		ground_size, leftdiv = (10, 5) if GameCheck.IsIWD2 () else (6, 3)
+		personal_size, rightdiv = 4, 2
+		ContainerWindow = Window = GemRB.LoadWindow (8, GUICommon.GetWindowPack(), WINDOW_BOTTOM|WINDOW_HCENTER)
 	ContainerWindow.SetEventProxy(GUICommon.GameControl)
 
 	# fix wrong height in the guiw10.chu and reposition
@@ -157,7 +211,7 @@ def OpenContainerWindow ():
 			Button.SetFlags (IE_GUI_BUTTON_ALIGN_RIGHT | IE_GUI_BUTTON_ALIGN_BOTTOM, OP_OR)
 
 	# 10-13 - Personal Item
-	for i in range (4):
+	for i in range (personal_size):
 		Button = Window.GetControl (i+10)
 		Button.SetVarAssoc ("RightIndex", i)
 		Button.OnPress (DropItemContainer)
@@ -227,6 +281,10 @@ def CloseContainerWindow ():
 
 	ContainerWindow.Close ()
 	ContainerWindow = None
+	if EEContainer:
+		PortraitWindow = GemRB.GetView ("PORTWIN")
+		if PortraitWindow:
+			PortraitWindow.SetVisible (True)
 	if not GameCheck.IsPST ():
 		GemRB.GetView ("MSGWIN").SetVisible (True)
 		if GemRB.GetView ("ACTWIN"):

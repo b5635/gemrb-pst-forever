@@ -10,6 +10,7 @@ import GemRB
 from GUIDefines import *
 import GUICommon
 import CommonWindow
+import EEUI
 
 def OnLoad ():
 	movies = ["", "T1DEATH", "T1ABSORB", "FINALE", "CREDITS"]
@@ -35,6 +36,12 @@ def DonePress ():
 
 def DeathWindowEnd ():
 	GemRB.GamePause (1,3)
+
+	if EEUI.PopupAvailable (1):
+		# EE's death box: the reason for death, one button (the picture is POPUPIMG frame 2)
+		EEUI.Popup (GemRB.GetVar ("QuitGame3"), [(17237, DonePress, "d")], image=2)
+		GUICommon.GameWindow.SetDisabled(True)
+		return
 
 	Window = GemRB.LoadWindow (25, GUICommon.GetWindowPack())
 

@@ -19,6 +19,10 @@ from ie_slots import *
 from ie_sounds import *
 from ie_feats import FEAT_MERCANTILE_BACKGROUND
 import CommonTables
+if GameCheck.IsPST ():
+	import EEUI
+else:
+	EEUI = None
 
 StoreWindow = None
 
@@ -75,6 +79,12 @@ windowIDs = { 'shop' : 2, 'ident' : 4, 'steal' : 6, 'donate' : 9, 'heal' : 5, 'r
 strrefs = { 'done' : 11973, 'cancel' : 13727, 'buy' : 13703, 'sell' : 13704, 'identify' : 14133, 'steal' : 14179, 'donate' : 15101, 'heal' : 8786, 'rumors' : 14144, 'rent' : 14293, 'itemnamecost' : 10162, 'restedfor' : 16476, 'rest' : 17199, 'confirmrest' : 15358, 'itemstoocostly' : 11047, 'spelltoocostly' : 11048, 'drinktoocostly' : 11049, 'toodrunk' : 10832, 'idtoocostly' : 11050, 'roomtoocostly' : 11051, 'donorgood' : 10468, 'donorfail' : 10469 }
 store_funcs = None
 StoreButtonCount = 4
+ShopCount = ItemButtonCount   # item rows of the buy/sell window (the EE layout has 6)
+EEShop = False                # the buy/sell window is the EE layout
+EEBar = False                 # the tab bar is the EE layout
+EEIdent = EEHeal = EERent = False   # the identify / heal / rent pages are EE layouts
+IdRows = HealRows = ItemButtonCount
+RowHooks = {}
 if GameCheck.IsIWD1():
 	# no bam for bags
 	storebams = ("STORSTOR","STORTVRN","STORINN","STORTMPL","STORSTOR","STORSTOR")
@@ -150,6 +160,9 @@ def PositionStoreWinRelativeTo(win):
 	EscButton = win.CreateButton (99, 0, 0, 0, 0);
 	EscButton.MakeEscape ()
 
+	if EEBar:
+		return   # the EE tab bar is a full-screen window that already sits where it belongs
+
 	winframe = win.GetFrame()
 	storeframe = storewin.GetFrame()
 
@@ -162,6 +175,224 @@ def PositionStoreWinRelativeTo(win):
 		storeframe['y'] = winframe['y'] + winframe['h']
 
 	storewin.SetFrame(storeframe)
+
+# EE store layouts (phase 16). EE's tab icon sequence in STRCHOOS for each classic store action
+# (buy/sell, identify, steal, heal, donate, drink, rent)
+EE_TAB_SEQ = (0, 1, 2, 4, 3, 5, 6)
+EE_ROW_PICTURES = ("STRROW",)
+EE_SELECTED = {'r': 255, 'g': 255, 'b': 255}   # label colour of a selected row
+EE_STORE_DY = {"STORE_BUYSELL": -52, "STORE_IDENTIFY": -97, "STORE_HEALING": -97, "STORE_ROOMS": -97}
+EE_CHOOSER_DY = 197
+
+def EEStoreAvailable (menu):
+	return EEUI is not None and EEUI.Available (menu)
+
+def LoadStoreBar ():
+	"""The tab bar and Done button: EE's STORE_CHOOSER when present, else the classic window 3."""
+	global EEBar
+	EEBar = EEStoreAvailable ("STORE_CHOOSER")
+	if not EEBar:
+		return GemRB.LoadWindow (3, "GUISTORE", StoreWindowPlacement)
+	# the Done button is control 0; the four EE tab slots are replaced by one button per classic
+	# action (controls 0x5100-0x5106; small ids are taken), placed on the same strip
+	win, ctl = EEUI.Build ("STORE_CHOOSER", ids = {1: 0}, skip = {0, 2, 3, 4, 5}, plate = False, dy = EE_CHOOSER_DY)
+	doc = EEUI.Load ("STORE_CHOOSER")
+	tabs = [c for c in doc["controls"] if c.get ("bam") == "STRCHOOS"]
+	x0, y0 = tabs[0]["frame"][0], tabs[0]["frame"][1] + EE_CHOOSER_DY
+	step = tabs[1]["frame"][0] - tabs[0]["frame"][0]
+	actions = Store['StoreButtons']
+	shown = [i for i in range (StoreButtonCount) if actions[i] is not None]
+	# later tabs are drawn over earlier ones, and the engine draws the first-created control on top
+	for n in range (len (shown) - 1, -1, -1):
+		i = shown[n]
+		b = win.CreateButton (0x5100 + i, x0 + n * step, y0, tabs[0]["frame"][2], tabs[0]["frame"][3])
+		b.SetFlags (IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_PICTURE, OP_SET)
+	for i in range (StoreButtonCount):
+		if i not in shown:
+			b = win.CreateButton (0x5100 + i, 0, 0, 1, 1)
+			b.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+	return win
+
+def CloseOldPage ():
+	"""EE pages reuse the classic control ids, which must be free before the next page is built."""
+	top = GemRB.GetView ("WIN_TOP")
+	if top:
+		top.Close ()
+
+def EEPage (base, menu, build):
+	"""Window loader for a store page that has an EE layout: build (menu) -> window, else the CHU window."""
+	def load (id, pack, pos):
+		if GemRB.GetView (pack, id) or not EEStoreAvailable (menu):
+			return base (id, pack, pos), False
+		if base is GUICommonWindows.ToggleWindow and GemRB.GetView ("WIN_STORE"):
+			return None, False
+		CloseOldPage ()
+		win = build ()
+		win.AddAlias (pack, id)
+		return win, True
+	return load
+
+def BuildEEPage (menu, ids, skip, override = None):
+	win, ctl = EEUI.Build (menu, ids = ids, skip = skip, dy = EE_STORE_DY[menu], reverse = True, override = override)
+	for c in EEUI.Controls (menu):
+		if c.get ("text", {}).get ("literal") == "font" and c["index"] in ctl:
+			ctl[c["index"]].SetText ("")
+	return win, ctl
+
+def ButtonStyle (btn):
+	btn.SetFont (EEUI.StyleFont ("button"))
+	btn.SetColor (EEUI.StyleColor ("button"))
+
+def LoadIdentifyWindow (base):
+	def build ():
+		global IdRows
+		IdRows = 6
+		RowHooks.clear ()
+		win, ctl = BuildEEPage ("STORE_IDENTIFY", {0: 0x0fffffff, 1: 0x10000002, 4: 0x10000000, 6: 0x10000001, 9: 4, 10: 14}, {2, 3, 7, 8}, {10: 'textarea'})
+		ButtonStyle (ctl[9])
+		lst = [c for c in EEUI.Controls ("STORE_IDENTIFY") if c["type"] == "list"][0]
+		BuildRows (win, "STORE_IDENTIFY", lst, IdRows, 6, 0x10000009, 5, "id", 0x4200)
+		return win
+	inner = EEPage (base, "STORE_IDENTIFY", build)
+	def load (id, pack, pos):
+		global EEIdent, IdRows
+		win, ee = inner (id, pack, pos)
+		if win:
+			if not ee:
+				IdRows = ItemButtonCount
+			EEIdent = ee
+		return win
+	return load
+
+def LoadHealWindow (base):
+	def build ():
+		global HealRows
+		HealRows = 6
+		RowHooks.clear ()
+		win, ctl = BuildEEPage ("STORE_HEALING", {0: 0x0fffffff, 2: 0x10000000, 6: 0x10000001, 8: 3, 9: 13}, {1, 3, 4, 7}, {9: 'textarea'})
+		ButtonStyle (ctl[8])
+		lst = [c for c in EEUI.Controls ("STORE_HEALING") if c["type"] == "list"][0]
+		BuildRows (win, "STORE_HEALING", lst, HealRows, 5, 0x10000008, 4, "heal", 0x4300)
+		return win
+	inner = EEPage (base, "STORE_HEALING", build)
+	def load (id, pack, pos):
+		global EEHeal, HealRows
+		win, ee = inner (id, pack, pos)
+		if win:
+			if not ee:
+				HealRows = ItemButtonCount
+			EEHeal = ee
+		return win
+	return load
+
+def LoadRentWindow (base):
+	def build ():
+		RowHooks.clear ()
+		win, ctl = BuildEEPage ("STORE_ROOMS", {0: 0x1000000a, 4: 0x1000000c, 6: 9, 7: 0x1000000b, 9: 8}, {1, 2, 3, 5}, {6: 'textarea'})
+		ButtonStyle (ctl[9])
+		lst = [c for c in EEUI.Controls ("STORE_ROOMS") if c["type"] == "list"][0]
+		x, y, w, h = lst["frame"]
+		y += EE_STORE_DY["STORE_ROOMS"]
+		rowh = lst["columns"][0]["controls"][0]["frame"][3]
+		for i in range (4):
+			# room icon buttons 0-3 are only state holders in the EE page
+			win.CreateButton (i, 0, 0, 1, 1).SetVisible (False)
+			b = win.CreateButton (4 + i, x, y + i * rowh, lst["columns"][0]["controls"][0]["frame"][2], rowh)
+			b.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+			b.SetFont (EEUI.StyleFont ("label"))
+			b.SetColor (EEUI.StyleColor ("normal"))
+			bg = win.CreateLabel (0x4400 + i, x, y + i * rowh, lst["columns"][0]["controls"][0]["frame"][2], rowh, "FONTDLG", "", 0)
+			bg.SetBackground (EE_ROW_PICTURES[0])
+		return win
+	inner = EEPage (base, "STORE_ROOMS", build)
+	def load (id, pack, pos):
+		global EERent
+		win, ee = inner (id, pack, pos)
+		if win:
+			EERent = ee
+		return win
+	return load
+
+def EETabPicture (btn, action, active):
+	# the picture is scaled down to the tab by the button; frame 2 of the cycle is the pressed look
+	btn.SetPicture (GemRB.GetSprite ("STRCHOOS", -1, EE_TAB_SEQ[action], 2 if active else 0))
+
+def EETabPress (win, action):
+	for i in range (StoreButtonCount):
+		if Store['StoreButtons'][i] is not None:
+			EETabPicture (win.GetControl (0x5100 + i), Store['StoreButtons'][i], i == action)
+	store_funcs[action] ()
+	win.Focus () # keep the tab bar above the page
+def LoadShopWindow (base):
+	"""Window loader for the buy/sell page: EE's STORE_BUYSELL when present, else the CHU window."""
+	def load (id, pack, pos):
+		global EEShop
+		if GemRB.GetView (pack, id) or not EEStoreAvailable ("STORE_BUYSELL"):
+			if not GemRB.GetView (pack, id):
+				EEShop = False
+			return base (id, pack, pos)
+		if base is GUICommonWindows.ToggleWindow and GemRB.GetView ("WIN_STORE"):
+			return None
+		EEShop = True
+		CloseOldPage ()
+		ids = {0: 0x10000001, 1: 0x10000005, 2: 0x10000002, 4: 0x10000003, 5: 0x10000004, 9: 0, 10: 1, 13: 50}
+		win, ctl = EEUI.Build ("STORE_BUYSELL", ids = ids, skip = {6, 7, 8, 11, 12, 14, 15}, dy = EE_STORE_DY["STORE_BUYSELL"], reverse = True)
+		win.AddAlias (pack, id)
+		ctl[0].SetText ("")
+		for i in (9, 10, 13):
+			ctl[i].SetFont (EEUI.StyleFont ("button"))
+			ctl[i].SetColor (EEUI.StyleColor ("button"))
+		ctl[13].SetVisible (False)
+		# the classic scripts write to these; the EE layout has no use for them
+		for cid in (25, 44):
+			win.CreateButton (cid, 0, 0, 1, 1).SetVisible (False)
+		for cid in (0xfffffff, 0x1000002f, 0x10000030):
+			win.CreateLabel (cid, 0, 0, 1, 1, "NUMBER", "", 0).SetVisible (False)
+		BuildShopRows (win)
+		return win
+	return load
+
+def BuildShopRows (win):
+	"""The two item lists of the EE buy/sell page: ShopCount rows each, with the classic control ids
+	(item button 8+i / 17+i, label 0x1000000b+i / 0x10000014+i, scroll bar 7 / 16)."""
+	global ShopCount
+	ShopCount = 6
+	RowHooks.clear ()
+	lists = [c for c in EEUI.Controls ("STORE_BUYSELL") if c["type"] == "list"]
+	BuildRows (win, "STORE_BUYSELL", lists[0], ShopCount, 8, 0x1000000b, 7, True, 0x4000)
+	BuildRows (win, "STORE_BUYSELL", lists[1], ShopCount, 17, 0x10000014, 16, False, 0x4000)
+
+def BuildRows (win, menu, lst, count, firstBtn, firstLbl, bar, key, obase):
+	"""count rows of an EE list template: a click catcher (obase + button id), the name/price text,
+	the item icon button and the row picture, plus the list's scroll bar. RowHooks[(key, i)]."""
+	x, y, w, h = lst["frame"]
+	y += EE_STORE_DY[menu]
+	tmpl = lst["columns"][0]["controls"]
+	rowh = tmpl[0]["frame"][3]
+	icon, name = tmpl[1]["frame"], tmpl[2]["frame"]
+	for i in range (count):
+		ry = y + i * rowh
+		# drawn top to bottom in creation order: click catcher, text, icon, row picture
+		over = win.CreateButton (obase + firstBtn + i, x, ry, tmpl[0]["frame"][2], rowh)
+		over.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+		lab = win.CreateLabel (firstLbl + i, x + name[0], ry + name[1], 223, name[3], EEUI.StyleFont ("normal"), "", IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_MIDDLE)
+		lab.SetColor (EEUI.StyleColor ("normal"))
+		btn = win.CreateButton (firstBtn + i, x + icon[0], ry + icon[1], icon[2], icon[3])
+		btn.SetFlags (IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_PICTURE, OP_SET)
+		bg = win.CreateLabel (obase + 0x100 + firstBtn + i, x, ry, tmpl[0]["frame"][2], rowh, "FONTDLG", "", 0)
+		bg.SetBackground (EE_ROW_PICTURES[0])
+		RowHooks[(key, i)] = (bg, over, lab)
+	win.CreateScrollBar (bar, {'x': x + w - 24, 'y': y, 'w': 24, 'h': h}, EEUI.Alias ("CGSCRL1"))
+
+def RowHook (left, i, state):
+	"""Called by SetupItems for each item button with its new state (None: empty row)."""
+	hook = RowHooks.get ((left, i))
+	if not hook:
+		return
+	bg, over, lab = hook
+	bg.SetVisible (state is not None)
+	over.SetState (IE_GUI_BUTTON_DISABLED if state is None else IE_GUI_BUTTON_ENABLED)
+	lab.SetColor (EE_SELECTED if state == IE_GUI_BUTTON_SELECTED else EEUI.StyleColor ("normal"))
 
 def OpenStoreWindow ():
 	global Store
@@ -214,8 +445,10 @@ def OpenStoreWindow ():
 
 	GemRB.SetVar ("Action", 0)
 
-	StoreWindow = Window = GemRB.LoadWindow (3, "GUISTORE", StoreWindowPlacement)
+	StoreWindow = Window = LoadStoreBar ()
 	StoreWindow.SetFlags (IE_GUI_VIEW_IGNORE_EVENTS, OP_OR)
+	if EEBar:
+		StoreWindow.Focus () # drawn above the full-screen EE page
 	if GameCheck.IsIWD2():
 		# IWD2 has weird overlay windows
 		StoreWindow.SetFlags(WF_ALPHA_CHANNEL, OP_OR)
@@ -234,12 +467,12 @@ def OpenStoreWindow ():
 	Button.MakeEscape()
 
 	#Store type icon
-	if not GameCheck.IsIWD2():
+	if not GameCheck.IsIWD2() and not EEBar:
 		Button = Window.GetControl (5)
 		Button.SetSprites (storebams[Store['StoreType']],0,0,0,0,0)
 
 	for i in range (StoreButtonCount):
-		Buttons[i] = Button = Window.GetControl (i+1)
+		Buttons[i] = Button = Window.GetControl ((0x5100 + i) if EEBar else (i+1))
 		Action = store_buttons[i]
 		Button.SetVarAssoc ("Action", i)
 		# iwd2 has no steal window
@@ -249,12 +482,14 @@ def OpenStoreWindow ():
 			Button.SetFlags (IE_GUI_BUTTON_RADIOBUTTON, OP_OR)
 			if GameCheck.IsIWD1() or GameCheck.IsIWD2():
 				Button.SetSprites ("GUISTBBC", Action, 1,2,0,0)
+			elif EEBar:
+				EETabPicture (Button, Action, i == 0)
 			elif GameCheck.IsPST():
 				Button.SetSprites (storebams[Action], 0, 0,1,2,0)
 			else:
 				Button.SetSprites ("GUISTBBC", Action, 0,1,2,0)
 			Button.SetTooltip (storetips[Action])
-			Button.OnPress (store_funcs[Action])
+			Button.OnPress ((lambda Action=Action: EETabPress (Window, Action)) if EEBar else store_funcs[Action])
 			Button.SetState (IE_GUI_BUTTON_ENABLED)
 		else:
 			Button.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_OR)
@@ -283,6 +518,9 @@ def InitStoreShoppingWindow (Window):
 	global LeftButton, RightButton, Inventory
 	global BestCharmer
 
+	global ShopCount
+	if not EEShop:
+		ShopCount = ItemButtonCount
 	Window.AddAlias('WINSHOP')
 	PositionStoreWinRelativeTo(Window)
 
@@ -296,10 +534,10 @@ def InitStoreShoppingWindow (Window):
 					'STOTITLE' : 0x10000001, 'STONAME' : 0x10000005, 'STOGOLD' : 0x10000002,
 					}
 
-		Window.AliasControls ({'LBTN' + str(x) : x+8 for x in range(ItemButtonCount)})
-		Window.AliasControls ({'RBTN' + str(x) : x+17 for x in range(ItemButtonCount)} )
-		Window.AliasControls ({'RLBL' + str(x) : x+0x10000014 for x in range(ItemButtonCount)} )
-		Window.AliasControls ({'LLBL' + str(x) : x+0x1000000b for x in range(ItemButtonCount)} )
+		Window.AliasControls ({'LBTN' + str(x) : x+8 for x in range(ShopCount)})
+		Window.AliasControls ({'RBTN' + str(x) : x+17 for x in range(ShopCount)} )
+		Window.AliasControls ({'RLBL' + str(x) : x+0x10000014 for x in range(ShopCount)} )
+		Window.AliasControls ({'LLBL' + str(x) : x+0x1000000b for x in range(ShopCount)} )
 
 	else:
 		aliases = { 'STOLBTN' : 2, 'STORBTN' : 3,
@@ -341,7 +579,7 @@ def InitStoreShoppingWindow (Window):
 	Label = Window.GetControlAlias ('PRICES')
 	Label.SetText ("")
 
-	for i in range (ItemButtonCount):
+	for i in range (ShopCount):
 		Button = Window.GetControlAlias ('LBTN' + str(i))
 		Button.SetVarAssoc ("LeftIndex", i)
 		SetupBorders (Button)
@@ -363,6 +601,21 @@ def InitStoreShoppingWindow (Window):
 		Button.OnRightPress (InfoRightWindow)
 		Button.SetFont ("NUMBER")
 		Button.SetFlags (IE_GUI_BUTTON_ALIGN_RIGHT | IE_GUI_BUTTON_ALIGN_BOTTOM | IE_GUI_BUTTON_PICTURE, OP_OR)
+
+	if EEShop:
+		# the transparent row catchers act like the item buttons they cover
+		for i in range (ShopCount):
+			over = Window.GetControl (0x4000 + 8 + i)
+			over.SetVarAssoc ("LeftIndex", i)
+			over.OnPress (SelectBuy)
+			over.OnDoublePress (lambda: OpenItemAmountWindow(Window))
+			over.OnRightPress (InfoLeftWindow)
+			over = Window.GetControl (0x4000 + 17 + i)
+			over.SetVarAssoc ("RightIndex", i)
+			if Store['StoreType'] != 3:
+				over.OnPress (SelectSell)
+				over.OnDoublePress (lambda: OpenBag(Window))
+			over.OnRightPress (InfoRightWindow)
 
 	GemRB.SetVar ("RightIndex", 0)
 	GemRB.SetVar ("LeftIndex", 0)
@@ -441,15 +694,15 @@ def UpdateStoreShoppingWindow (Window):
 	Bag = GemRB.GetStore (STORE_BAG)
 
 	callback = lambda: RedrawStoreShoppingWindow(Window)
-	LeftCount = Store['StoreItemCount'] - ItemButtonCount
+	LeftCount = Store['StoreItemCount'] - ShopCount
 	# left scrollbar
 	SetupScrollBar(Window.GetControlAlias('STOSBARL'), "LeftTopIndex", LeftCount, Window.GetControlAlias('LBTN0'), callback)
 
 	if Bag:
-		RightCount = Bag['StoreItemCount'] - ItemButtonCount
+		RightCount = Bag['StoreItemCount'] - ShopCount
 	else:
 		inventory_slots = GemRB.GetSlots (pc, SLOT_INVENTORY)
-		RightCount = len(inventory_slots) - ItemButtonCount
+		RightCount = len(inventory_slots) - ShopCount
 
 	# right scrollbar
 	SetupScrollBar(Window.GetControlAlias('STOSBARR'), "RightTopIndex", RightCount, Window.GetControlAlias('RBTN0'), callback)
@@ -460,12 +713,14 @@ def UpdateStoreShoppingWindow (Window):
 			Button.SetState (IE_GUI_BUTTON_ENABLED)
 		else:
 			Button.SetState (IE_GUI_BUTTON_DISABLED)
+		if EEShop:
+			Button.SetVisible (bool (Bag))
 
 	RedrawStoreShoppingWindow (Window)
 	return
 
-ToggleStoreShoppingWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["shop"], "GUISTORE", GUICommonWindows.ToggleWindow, InitStoreShoppingWindow, UpdateStoreShoppingWindow, False, StoreWindowPlacement)
-OpenStoreShoppingWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["shop"], "GUISTORE", GUICommonWindows.OpenWindowOnce, InitStoreShoppingWindow, UpdateStoreShoppingWindow, False, StoreWindowPlacement)
+ToggleStoreShoppingWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["shop"], "GUISTORE", LoadShopWindow (GUICommonWindows.ToggleWindow), InitStoreShoppingWindow, UpdateStoreShoppingWindow, False, StoreWindowPlacement)
+OpenStoreShoppingWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["shop"], "GUISTORE", LoadShopWindow (GUICommonWindows.OpenWindowOnce), InitStoreShoppingWindow, UpdateStoreShoppingWindow, False, StoreWindowPlacement)
 
 def InitStoreIdentifyWindow (Window):
 	global LeftButton
@@ -478,7 +733,7 @@ def InitStoreIdentifyWindow (Window):
 								'IDPRICE' : 0x10000001, 'STOGOLD' : 0x10000000,
 								'STOTITLE' : 0x0fffffff, 'STONAME' : 0x10000002
 							  } )
-		Window.AliasControls ({'IDBTN' + str(x) : 6+x for x in range(ItemButtonCount)})
+		Window.AliasControls ({'IDBTN' + str(x) : 6+x for x in range(IdRows)})
 	else:
 		Window.AliasControls ({ 'IDSBAR' : 7, 'IDLBTN' : 5, 'IDTA' : 23,
 								'IDPRICE' : 0x10000003, 'STOGOLD' : 0x10000001,
@@ -500,7 +755,7 @@ def InitStoreIdentifyWindow (Window):
 	Label.SetText ("0")
 
 	# 8-11 item slots, 0x1000000c-f labels
-	for i in range (ItemButtonCount):
+	for i in range (IdRows):
 		Button = Window.GetControlAlias ("IDBTN" + str(i))
 		Button.SetVarAssoc ("Index", i)
 
@@ -513,6 +768,12 @@ def InitStoreIdentifyWindow (Window):
 		Button.SetFont ("NUMBER")
 		Button.SetFlags (IE_GUI_BUTTON_ALIGN_RIGHT|IE_GUI_BUTTON_ALIGN_BOTTOM, OP_OR)
 
+		if EEIdent:
+			over = Window.GetControl (0x4200 + 6 + i)
+			over.SetVarAssoc ("Index", i)
+			over.OnPress (SelectID)
+			over.OnRightPress (InfoIdentifyWindow)
+
 	GemRB.SetVar ("Index", None)
 	UnselectNoRedraw ()
 	return
@@ -524,15 +785,15 @@ def UpdateStoreIdentifyWindow (Window):
 	inventory_slots = GemRB.GetSlots (pc, SLOT_INVENTORY)
 
 	callback = lambda: RedrawStoreIdentifyWindow(Window)
-	Count = len(inventory_slots) - ItemButtonCount
+	Count = len(inventory_slots) - IdRows
 	ScrollBar = Window.GetControlAlias('IDSBAR')
 	SetupScrollBar (ScrollBar, "TopIndex", Count, Window.GetControlAlias('IDBTN0'), callback)
 
 	RedrawStoreIdentifyWindow (Window)
 	return
 
-ToggleStoreIdentifyWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["ident"], "GUISTORE", GUICommonWindows.ToggleWindow, InitStoreIdentifyWindow, UpdateStoreIdentifyWindow, False, StoreWindowPlacement)
-OpenStoreIdentifyWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["ident"], "GUISTORE", GUICommonWindows.OpenWindowOnce, InitStoreIdentifyWindow, UpdateStoreIdentifyWindow, False, StoreWindowPlacement)
+ToggleStoreIdentifyWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["ident"], "GUISTORE", LoadIdentifyWindow (GUICommonWindows.ToggleWindow), InitStoreIdentifyWindow, UpdateStoreIdentifyWindow, False, StoreWindowPlacement)
+OpenStoreIdentifyWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["ident"], "GUISTORE", LoadIdentifyWindow (GUICommonWindows.OpenWindowOnce), InitStoreIdentifyWindow, UpdateStoreIdentifyWindow, False, StoreWindowPlacement)
 
 def InitStoreStealWindow (Window):
 	global LeftButton
@@ -711,7 +972,7 @@ def InitStoreHealWindow (Window):
 		Window.AliasControls ({ 'HWSBAR' : 4, 'HEALBTN' : 3, 'HWTA' : 13,
 								 'HWPRICE' : 0x10000001, 'STOGOLD' : 0x10000000, 'STOTITLE' : 0x0fffffff
 								 } )
-		Window.AliasControls ({'HWLBTN' + str(x) : x+5 for x in range(ItemButtonCount)} )
+		Window.AliasControls ({'HWLBTN' + str(x) : x+5 for x in range(HealRows)} )
 	else:
 		Window.AliasControls ({ 'HWSBAR' : 7, 'HEALBTN' : 5, 'HWTA' : 23,
 								 'HWPRICE' : 0x10000003, 'STOGOLD' : 0x10000001, 'STOTITLE' : 0x10000000
@@ -719,12 +980,18 @@ def InitStoreHealWindow (Window):
 		Window.AliasControls ({'HWLBTN' + str(x) : x+8 for x in range(ItemButtonCount)})
 
 	#spell buttons
-	for i in range (ItemButtonCount):
+	for i in range (HealRows):
 		Button = Window.GetControlAlias ('HWLBTN' + str(i))
 		Button.SetFlags (IE_GUI_BUTTON_RADIOBUTTON, OP_OR)
 		Button.OnPress (lambda: UpdateStoreHealWindow(Window))
 		Button.OnRightPress (InfoHealWindow)
 		Button.SetVarAssoc ("Index", i)
+		if EEHeal:
+			over = Window.GetControl (0x4300 + 5 + i)
+			over.SetFlags (IE_GUI_BUTTON_RADIOBUTTON, OP_OR)
+			over.OnPress (lambda: UpdateStoreHealWindow(Window))
+			over.OnRightPress (InfoHealWindow)
+			over.SetVarAssoc ("Index", i)
 
 	UnselectNoRedraw ()
 
@@ -739,7 +1006,7 @@ def InitStoreHealWindow (Window):
 	Button.SetDisabled (True)
 
 	callback = lambda: UpdateStoreHealWindow(Window)
-	Count = Store['StoreCureCount'] - 4
+	Count = Store['StoreCureCount'] - HealRows
 	SetupScrollBar(Window.GetControlAlias('HWSBAR'), "TopIndex", Count, Window.GetControlAlias('HWLBTN0'), callback)
 
 	return
@@ -755,8 +1022,10 @@ def UpdateStoreHealWindow (Window):
 	elif GameCheck.IsPST():
 		labelOffset = 0x10000008
 
-	for i in range (ItemButtonCount):
+	for i in range (HealRows):
 		Cure = GemRB.GetStoreCure (TopIndex+i)
+		if EEHeal:
+			RowHook ("heal", i, None if not Cure else (IE_GUI_BUTTON_SELECTED if TopIndex + i == Index else IE_GUI_BUTTON_ENABLED))
 
 		Button = Window.GetControlAlias ('HWLBTN' + str(i))
 		Label = Window.GetControl (labelOffset+i)
@@ -800,8 +1069,8 @@ def UpdateStoreHealWindow (Window):
 
 	return
 
-ToggleStoreHealWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["heal"], "GUISTORE", GUICommonWindows.ToggleWindow, InitStoreHealWindow, UpdateStoreHealWindow, False, StoreWindowPlacement)
-OpenStoreHealWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["heal"], "GUISTORE", GUICommonWindows.OpenWindowOnce, InitStoreHealWindow, UpdateStoreHealWindow, False, StoreWindowPlacement)
+ToggleStoreHealWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["heal"], "GUISTORE", LoadHealWindow (GUICommonWindows.ToggleWindow), InitStoreHealWindow, UpdateStoreHealWindow, False, StoreWindowPlacement)
+OpenStoreHealWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["heal"], "GUISTORE", LoadHealWindow (GUICommonWindows.OpenWindowOnce), InitStoreHealWindow, UpdateStoreHealWindow, False, StoreWindowPlacement)
 
 def InitStoreRumourWindow (Window):
 	Window.AddAlias('WINRUMOR')
@@ -924,6 +1193,8 @@ def InitStoreRentWindow (Window):
 
 		Button = Window.GetControl (i+4)
 		Button.SetText (roomnames[i])
+		if EERent:
+			Button.SetFont (EEUI.StyleFont ("label"))
 		Button.OnPress (lambda: UpdateStoreRentWindow(Window))
 		Button.SetFlags (IE_GUI_BUTTON_RADIOBUTTON, OP_OR)
 		
@@ -950,6 +1221,9 @@ def UpdateStoreRentWindow (Window):
 
 	UpdateStoreCommon (Window, "STOTITLE", None, "STOGOLD")
 	RentIndex = GemRB.GetVar ("RentIndex")
+	if EERent:
+		for i in range (4):
+			Window.GetControl (i + 4).SetColor (EE_SELECTED if i == RentIndex else EEUI.StyleColor ("normal"))
 	Button = Window.GetControlAlias ('RENTBTN')
 	Label = Window.GetControlAlias ('RENTLBL')
 	if RentIndex is not None:
@@ -963,8 +1237,8 @@ def UpdateStoreRentWindow (Window):
 		Button.SetState (IE_GUI_BUTTON_DISABLED)
 	return
 
-ToggleStoreRentWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["rent"], "GUISTORE", GUICommonWindows.ToggleWindow, InitStoreRentWindow, UpdateStoreRentWindow, False, StoreWindowPlacement)
-OpenStoreRentWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["rent"], "GUISTORE", GUICommonWindows.OpenWindowOnce, InitStoreRentWindow, UpdateStoreRentWindow, False, StoreWindowPlacement)
+ToggleStoreRentWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["rent"], "GUISTORE", LoadRentWindow (GUICommonWindows.ToggleWindow), InitStoreRentWindow, UpdateStoreRentWindow, False, StoreWindowPlacement)
+OpenStoreRentWindow = GUICommonWindows.CreateTopWinLoader(windowIDs["rent"], "GUISTORE", LoadRentWindow (GUICommonWindows.OpenWindowOnce), InitStoreRentWindow, UpdateStoreRentWindow, False, StoreWindowPlacement)
 
 def UpdateStoreCommon (Window, title, name, gold):
 	if Store['StoreName'] != -1:
@@ -1271,7 +1545,7 @@ def RedrawStoreShoppingWindow (Window):
 			CloseBagButton.SetState (IE_GUI_BUTTON_LOCKED)
 			CloseBagButton.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_OR)
 
-	for i in range (ItemButtonCount):
+	for i in range (ShopCount):
 		if i+LeftTopIndex<LeftCount:
 			Slot = GemRB.GetStoreItem (i+LeftTopIndex)
 		else:
@@ -1395,7 +1669,7 @@ def RedrawStoreIdentifyWindow (Window):
 		if flags & SHOP_ID and flags & SHOP_SELECT:
 			Selected += 1
 
-	for i in range (ItemButtonCount):
+	for i in range (IdRows):
 		if TopIndex+i<Count:
 			Slot = GemRB.GetSlotItem (pc, inventory_slots[TopIndex+i])
 		else:
@@ -1435,12 +1709,16 @@ def RedrawStoreIdentifyWindow (Window):
 				Button.EnableBorder (0, False)
 
 			Label.SetText (strrefs["itemnamecost"])
+			if EEIdent:
+				RowHook ("id", i, IE_GUI_BUTTON_SELECTED if Flags & SHOP_ID and Flags & SHOP_SELECT else IE_GUI_BUTTON_ENABLED)
 		else:
 			Button.SetState (IE_GUI_BUTTON_DISABLED)
 			Button.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_OR)
 			Button.SetFlags (IE_GUI_BUTTON_PICTURE, OP_NAND)
 			Button.SetText ("")
 			Label.SetText ("")
+			if EEIdent:
+				RowHook ("id", i, None)
 
 	Button = Window.GetControlAlias ("IDLBTN")
 	Label = Window.GetControlAlias ("IDPRICE")
@@ -1652,6 +1930,8 @@ def SetupItems (pc, Slot, Button, Label, i, storetype, steal = False):
 		Button.SetState(IE_GUI_BUTTON_DISABLED)
 		Button.SetText("")
 		Label.SetVisible(False)
+		if EEShop:
+			RowHook (storetype == ITEM_STORE, i, None)
 		return
 
 	Item = GemRB.GetItem (Slot['ItemResRef'])
@@ -1703,6 +1983,8 @@ def SetupItems (pc, Slot, Button, Label, i, storetype, steal = False):
 				state = IE_GUI_BUTTON_DISABLED
 
 	Button.SetState(state)
+	if EEShop:
+		RowHook (storetype == ITEM_STORE, i, state)
 	if Flags & SHOP_ID:
 		Name = GemRB.GetString (Item['ItemName'])
 		Button.EnableBorder (0, True)
