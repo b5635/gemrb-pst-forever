@@ -263,10 +263,13 @@ def OpenBeastsWindow ():
 
 def OnJournalBeastSelect ():
 	row = GemRB.GetVar ('SelectedBeast')
+	if row is None or row >= len (beasts[selected_beast_class]):
+		# the "No Known Creatures" placeholder row
+		return
 	b = beasts[selected_beast_class][row]
-	
-	desc = GemRB.GetINIBeastsKey (str (b), 'desc0', '0')
-	BeastDesc.SetText (int (desc)) 
+
+	desc = BeastDescription (b)
+	BeastDesc.SetText (int (desc))
 
 	image = GemRB.GetINIBeastsKey (str (b), 'imageKnown', '')
 	BeastImage.SetPicture (image)
@@ -284,13 +287,33 @@ def OnJournalNPCPress ():
 	PopulateBeastsList ()
 
 
+def BeastName (beast):
+	return GemRB.GetString (int (GemRB.GetINIBeastsKey (str (beast), 'name', '0')))
+
+def BeastDescription (beast):
+	"""strref of the description: with a 'global', the highest desc<n> with n <= its value, else desc0"""
+	key = str (beast)
+	desc = GemRB.GetINIBeastsKey (key, 'desc0', '0')
+	var = GemRB.GetINIBeastsKey (key, 'global', '')
+	if var:
+		value = GemRB.GetGameVar (var)
+		for n in range (value, 0, -1):
+			found = GemRB.GetINIBeastsKey (key, 'desc' + str (n), '')
+			if found:
+				return found
+	return desc
+
 def PopulateBeastsList ():
 	GemRB.SetVar ('SelectedBeast', None)
 	BeastDesc.Clear ()
 	BeastImage.SetPicture ('default')
 
-	lookup = lambda beast: int(GemRB.GetINIBeastsKey (str (beast), 'name', '0'))
-	opts = [GemRB.GetString(lookup(b)) for b in beasts[selected_beast_class]]
+	if not beasts[selected_beast_class]:
+		# nothing known in this class: EE shows a placeholder entry
+		BeastsList.SetOptions ([GemRB.GetString (3594)])
+		BeastDesc.SetText (3595)
+		return
+	opts = [BeastName (b) for b in beasts[selected_beast_class]]
 	BeastsList.SetOptions(opts)
 
 def EvaluateAllBeasts ():
@@ -306,8 +329,9 @@ def EvaluateAllBeasts ():
 		klass = int (GemRB.GetINIBeastsKey (str (i), 'class', '0'))
 		beasts[klass].append (i)
 		
-	beasts[0].sort()
-	beasts[1].sort()
+	# EE order: alphabetical by the displayed name
+	beasts[0].sort (key = lambda b: BeastName (b).lower ())
+	beasts[1].sort (key = lambda b: BeastName (b).lower ())
 
 
 ###################################################

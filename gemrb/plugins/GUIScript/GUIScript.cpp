@@ -2883,6 +2883,20 @@ encounters will be evaluated too.\n\
 \n\
 **See also:** [Window_CreateWorldMapControl](Window_CreateWorldMapControl.md), [CreateMovement](CreateMovement.md)");
 
+PyDoc_STRVAR(GemRB_MapControl_SetFit__doc,
+	     "===== MapControl_SetFit =====\n\n**Prototype:** GemRB.MapControl.SetFit (fit)\n\n**Description:** Scales the small map bitmap to the control, keeping its aspect ratio.\n\n**Parameters:** fit - true to scale\n\n**Return value:** N/A");
+
+static PyObject* GemRB_MapControl_SetFit(PyObject* self, PyObject* args)
+{
+	int fit = 1;
+	PARSE_ARGS(args, "O|i", &self, &fit);
+
+	MapControl* map = GetView<MapControl>(self);
+	ABORT_IF_NULL(map);
+	map->SetFit(fit != 0);
+	Py_RETURN_NONE;
+}
+
 static PyObject* GemRB_WorldMap_GetDestinationArea(PyObject* self, PyObject* args)
 {
 	int eval = 0;
@@ -13728,6 +13742,7 @@ static PyMethodDef GemRBInternalMethods[] = {
 	METHOD(Window_SetupEquipmentIcons, METH_VARARGS),
 	METHOD(Window_ShowModal, METH_VARARGS),
 	METHOD(WorldMap_GetDestinationArea, METH_VARARGS),
+	METHOD(MapControl_SetFit, METH_VARARGS),
 	// terminating entry
 	{ nullptr, nullptr, 0, nullptr }
 };

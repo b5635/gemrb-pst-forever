@@ -368,7 +368,9 @@ class GWorldMap(GControl, Scrollable):
 	}
 
 class GMap(GControl):
-	pass
+	methods = {
+		'SetFit': _GemRB.MapControl_SetFit
+	}
 
 class GProgressBar(GControl):
 	def OnEndReached(self, handler):

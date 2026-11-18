@@ -23,6 +23,7 @@ EXT_BY_TYPE = {
     0x03F1: "cre",
     # ARE is for the lighting survey. The upscaler never asks for it.
     0x03F2: "are",
+    0x03F7: "wmp",
 }
 WANTED = set(EXT_BY_TYPE.values())
 TIS_TYPE = 0x03EB

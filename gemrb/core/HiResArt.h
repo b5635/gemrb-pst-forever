@@ -41,6 +41,16 @@ public:
 	// Reads the effect twins once on a background thread and drops the bytes, only so the
 	// OS has them cached when the game loads them; touches no engine state.
 	static void PrefetchEffects();
+
+	// EEUI art scale k = 2160 / logical height (720 -> 3, 1080 -> 2). 0 when EEUI is off or the
+	// height is unsupported (logged once).
+	static int EEScale();
+	// V2 art arrives at full resolution (EE plates are 3840x2160, i.e. k x the 1280x720 screen).
+	// Pads `full` with transparent pixels to a multiple of k, builds the logical sprite with a
+	// k x k premultiplied-alpha box filter and attaches the padded full sprite as hiRes.
+	// The logical frame origin is full.Frame.{x,y} / k, rounded. Only 32-bit RGBA(-like) input
+	// is handled; anything else is returned unchanged.
+	static Holder<Sprite2D> FromFullRes(const Holder<Sprite2D>& full, int k);
 };
 
 }

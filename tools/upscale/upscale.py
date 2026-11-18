@@ -476,6 +476,22 @@ def _wed_fingerprint(overlays: list, name: str) -> bytes:
     return json.dumps(parts, separators=(",", ":")).encode("utf-8")
 
 
+def _ee_twin_resources(out: Path) -> set[tuple[str, str]]:
+    """(ext, NAME) of every resource whose twin tools/eeui/twins.py wrote from EE art."""
+    listing = out / "ee_twins.txt"
+    found: set[tuple[str, str]] = set()
+    if not listing.is_file():
+        return found
+    for line in listing.read_text(encoding="utf-8").splitlines():
+        parts = line.strip().split("/")
+        if len(parts) >= 3 and parts[0] == "gui":
+            if parts[1] == "bam":
+                found.add(("bam", parts[2].upper()))
+            elif parts[1] in ("mos", "bmp"):
+                found.add((parts[1], Path(parts[2]).stem.upper()))
+    return found
+
+
 def _run_category(args, index, report, category: str, model: Path, state: State) -> tuple[int, int, int]:
     _need()
     from upscaler import Upscaler
@@ -505,10 +521,14 @@ def _run_category(args, index, report, category: str, model: Path, state: State)
     except Exception:
         progress = rows
     total = len(rows)
+    ee_twins = _ee_twin_resources(Path(args.out)) if category == "gui" else set()
     for index_no, row in enumerate(progress, 1):
         name = row["name"]
         ext = row["ext"]
         key = f"{category}:{ext}:{name}"
+        if (ext, name.upper()) in ee_twins:
+            current += 1  # an EE twin owns this path, even with --force
+            continue
         try:
             data = index.get(name, ext)
             extra = b""

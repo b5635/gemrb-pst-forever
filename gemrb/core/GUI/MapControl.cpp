@@ -110,13 +110,30 @@ void MapControl::WillDraw(const Region& /*drawFrame*/, const Region& /*clip*/)
 		}
 	}
 
-	if (MapMOS) {
+	if (MapMOS && fitMap) {
+		Region fit = FitRegion(MapMOS->Frame.size, Dimensions());
+		mosRgn = Region(Origin() + fit.origin, fit.size);
+	} else if (MapMOS) {
 		const Size& mosSize = MapMOS->Frame.size;
 		const Point center(frame.w / 2 - mosSize.w / 2, frame.h / 2 - mosSize.h / 2);
 		mosRgn = Region(Origin() + center, mosSize);
 	} else {
 		mosRgn = Region(Point(), Dimensions());
 	}
+}
+
+Region MapControl::FitRegion(const Size& src, const Size& dst) noexcept
+{
+	if (src.w <= 0 || src.h <= 0 || dst.w <= 0 || dst.h <= 0) return Region(Point(), dst);
+	// compare aspects without floating point: src.w / src.h against dst.w / dst.h
+	int w = dst.w;
+	int h = dst.h;
+	if (int64_t(src.w) * dst.h > int64_t(src.h) * dst.w) {
+		h = int(int64_t(src.h) * dst.w / src.w);
+	} else {
+		w = int(int64_t(src.w) * dst.h / src.h);
+	}
+	return Region(Point((dst.w - w) / 2, (dst.h - h) / 2), Size(w, h));
 }
 
 Region MapControl::GetViewport() const
@@ -144,7 +161,9 @@ void MapControl::DrawSelf(const Region& rgn, const Region& /*clip*/)
 		return;
 	}
 
-	if (MapMOS) {
+	if (MapMOS && fitMap) {
+		VideoDriver->BlitSprite(MapMOS, Region(Point(), MapMOS->Frame.size), mosRgn, BlitFlags::NONE);
+	} else if (MapMOS) {
 		VideoDriver->BlitSprite(MapMOS, mosRgn.origin);
 	}
 

@@ -17,6 +17,8 @@
 #include "Video/Video.h"
 
 #include <cctype>
+#include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <unordered_map>
 #include <thread>
@@ -350,6 +352,110 @@ void HiResArt::Attach(const Holder<Sprite2D>& spr, const std::string& relPath)
 			}
 		}
 	}
+}
+
+int HiResArt::EEScale()
+{
+	static bool warned = false;
+	if (!core || !core->config.EEUI) return 0;
+	switch (core->config.Height) {
+		case 720: return 3;
+		case 1080: return 2;
+		default:
+			if (!warned) {
+				Log(ERROR, "HiResArt", "EEUI needs a logical height of 720 or 1080, not {}. EE art is not scaled.", core->config.Height);
+				warned = true;
+			}
+			return 0;
+	}
+}
+
+static int ChannelShift(uint32_t mask)
+{
+	int shift = 0;
+	while (mask && !(mask & 1u)) {
+		mask >>= 1;
+		++shift;
+	}
+	return shift;
+}
+
+Holder<Sprite2D> HiResArt::FromFullRes(const Holder<Sprite2D>& full, int k)
+{
+	if (!full || k < 2) return full;
+	const PixelFormat& fmt = full->Format();
+	if (fmt.Bpp != 4 || !fmt.Amask) return full;
+	const int fw = full->Frame.w;
+	const int fh = full->Frame.h;
+	if (fw <= 0 || fh <= 0) return full;
+
+	const int pw = (fw + k - 1) / k * k;
+	const int ph = (fh + k - 1) / k * k;
+	const int lw = pw / k;
+	const int lh = ph / k;
+	const uint32_t masks[4] = { fmt.Rmask, fmt.Gmask, fmt.Bmask, fmt.Amask };
+	int shifts[4];
+	for (int c = 0; c < 4; ++c) {
+		shifts[c] = ChannelShift(masks[c]);
+	}
+
+	// pixels are read through the const lock, which keeps the source's own twin
+	const Sprite2D& constFull = *full;
+	const uint32_t* src = static_cast<const uint32_t*>(constFull.LockSprite());
+	if (!src) return full;
+	// the engine's sprites have a pitch of width * 4 for 32-bit data
+	uint32_t* padded = static_cast<uint32_t*>(calloc(size_t(pw) * ph, 4));
+	uint32_t* logical = static_cast<uint32_t*>(calloc(size_t(lw) * lh, 4));
+	if (!padded || !logical) {
+		free(padded);
+		free(logical);
+		return full;
+	}
+	for (int y = 0; y < fh; ++y) {
+		std::memcpy(padded + size_t(y) * pw, src + size_t(y) * fw, size_t(fw) * 4);
+	}
+
+	const uint32_t area = uint32_t(k) * uint32_t(k);
+	for (int ly = 0; ly < lh; ++ly) {
+		for (int lx = 0; lx < lw; ++lx) {
+			uint64_t sum[3] = { 0, 0, 0 };
+			uint64_t sumA = 0;
+			for (int dy = 0; dy < k; ++dy) {
+				for (int dx = 0; dx < k; ++dx) {
+					const uint32_t px = padded[size_t(ly * k + dy) * pw + lx * k + dx];
+					const uint32_t a = (px & masks[3]) >> shifts[3];
+					sumA += a;
+					for (int c = 0; c < 3; ++c) {
+						sum[c] += uint64_t((px & masks[c]) >> shifts[c]) * a;
+					}
+				}
+			}
+			uint32_t out = 0;
+			if (sumA) {
+				for (int c = 0; c < 3; ++c) {
+					out |= uint32_t((sum[c] + sumA / 2) / sumA) << shifts[c];
+				}
+				out |= uint32_t((sumA + area / 2) / area) << shifts[3];
+			}
+			logical[size_t(ly) * lw + lx] = out;
+		}
+	}
+
+	const int ox = int(std::lround(double(full->Frame.x) / k));
+	const int oy = int(std::lround(double(full->Frame.y) / k));
+	Region lowFrame(ox, oy, lw, lh);
+	Holder<Sprite2D> low;
+	Holder<Sprite2D> hi;
+	if (VideoDriver) {
+		low = VideoDriver->CreateSprite(lowFrame, logical, fmt);
+		hi = VideoDriver->CreateSprite(Region(0, 0, pw, ph), padded, fmt);
+	} else {
+		low = MakeHolder<Sprite2D>(lowFrame, logical, fmt, uint16_t(lw * 4));
+		hi = MakeHolder<Sprite2D>(Region(0, 0, pw, ph), padded, fmt, uint16_t(pw * 4));
+	}
+	low->renderFlags = full->renderFlags;
+	low->hiRes = std::move(hi);
+	return low;
 }
 
 void HiResArt::Flush()

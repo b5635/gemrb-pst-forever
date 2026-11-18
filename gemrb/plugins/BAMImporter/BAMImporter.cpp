@@ -22,7 +22,7 @@ using namespace GemRB;
 
 static void AttachBamFrame(const Holder<Sprite2D>& spr, const ResRef& resref, int index)
 {
-	if (!spr) return;
+	if (!spr || spr->hiRes) return; // EE V2 frames already carry their full-res twin
 	auto stem = HiResArt::Stem(resref.c_str());
 	if (stem.empty()) return;
 	// gui first, then sprites, so a button bam is not also treated as a creature
@@ -214,7 +214,12 @@ Holder<Sprite2D> BAMImporter::GetV2Frame(const FrameEntry& frame)
 	}
 
 	PixelFormat fmt = PixelFormat::ARGB32Bit();
-	return { VideoDriver->CreateSprite(frame.bounds, frameData, fmt) };
+	Holder<Sprite2D> spr = VideoDriver->CreateSprite(frame.bounds, frameData, fmt);
+	if (int k = HiResArt::EEScale()) {
+		// full-resolution EE art: logical sprite by box filter, the original as its twin
+		return HiResArt::FromFullRes(spr, k);
+	}
+	return spr;
 }
 
 void BAMImporter::Blit(const FrameEntry& frame, const BAMV2DataBlock& dataBlock, uint8_t* frameData)

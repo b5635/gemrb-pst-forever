@@ -215,6 +215,7 @@ IF (BUILD_TESTING)
     tests/core/Test_OverHeadText.cpp
     tests/core/Test_HiResArt.cpp
     tests/core/Test_AreaSceneData.cpp
+    tests/core/Test_EEUIArt.cpp
     tests/core/Test_FontHiRes.cpp
     tests/core/Streams/Test_DataStream.cpp
     tests/core/Strings/Test_CString.cpp

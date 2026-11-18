@@ -367,3 +367,44 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   (2/2). In game the log is `Loaded Font: FONTDLG for ResRef FONTDLG` (BAM, 255 hi-res frames);
   same for TRMTFONT, EXOFONT, POSTANT, NUMBER*, SYSFONT, NORMAL. No `EXOCET.ttf` was opened.
   HUD text is the classic bitmap face (`shots/eeui_phase0_fonts.png`). Nothing is committed.
+- 2026-11-17: Phase 1 (partial). `tools/eeui/` has `ee_data.py` (KEY/BIF reader), `pvrz.py`
+  (vectorised DXT1/DXT5), `decode.py` (MOS V2/V1, BAM V2), `dump.py`. STARTBG, CGBACK, NORMBUTT,
+  STARTBUT, SP001 decode at the sizes in section 1; STARTBG and SP001 looked at (match the EE art).
+  `inventory.py` and `run_eeui.bat` are not written yet (`build.py` is phase 4).
+- 2026-11-17: Phase 2 (2a, 2b, 2c, 2d) via `tools/eeui/twins.py`. Written to
+  `D:\Games\GemRB\upscaled` and listed in `ee_twins.txt` (337 files; log in `ee_twins.log`).
+  2a 104/104 spell icons (n=8). 2b WMWRLDB 2x (classic worldmap.wmp confirmed to use it).
+  2c 122/122 area maps (n up to 12 for tiny classic maps; EE art is upsampled when
+  `round(ee/classic)*classic` exceeds it). 2d only WMPICKL passes the rule; IVSLOT, CGPLUS, CGMINUS,
+  WMLOCAT, WMTIME, WMCHRH fail frame count, CGCANCEL, CGSCRL1, STALIGN, STFCTION, FILLBAR fail aspect.
+  `upscale.py` now skips every resource in `ee_twins.txt`, even with `--force`.
+  Seen in game: Hive area map (AR0400) opens, log shows twins attached for AR0400 and WMWRLDB
+  (`shots/ee_p2_areamap.png`). Not looked at yet: spell book icons, world map screen, WMPICKL.
+  Not done: 2e cursors, 2f paper-doll review images, 2g/2h bestiary. Nothing committed.
+- 2026-11-17: 2g + 2h. `twins.py bestiary` wrote 88/89 JR*KN twins (EE 1124x1764 resized to classic x4,
+  alpha from the classic BMP; DEFAULT included) into `upscaled/gui/bmp`, listed in `ee_twins.txt`.
+  JRALUKN has no EE picture; `classify.py` now queues every `beast.ini` imageKnown, and the ESRGAN
+  run produced its twin. `GUIJRNL.py`: description follows `global` (highest `desc<n>` <= value),
+  lists sorted by displayed name, "No Known Creatures" placeholder (3594/3595) with DEFAULT picture.
+  Seen in game (`shots/ee_bestiary2-4.png`): alphabetical lists; Morte text 3531 at Morte=0 and
+  3526 at Morte=1; Morte picture sharp from the EE twin; placeholder shown for an emptied class.
+  Not looked at: Alu-fiend picture, corner transparency, shimmer at 1x window, EEUI=0 (2h does not
+  read EEUI). Nothing committed.
+- 2026-11-17: Phase 3 (engine, behind `EEUI`). Built, installed, unit tests green (33/33 incl. new
+  `Test_EEUIArt.cpp`: FromFullRes geometry/padding/alpha/colour average/offset rounding, FitRegion).
+  3.1 `EEUI` / `EEUIPath` config; `ee_ui` is registered as source "EE UI" after mods (EEUI forced off
+  with a warning when the folder is missing); `EEUI=1` is in `tools/dev_settings.ini` (GemRB.cfg
+  section). 3.2 `HiResArt::EEScale()` (720 -> 3, 1080 -> 2, else logged error) and
+  `HiResArt::FromFullRes`; hooked into `BAMImporter::GetV2Frame` (centre / k, rounded) and
+  `MOSImporter::GetSprite2Dv2`; `AttachBamFrame`/MOS attach skip sprites that already have a twin.
+  3.3 CHANGED FROM PLAN: GL mipmaps do nothing here (the shader reads with `texelFetch` and filters
+  by hand), so `GLShaders.h` now averages four bilinear taps when a twin is minified (footprint >
+  1.25 texels). 3.4 SKIPPED: `Button::HitTest` already tests the button picture's alpha and the
+  STARTBUT frames are arc-shaped (67% opaque), so no hit polygon. 3.5 `MapControl.SetFit(True)`
+  (Python + C++, `MapControl::FitRegion`), coordinates keep using `mosRgn`.
+  Seen in game: with a scratch `ee_ui` holding STARTBG, the log shows `Found 'STARTBG.mos' in 'EE UI'`
+  and the picture drew on the journal button with no error (`shots/ee_p3_startbg.png`; tiny, so
+  sharpness not judged). `tb_autotest.ps1` mortuary passed twice (one earlier run failed to start
+  the fight, ghouls passed; looks flaky, not tied to this change). Scratch `ee_ui` removed again.
+  Not seen: the minify filter at a 2x window, SetFit on a real map screen (phase 15), 1080 mode.
+  Nothing committed.

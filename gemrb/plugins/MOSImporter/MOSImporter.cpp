@@ -80,7 +80,7 @@ void MOSImporter::Blit(const MOSV2DataBlock& dataBlock, uint8_t* frameData)
 Holder<Sprite2D> MOSImporter::GetSprite2D()
 {
 	Holder<Sprite2D> spr = version == MOSVersion::V2 ? GetSprite2Dv2() : GetSprite2Dv1();
-	if (spr && HiResArt::Enabled(HiResCategory::GUI) && str) {
+	if (spr && !spr->hiRes && HiResArt::Enabled(HiResCategory::GUI) && str) {
 		auto stem = HiResArt::Stem(str->filename.c_str());
 		if (!stem.empty()) {
 			HiResArt::Attach(spr, fmt::format("gui/mos/{}.png", stem));
@@ -114,7 +114,11 @@ Holder<Sprite2D> MOSImporter::GetSprite2Dv2()
 	PixelFormat fmt = PixelFormat::ARGB32Bit();
 	Region region { 0, 0, size.w, size.h };
 
-	return { VideoDriver->CreateSprite(region, imageData, fmt) };
+	Holder<Sprite2D> spr = VideoDriver->CreateSprite(region, imageData, fmt);
+	if (int k = HiResArt::EEScale()) {
+		return HiResArt::FromFullRes(spr, k);
+	}
+	return spr;
 }
 
 Holder<Sprite2D> MOSImporter::GetSprite2Dv1()

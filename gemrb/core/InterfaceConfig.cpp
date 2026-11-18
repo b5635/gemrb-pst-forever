@@ -298,6 +298,8 @@ CoreSettings LoadFromDictionary(InterfaceConfig cfg)
 	// before the leftover loop: that loop atoi's every remaining value and would destroy a path
 	CONFIG_PATH("AbsoluteGemRBPath", config.AbsoluteGemRBPath);
 	CONFIG_PATH("UpscalePath", config.UpscalePath);
+	CONFIG_INT("EEUI", config.EEUI);
+	CONFIG_PATH("EEUIPath", config.EEUIPath);
 
 	CONFIG_STRING("AudioDriver", config.AudioDriverName);
 	CONFIG_STRING("VideoDriver", config.VideoDriverName);

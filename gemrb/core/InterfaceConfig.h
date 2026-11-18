@@ -54,6 +54,9 @@ struct CoreSettings {
 	path_t AbsoluteGemRBPath;
 	// Empty means <exe dir>/upscaled. Hi-res PNGs live here, never in the game data.
 	path_t UpscalePath;
+	// EE_UI_PLAN.md: 1 draws EE-layout screens from EEUIPath. Empty path means <GemRBPath>/ee_ui.
+	int EEUI = 0;
+	path_t EEUIPath;
 	path_t GemRBOverridePath;
 	path_t GemRBUnhardcodedPath;
 	path_t PluginsPath;

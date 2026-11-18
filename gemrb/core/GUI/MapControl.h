@@ -39,6 +39,8 @@ private:
 
 	Region mosRgn;
 	Point notePos;
+	// EE_UI_PLAN.md phase 3.5: scale the small map to the control, keeping its aspect
+	bool fitMap = false;
 
 	std::shared_ptr<const AnimationFactory> mapFlags;
 
@@ -53,6 +55,11 @@ public:
 	MapControl(const Region& frame, std::shared_ptr<const AnimationFactory> af);
 
 	bool IsAnimated() const override { return true; } // map must constantly update actor positions
+
+	void SetFit(bool fit) noexcept { fitMap = fit; MarkDirty(); }
+	bool Fit() const noexcept { return fitMap; }
+	// The largest region of `src`'s aspect that fits in `dst`, centred in it (origin relative to dst).
+	static Region FitRegion(const Size& src, const Size& dst) noexcept;
 
 	void UpdateState(value_t) override;
 

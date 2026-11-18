@@ -212,6 +212,16 @@ def classify(index: ResourceIndex, repo: Path) -> dict:
         if index.has(name, "bmp") and not name.endswith(_SKIP_SUFFIX):
             gui_bmps.add(name)
 
+    # bestiary pictures are named by beast.ini, which neither portraits nor scripts mention
+    for ini in (index.game / "beast.ini", index.game / "override" / "beast.ini"):
+        if ini.is_file():
+            for line in ini.read_text(encoding="latin1").splitlines():
+                line = line.split("//")[0].strip()
+                if line.lower().startswith("imageknown="):
+                    name = line.split("=", 1)[1].strip().upper()
+                    if name and index.has(name, "bmp"):
+                        gui_bmps.add(name)
+
     items = {"gui": [], "areas": [], "sprites": [], "skip": []}
 
     def add(category: str, name: str, ext: str, reason: str = "") -> None:

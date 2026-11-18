@@ -94,6 +94,14 @@ vec4 fetch(ivec2 p, ivec2 size)
 	return vec4(c.rgb * c.a, c.a); // premultiplied so edges don't pick up dark fringes
 }
 
+// bilinear blend of the four texels around pos (texel centres at integers) with weights f
+vec4 bilinear(vec2 pos, ivec2 size, vec2 f)
+{
+	ivec2 p = ivec2(floor(pos));
+	return mix(mix(fetch(p, size), fetch(p + ivec2(1, 0), size), f.x),
+		mix(fetch(p + ivec2(0, 1), size), fetch(p + ivec2(1, 1), size), f.x), f.y);
+}
+
 // alpha of a texel, 0 outside the texture (outline pass)
 float alphaAt(ivec2 p, ivec2 size)
 {
@@ -169,19 +177,30 @@ void main()
 		c = v_color;
 	} else {
 		ivec2 size = texSize();
-		vec2 pos = v_uv - 0.5;
-		ivec2 p = ivec2(floor(pos));
-		vec2 f = fract(pos);
-		if (u_smooth == 1) {
-			// sharpen only while magnifying; when minifying plain bilinear shimmers less
-			vec2 px = max(fwidth(v_uv), vec2(0.0001));
-			vec2 sharp = clamp((f - 0.5) / px + 0.5, 0.0, 1.0);
-			f = mix(sharp, f, step(1.0, px));
+		vec2 px = max(fwidth(v_uv), vec2(0.0001));
+		vec4 t;
+		if (u_smooth == 1 && max(px.x, px.y) > 1.25) {
+			// minifying a big twin (EE art at 3x drawn smaller): average four bilinear taps
+			// spread over the footprint, a stand-in for mipmaps (texelFetch ignores them)
+			t = vec4(0.0);
+			for (int i = 0; i < 4; i++) {
+				vec2 o = vec2(float(i & 1) - 0.5, float(i >> 1) - 0.5) * 0.5 * px;
+				vec2 pos = v_uv + o - 0.5;
+				t += bilinear(pos, size, fract(pos));
+			}
+			t *= 0.25;
 		} else {
-			f = step(0.5, f);
+			vec2 pos = v_uv - 0.5;
+			vec2 f = fract(pos);
+			if (u_smooth == 1) {
+				// sharpen only while magnifying; when minifying plain bilinear shimmers less
+				vec2 sharp = clamp((f - 0.5) / px + 0.5, 0.0, 1.0);
+				f = mix(sharp, f, step(1.0, px));
+			} else {
+				f = step(0.5, f);
+			}
+			t = bilinear(pos, size, f);
 		}
-		vec4 t = mix(mix(fetch(p, size), fetch(p + ivec2(1, 0), size), f.x),
-			mix(fetch(p + ivec2(0, 1), size), fetch(p + ivec2(1, 1), size), f.x), f.y);
 		c = t.a > 0.0 ? vec4(t.rgb / t.a, t.a) : vec4(0.0);
 		c *= v_color;
 	}

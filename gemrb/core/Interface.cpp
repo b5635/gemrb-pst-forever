@@ -341,6 +341,20 @@ Interface::Interface(CoreSettings&& cfg)
 		gamedata->AddSource(modPath, "Mod paths", PLUGIN_RESOURCE_CACHEDDIRECTORY);
 	}
 
+	if (config.EEUI) {
+		path_t eePath = config.EEUIPath;
+		if (eePath.empty()) {
+			eePath = PathJoin(config.AbsoluteGemRBPath.empty() ? config.GemRBPath : config.AbsoluteGemRBPath, "ee_ui");
+		}
+		if (DirExists(eePath)) {
+			// EE art (MOS/BAM V2 and their PVRZ pages), after mods and before every game source
+			gamedata->AddSource(eePath, "EE UI", PLUGIN_RESOURCE_CACHEDDIRECTORY);
+		} else {
+			Log(WARNING, "Core", "EEUI is on but {} does not exist; classic screens only.", eePath);
+			config.EEUI = 0;
+		}
+	}
+
 	path = PathJoin(config.GemRBOverridePath, "override", config.GameType);
 	if (config.GameType == "auto") {
 		gamedata->AddSource(path, "GemRB Override", PLUGIN_RESOURCE_NULL);
