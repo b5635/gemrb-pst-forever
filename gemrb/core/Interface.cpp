@@ -347,6 +347,7 @@ Interface::Interface(CoreSettings&& cfg)
 			eePath = PathJoin(config.AbsoluteGemRBPath.empty() ? config.GemRBPath : config.AbsoluteGemRBPath, "ee_ui");
 		}
 		if (DirExists(eePath)) {
+			config.EEUIPath = eePath; // scripts read the resolved folder
 			// EE art (MOS/BAM V2 and their PVRZ pages), after mods and before every game source
 			gamedata->AddSource(eePath, "EE UI", PLUGIN_RESOURCE_CACHEDDIRECTORY);
 		} else {

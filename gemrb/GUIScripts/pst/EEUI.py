@@ -1,0 +1,259 @@
+# SPDX-FileCopyrightText: 2026 Contributors to the GemRB project <https://gemrb.org>
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+# EEUI.py - builds Enhanced Edition style windows from the JSON layouts that
+# tools/eeui/build.py writes into <ee_ui>/layout/. See EE_UI_PLAN.md.
+#
+# Screens call Available(menu) and, if true, Build(menu) instead of loading a CHU window.
+# Build returns (window, controls); controls are keyed by the EE control name, and every
+# control (named or not) by its integer index in the menu.
+
+import json
+import os
+import GemRB
+from GUIDefines import *
+
+LOGICAL_W = 1280
+LOGICAL_H = 720
+WINDOW_PACK = "START"
+
+_layouts = {}
+_styles = None
+_fonts = None
+_nextWindow = [0x7000]
+_missing = set ()
+
+def Enabled ():
+	return GemRB.GetSystemVariable (SV_EEUI) == 1
+
+def Root ():
+	return GemRB.GetSystemVariable (SV_EEUIPATH)
+
+def Load (menu):
+	if menu not in _layouts:
+		path = os.path.join (Root (), "layout", menu + ".json")
+		try:
+			with open (path, "r", encoding="utf-8") as f:
+				_layouts[menu] = json.load (f)
+		except (OSError, ValueError):
+			_layouts[menu] = None
+	return _layouts[menu]
+
+def Available (menu):
+	"""True when the EE layer is on and a converted layout exists for the menu."""
+	if not Enabled ():
+		return False
+	doc = Load (menu)
+	return doc is not None and len (doc["controls"]) > 0
+
+def _Warn (msg):
+	if msg not in _missing:
+		_missing.add (msg)
+		print ("EEUI:", msg)
+
+# -- text styles ------------------------------------------------------------------------
+
+def _Styles ():
+	global _styles
+	if _styles is None:
+		try:
+			with open (os.path.join (Root (), "styles.json"), "r", encoding="utf-8") as f:
+				_styles = json.load (f)["styles"]
+		except (OSError, ValueError):
+			_styles = {}
+	return _styles
+
+def _FontTable ():
+	global _fonts
+	if _fonts is None:
+		_fonts = GemRB.LoadTable ("eeuifont", 1)
+	return _fonts
+
+def _HasRow (tbl, style):
+	return bool (tbl) and tbl.GetRowIndex (style) >= 0
+
+def StyleFont (style):
+	"""Classic bitmap font for an EE style name (eeuifont.2da, FONTDLG when unknown)."""
+	tbl = _FontTable ()
+	if _HasRow (tbl, style):
+		return tbl.GetValue (style, "FONT")
+	return "FONTDLG"
+
+def StyleColor (style):
+	"""{'r','g','b'} for an EE style, from styles.json (the 2da COLOR column overrides as RRGGBB)."""
+	tbl = _FontTable ()
+	if _HasRow (tbl, style):
+		hexval = tbl.GetValue (style, "COLOR")
+		if hexval and hexval != "*" and len (hexval) == 6:
+			return {'r': int (hexval[0:2], 16), 'g': int (hexval[2:4], 16), 'b': int (hexval[4:6], 16)}
+	rgba = _Styles ().get (style, {}).get ("rgba")
+	if rgba:
+		return {'r': rgba[0], 'g': rgba[1], 'b': rgba[2]}
+	return {'r': 255, 'g': 255, 'b': 255}
+
+def StyleFlags (style):
+	"""IE_FONT_* alignment flags from the style's halign/valign."""
+	st = _Styles ().get (style, {})
+	flags = {"left": IE_FONT_ALIGN_LEFT, "center": IE_FONT_ALIGN_CENTER, "right": IE_FONT_ALIGN_RIGHT}.get (st.get ("halign", "left"), 0)
+	v = st.get ("valign", "top")
+	if v == "center":
+		flags |= IE_FONT_ALIGN_MIDDLE
+	elif v == "bottom":
+		flags |= IE_FONT_ALIGN_BOTTOM
+	else:
+		flags |= IE_FONT_ALIGN_TOP
+	return flags
+
+# -- strings ----------------------------------------------------------------------------
+
+def Text (spec):
+	"""A layout string object -> what Control.SetText takes (a strref int or a str), or None."""
+	if not spec:
+		return None
+	if "strref" in spec:
+		return spec["strref"]
+	if "text" in spec:
+		return spec["text"]
+	if "literal" in spec:
+		return spec["literal"]
+	return None
+
+# -- building ---------------------------------------------------------------------------
+
+def PlateOf (doc):
+	"""Name of the background picture the menu is drawn over (EE's Infinity_SetBackground)."""
+	pm = doc.get ("plate_menu")
+	if not pm:
+		return None
+	pdoc = Load (pm)
+	if not pdoc:
+		return None
+	for c in pdoc["controls"]:
+		if c.get ("mosaic"):
+			return c["mosaic"]
+	return None
+
+def _ApplyText (ctl, c, single=False):
+	text = Text (c.get ("text"))
+	style = c.get ("style")
+	if style:
+		ctl.SetFont (StyleFont (style))
+		ctl.SetColor (StyleColor (style))
+	if text is not None:
+		ctl.SetText (text)
+
+def _Frame (c):
+	x, y, w, h = c["frame"]
+	return x, y, w, h
+
+def _Tooltip (ctl, c):
+	tip = Text (c.get ("tooltip"))
+	if tip is not None:
+		ctl.SetTooltip (tip)
+
+def _MakeButton (win, cid, c):
+	x, y, w, h = _Frame (c)
+	b = win.CreateButton (cid, x, y, w, h)
+	if c.get ("bam") and isinstance (c.get ("sequence", 0), int):
+		# EE button cycles: 0 normal, 1 highlighted, 2 pressed, 3 disabled
+		b.SetSprites (c["bam"], c.get ("sequence", 0), 0, 2, 0, 3)
+	elif c.get ("mosaic"):
+		b.SetFlags (IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_PICTURE, OP_SET)
+		b.SetPicture (c["mosaic"])
+	else:
+		b.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+	if c.get ("text"):
+		style = c.get ("style", "button")
+		b.SetFont (StyleFont (style))
+		b.SetColor (StyleColor (style))
+		b.SetText (Text (c["text"]))
+	_Tooltip (b, c)
+	return b
+
+def _MakeLabel (win, cid, c):
+	x, y, w, h = _Frame (c)
+	style = c.get ("style", "label")
+	lab = win.CreateLabel (cid, x, y, w, h, StyleFont (style), "", StyleFlags (style))
+	if c.get ("mosaic"):
+		lab.SetBackground (c["mosaic"])
+	if c.get ("text"):
+		lab.SetColor (StyleColor (style))
+		lab.SetText (Text (c["text"]))
+	return lab
+
+def _MakeTextArea (win, cid, c):
+	x, y, w, h = _Frame (c)
+	style = c.get ("style", "normal")
+	ta = win.CreateTextArea (cid, x, y, w, h)
+	ta.SetFont (StyleFont (style))
+	ta.SetColor (StyleColor (style))
+	if c.get ("text"):
+		ta.SetText (Text (c["text"]))
+	return ta
+
+# EE controls whose text is set by Lua at run time (`text lua "name"`)
+LUA_TEXT = {
+	"versionString": lambda: GemRB.Version,
+}
+
+def Find (menu, **match):
+	"""Index of the first control of the menu whose fields equal all of `match`
+	(for example Find ("START_MAIN", type="button", bam="STARTBUT", sequence=4)), else None."""
+	doc = Load (menu)
+	if doc is None:
+		return None
+	for c in doc["controls"]:
+		if all (c.get (k) == v for k, v in match.items ()):
+			return c["index"]
+	return None
+
+def Build (menu, windowId=None, plate=None, skip=()):
+	"""Create the window for an EE menu. Returns (window, controls).
+
+	plate: a background picture name to draw behind the controls; None uses the menu's own
+	plate (EE's Infinity_SetBackground), False draws none.
+	skip: control indices to leave out (EE-only controls that have no classic function)."""
+	doc = Load (menu)
+	if doc is None:
+		raise RuntimeError ("EEUI: no layout for " + menu)
+	if windowId is None:
+		windowId = _nextWindow[0]
+		_nextWindow[0] += 1
+	win = GemRB.CreateWindow (windowId, WINDOW_PACK, {'x': 0, 'y': 0, 'w': LOGICAL_W, 'h': LOGICAL_H})
+	if plate is None:
+		plate = PlateOf (doc)
+	if plate:
+		win.SetBackground (plate)
+	controls = {}
+	for c in doc["controls"]:
+		kind = c["type"]
+		cid = c["index"] + 1
+		if "frame" not in c or c["index"] in skip:
+			continue
+		if kind == "button":
+			ctl = _MakeButton (win, cid, c)
+		elif kind == "label":
+			ctl = _MakeLabel (win, cid, c)
+		elif kind == "text":
+			ctl = _MakeLabel (win, cid, c)
+		elif kind == "list":
+			ctl = _MakeTextArea (win, cid, c)
+		else:
+			_Warn ("{}: control type '{}' is not built yet ({})".format (menu, kind, c.get ("name", c["index"])))
+			continue
+		lua = c.get ("text_opts", {}).get ("lua")
+		if lua in LUA_TEXT:
+			style = c.get ("style", "label")
+			ctl.SetColor (StyleColor (style))
+			text = LUA_TEXT[lua] ()
+			fr = ctl.GetFrame ()
+			grow = max (0, 12 * len (text) - fr['w'])    # run-time text can be wider than EE's box
+			fr['x'] -= grow // 2
+			fr['w'] += grow
+			ctl.SetFrame (fr)
+			ctl.SetText (text)
+		controls[c["index"]] = ctl
+		if c.get ("name"):
+			controls[c["name"]] = ctl
+	return win, controls

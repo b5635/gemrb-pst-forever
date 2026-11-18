@@ -23,6 +23,8 @@ enum {
 	SV_SAVEPATH,
 	SV_INICONF,
 	SV_UNHARDCODEDPATH,
+	SV_EEUI,
+	SV_EEUIPATH,
 };
 
 class GUIScript : public ScriptEngine {

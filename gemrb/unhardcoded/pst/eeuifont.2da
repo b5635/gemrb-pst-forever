@@ -1,0 +1,16 @@
+2DA V1.0
+*
+              FONT      COLOR
+normal        TRMTFONT  *
+normal_parchment TRMTFONT *
+white_parchment TRMTFONT *
+parchment     TRMTFONT  *
+title         EXOFONT   *
+button        FONTDLG   *
+label         FONTDLG   *
+label_parchment FONTDLG *
+edit          TRMTFONT  *
+edit_parchment TRMTFONT *
+list          FONTDLG   *
+list_parchment FONTDLG  *
+gold          FONTDLG   *

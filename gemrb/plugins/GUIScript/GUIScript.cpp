@@ -9817,6 +9817,12 @@ static PyObject* GemRB_GetSystemVariable(PyObject* /*self*/, PyObject* args)
 		case SV_UNHARDCODEDPATH:
 			path = core->config.GemRBUnhardcodedPath;
 			break;
+		case SV_EEUI:
+			value = core->config.EEUI;
+			break;
+		case SV_EEUIPATH:
+			path = core->config.EEUIPath;
+			break;
 		default:
 			value = -1;
 			break;

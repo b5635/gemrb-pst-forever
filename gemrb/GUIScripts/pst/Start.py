@@ -8,6 +8,7 @@
 ###################################################
 
 import GemRB
+import EEUI
 from GUIDefines import *
 
 def AutoLoad():
@@ -49,24 +50,55 @@ def OnLoad():
 
 		GemRB.SetVar ("SkipIntroVideos", 1)
 
-	StartWindow = GemRB.LoadWindow(0, "START")
-	NewLifeButton = StartWindow.GetControl(0)
-	ResumeLifeButton = StartWindow.GetControl(2)
-	ExitButton = StartWindow.GetControl(3)
-	NewLifeButton.OnPress (NewLifePress)
-	ResumeLifeButton.OnPress (ResumeLifePress)
-	ExitButton.OnPress (QuitPress)
-	ExitButton.MakeEscape()
-
-	Label = StartWindow.CreateLabel(0x0fff0000, 0,415,640,30, "FONTDLG", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_CENTER)
-	Label.SetText(GemRB.Version)
-	Label.SetColor ({'r' : 255, 'g' : 255, 'b' : 255})
-
-	StartWindow.Focus()
+	if EEUI.Available ("START_MAIN"):
+		handles = BuildEE ()
+	else:
+		handles = BuildClassic ()
+	Wire (handles)
 
 	GemRB.LoadMusicPL("Main.mus")
 	return
 	
+def BuildClassic():
+	StartWindow = GemRB.LoadWindow(0, "START")
+	Label = StartWindow.CreateLabel(0x0fff0000, 0,415,640,30, "FONTDLG", "", IE_FONT_SINGLE_LINE | IE_FONT_ALIGN_CENTER)
+	Label.SetText(GemRB.Version)
+	Label.SetColor ({'r' : 255, 'g' : 255, 'b' : 255})
+	return {
+		"window": StartWindow,
+		"new": StartWindow.GetControl(0),
+		"load": StartWindow.GetControl(2),
+		"quit": StartWindow.GetControl(3),
+	}
+
+def BuildEE():
+	# EE's Continue (seq 1) and Options (seq 2, 3) have no start-screen function here
+	skip = set ()
+	for seq in (1, 2, 3):
+		idx = EEUI.Find ("START_MAIN", type="button", bam="STARTBUT", sequence=seq)
+		if idx is not None:
+			skip.add (idx)
+	plate = EEUI.Find ("START_MAIN", type="label", mosaic="VERPLATE")
+	if plate is not None:
+		skip.add (plate)   # the version plate is tiny and the text reads fine on the plate art
+	win, ctl = EEUI.Build ("START_MAIN", skip=skip)
+	def Pick(seq):
+		return ctl[EEUI.Find ("START_MAIN", type="button", bam="STARTBUT", sequence=seq)]
+	return {
+		"window": win,
+		"new": Pick (0),
+		"load": Pick (4),
+		"quit": Pick (5),
+	}
+
+def Wire(handles):
+	"""Attach the start screen's logic to whichever window was built."""
+	handles["new"].OnPress (NewLifePress)
+	handles["load"].OnPress (ResumeLifePress)
+	handles["quit"].OnPress (QuitPress)
+	handles["quit"].MakeEscape()
+	handles["window"].Focus()
+
 def QuitPress():
 	QuitWindow = GemRB.LoadWindow(3, "START")
 	QuitTextArea = QuitWindow.GetControl(0)

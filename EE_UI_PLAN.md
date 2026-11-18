@@ -306,7 +306,7 @@ sit on the arcs and stat boxes on the wheel.
   - `Build(menu, windowId, plate=None)`: creates a 1280×720 window (plate as its background when
     given) and the controls from JSON; returns `(window, controls)` with controls keyed by EE
     `name`, plus unnamed ones by index.
-  - Fonts and colours from `gemrb/unhardcoded/pst/eeui_fonts.2da` (new, committed, ours): one row
+  - Fonts and colours from `gemrb/unhardcoded/pst/eeuifont.2da` (new, committed, ours): one row
     per EE style, with columns FONT and COLOR. Default fonts: `title` and any style at 22 pt or
     more → EXOFONT; `button`, `label`, `label_parchment`, `list*` → FONTDLG; `normal*`, `parchment`,
     `edit*`, `white_parchment` → TRMTFONT; `gold` → NUMBER2 if it reads well, else FONTDLG.
@@ -422,3 +422,20 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   FUNC, GUIBUTNT, GUICONTB, GUIERR6, GUIOSTUR, GUIOSW, GUIPOPF, RES, START3EE, TITLE.
   Not done: V1 BAM art is outlined only in previews; save portraits not in `extra_art.txt` yet;
   bestiary report's "differs" column not reviewed. Committed with this entry.
+- 2026-11-17: Phase 5 + 6. Engine: `GetSystemVariable` gained `SV_EEUI` (8) and `SV_EEUIPATH` (9);
+  `Interface.cpp` stores the resolved `ee_ui` folder back into `config.EEUIPath`. New
+  `gemrb/GUIScripts/pst/EEUI.py` (`Enabled`, `Available`, `Load`, `Find`, `Build(menu, windowId,
+  plate, skip)`, `StyleFont/StyleColor/StyleFlags`, `Text`, `LUA_TEXT` for `text lua` labels) and
+  `gemrb/unhardcoded/pst/eeuifont.2da` (8-char name; was planned as `eeui_fonts`). Windows are
+  created in the existing `START` pack (an unknown pack makes `CreateWindow` log a CHU error). EE
+  button cycles are frames 0 normal, 1 highlight, 2 pressed, 3 disabled; `SetSprites(bam, seq, 0,
+  2, 0, 3)`. Types not built yet are logged once (`slot`, `slider`, `edit`, `map`, ...).
+  `Start.py` split into `BuildClassic()`, `BuildEE()`, `Wire(handles)`. Skipped from EE START_MAIN:
+  Continue (seq 1), Options (seq 2, 3), and the VERPLATE plate (tiny, blurred; the version text
+  sits on the plate art, label widened to fit the run-time text).
+  Seen in game: EE start screen with STARTBG and the three arcs (`shots/ee_p6_start2.png`); New Life
+  opens character generation; The Abyss opens the classic quit popup (`shots/ee_p6_quit.png`);
+  `EEUI=0` shows the classic start screen unchanged (`shots/ee_p6_classic.png`). The version text
+  shows as `095 git` (the classic font has no `.` or `-`, same as classic).
+  Not seen: Select Life (Load) from the EE screen; Escape (the dev key tool does not trigger
+  `MakeEscape` even on the classic screen); `tb_autotest.ps1` not run (no in-game screen touched).
