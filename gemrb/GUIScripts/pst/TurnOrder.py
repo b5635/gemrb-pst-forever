@@ -56,6 +56,7 @@ def GetOrderWindow ():
 		return Window
 
 	Window.AddAlias ("TURNORDER")
+	CardPictures.clear () # fresh buttons
 	Window.SetFlags (WF_DESTROY_ON_CLOSE, OP_NAND)
 	# a see-through window: its buffer is cleared before each redraw, so moving cards leave no trails
 	Window.SetFlags (WF_ALPHA_CHANNEL | WF_BORDERLESS | IE_GUI_VIEW_IGNORE_EVENTS, OP_OR) # never the key focus
@@ -189,20 +190,40 @@ def DrawCards (order):
 		text = "{}      {}   Lv. {}".format (text, c['Name'], c.get ('Level', '?'))
 	Label.SetText (text)
 
+# decoded card art by resource name: loading a bestiary picture by name decodes it from
+# disk every time (~5 ms each), and the cards redraw every animation step
+PictureCache = {}
+CardPictures = {} # what each card button shows, so an unchanged picture isn't set again
+
+def CardSprite (name, bam):
+	key = (name, bam)
+	if key not in PictureCache:
+		PictureCache[key] = GemRB.GetSprite (name, -1, 0, 0) if bam else GemRB.GetSprite (name)
+	return PictureCache[key]
+
 def SetCardPicture (Button, c):
 	# beasts use the bestiary art from the journal, party members animated portraits
 	image = None
 	if c['Bestiary'] >= 0:
 		image = GemRB.GetINIBeastsKey (str (c['Bestiary']), 'imageKnown', '')
 	if image:
-		Button.SetPicture (image)
-		Button.SetText ("")
+		key = (image, False)
 	elif c['IsPC'] and c['LargePortrait']:
-		Button.SetPicture (GemRB.GetSprite (c['LargePortrait'], -1, 0, 0))
-		Button.SetText ("")
+		key = (c['LargePortrait'], True)
 	else:
+		key = None
+
+	cid = Button.ControlID & 0xffff
+	if CardPictures.get (cid, -1) == key:
+		return
+	CardPictures[cid] = key
+	if key is None:
 		Button.SetPicture (None)
 		Button.SetText (c['Name'][:10])
+		return
+	sprite = CardSprite (*key)
+	Button.SetPicture (sprite)
+	Button.SetText ("" if sprite else c['Name'][:10])
 
 def ShowDeathFade (Button, card):
 	# the card darkens as it falls away

@@ -303,15 +303,17 @@ bool HiResArt::Enabled(HiResCategory category)
 void HiResArt::Attach(const Holder<Sprite2D>& spr, const std::string& relPath)
 {
 	if (!spr || relPath.empty()) return;
+	std::string root = HiResArt::Root();
+	if (root.empty()) return;
+	std::string full = Native(PathJoin(root, relPath));
+	if (!Listed(full)) return;
+	// only a twin that exists switches the report: the gui lookup that misses before the
+	// sprites one would otherwise log every frame on its own line
 	std::string key = ReportKey(relPath);
 	if (key != pending.key) {
 		Flush();
 		pending.key = key;
 	}
-	std::string root = HiResArt::Root();
-	if (root.empty()) return;
-	std::string full = Native(PathJoin(root, relPath));
-	if (!Listed(full)) return;
 	Holder<Sprite2D> hi = LoadPng(full);
 	if (!hi) {
 		if (!warnedRead) {
