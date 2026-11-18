@@ -8,6 +8,7 @@
 #include "Sprite2D.h"
 
 #include <string>
+#include <vector>
 
 namespace GemRB {
 
@@ -35,6 +36,11 @@ public:
 	static std::string Root();
 	// "ar0202.tis" -> "AR0202". Extension and trailing spaces are dropped.
 	static std::string Stem(const char* filename);
+	// Spell and effect BAMs with upscaled twins (sprites/bam/S<digit>*, SP*, EF*): kept loaded all game.
+	static std::vector<std::string> EffectBams();
+	// Reads the effect twins once on a background thread and drops the bytes, only so the
+	// OS has them cached when the game loads them; touches no engine state.
+	static void PrefetchEffects();
 };
 
 }

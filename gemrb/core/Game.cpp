@@ -12,6 +12,7 @@
 
 #include "DisplayMessage.h"
 #include "GameData.h"
+#include "HiResArt.h"
 #include "IniSpawn.h"
 #include "Interface.h"
 #include "Map.h"
@@ -908,6 +909,21 @@ int Game::LoadMap(const ResRef& resRef, bool loadscreen)
 	// Load every animation the area's creatures can play now, behind the loading screen:
 	// loaded on first use instead, an upscaled one (one file per frame) froze the game for
 	// up to a second the first time someone attacked, got hit or died.
+	// spell and effect animations stay loaded for the whole session: done once, behind the
+	// first loading screen (the factory cache never drops them)
+	static bool effectsLoaded = false;
+	if (!effectsLoaded && core->GetDictionary().Get("PreloadEffects", 0) && HiResArt::Enabled(HiResCategory::Sprites)) {
+		effectsLoaded = true;
+		tick_t start = GetMilliseconds();
+		int files = 0;
+		for (const std::string& name : HiResArt::EffectBams()) {
+			ResRef ref(name);
+			if (!gamedata->Exists(ref, IE_BAM_CLASS_ID, true)) continue;
+			if (gamedata->GetFactoryResource(ref, IE_BAM_CLASS_ID, true)) ++files;
+		}
+		Log(MESSAGE, "Game", "Preloaded {} spell and effect animation files in {} ms.", files, GetMilliseconds() - start);
+	}
+
 	if (core->GetDictionary().Get("PreloadAreaSprites", 0)) {
 		tick_t start = GetMilliseconds();
 		std::unordered_set<ResRef, CstrHashCI, CstrEqCI> seen;

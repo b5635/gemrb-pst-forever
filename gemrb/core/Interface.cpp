@@ -5,6 +5,7 @@
 #include "Interface.h"
 
 #include "Predicates.h"
+#include "HiResArt.h"
 #include "exports.h"
 #include "globals.h"
 #include "ie_cursors.h"
@@ -641,6 +642,9 @@ Interface::Interface(CoreSettings&& cfg)
 		}
 	}
 
+	if (GetDictionary().Get("PreloadEffects", 0) && HiResArt::Enabled(HiResCategory::Sprites)) {
+		HiResArt::PrefetchEffects(); // warms the disk cache while the menus are up
+	}
 	Log(MESSAGE, "Core", "Core Initialization Complete!");
 
 #ifdef HAVE_REALPATH

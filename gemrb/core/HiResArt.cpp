@@ -19,6 +19,7 @@
 #include <cctype>
 #include <cstring>
 #include <unordered_map>
+#include <thread>
 #include <unordered_set>
 #include <vector>
 
@@ -379,6 +380,60 @@ std::string HiResArt::Stem(const char* filename)
 	while (start < text.size() && text[start] == ' ') ++start;
 	if (start) text.erase(0, start);
 	return Upper(text);
+}
+
+static bool IsEffectBam(const std::string& name)
+{
+	if (name.size() < 2) return false;
+	char a = char(std::toupper(static_cast<unsigned char>(name[0])));
+	char b = char(std::toupper(static_cast<unsigned char>(name[1])));
+	return (a == 'S' && (std::isdigit(static_cast<unsigned char>(b)) || b == 'P')) || (a == 'E' && b == 'F');
+}
+
+static std::vector<std::string> ListDir(const std::string& dir, bool dirs)
+{
+	std::vector<std::string> names;
+	if (!DirExists(dir)) return names;
+	DirectoryIterator iter(dir);
+	iter.SetFlags(dirs ? DirectoryIterator::Directories : DirectoryIterator::Files, true);
+	if (!iter) return names;
+	do {
+		std::string entry = iter.GetName();
+		if (entry.empty() || entry == "." || entry == "..") continue;
+		names.push_back(entry);
+	} while (++iter);
+	return names;
+}
+
+std::vector<std::string> HiResArt::EffectBams()
+{
+	std::vector<std::string> names;
+	std::string root = Root();
+	if (root.empty()) return names;
+	for (const std::string& name : ListDir(Native(PathJoin(root, "sprites/bam")), true)) {
+		if (IsEffectBam(name)) names.push_back(name);
+	}
+	return names;
+}
+
+void HiResArt::PrefetchEffects()
+{
+	std::string root = Root();
+	if (root.empty()) return;
+	std::thread([root]() {
+		std::string base = Native(PathJoin(root, "sprites/bam"));
+		std::vector<char> buffer(1 << 16);
+		for (const std::string& name : ListDir(base, true)) {
+			if (!IsEffectBam(name)) continue;
+			std::string dir = PathJoin(base, name);
+			for (const std::string& file : ListDir(dir, false)) {
+				FILE* f = fopen(PathJoin(dir, file).c_str(), "rb");
+				if (!f) continue;
+				while (fread(buffer.data(), 1, buffer.size(), f) == buffer.size()) {}
+				fclose(f);
+			}
+		}
+	}).detach();
 }
 
 }
