@@ -56,7 +56,11 @@ def OpenLUStatsWindow(Type = 1, LevelDiff = 0):
 	StatTable = GemRB.LoadTable("abcomm")
 
 	#setting up CG window
-	NewLifeWindow = GemRB.LoadWindow(0, "GUICG")
+	if EEUI.Available ("CHARGEN"):
+		handles = BuildEE ()
+	else:
+		handles = BuildClassic ()
+	NewLifeWindow = handles["window"]
 
 	if LevelUp:
 		StatLowerLimit = []
@@ -69,88 +73,144 @@ def OpenLUStatsWindow(Type = 1, LevelDiff = 0):
 			GemRB.SetPlayerStat (1, stat, 9)
 		TotPoints = 21
 
-	# stat label controls
-	for i in range(6):
-		StatLabels[i] = NewLifeWindow.GetControl(0x10000018 + i)
-
-	# individual stat buttons
-	for i in range(6):
-		Button = NewLifeWindow.GetControl (i+2)
-		Button.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
-		Button.OnMouseEnter (StatPress[i])
-
-	Button = NewLifeWindow.GetControl(8)
-	Button.SetFlags(IE_GUI_BUTTON_RADIOBUTTON, OP_SET)
-	Button.SetState(IE_GUI_BUTTON_LOCKED)
-	Button.SetSprites("", 0, 0, 0, 0, 0)
-	Button.SetText(5025)
-	Button.OnMouseEnter (AcPress)
-
-	Button = NewLifeWindow.GetControl(9)
-	Button.SetFlags(IE_GUI_BUTTON_RADIOBUTTON, OP_SET)
-	Button.SetState(IE_GUI_BUTTON_LOCKED)
-	Button.SetSprites("", 0, 0, 0, 0, 0)
-	Button.SetText(5026)
-	Button.OnMouseEnter (HpPress)
-
-	Button = NewLifeWindow.GetControl(10)
-	Button.SetFlags(IE_GUI_BUTTON_RADIOBUTTON, OP_SET)
-	Button.SetState(IE_GUI_BUTTON_LOCKED)
-	Button.SetSprites("", 0, 0, 0, 0, 0)
-	Button.SetText(5027)
-	Button.OnMouseEnter (PointPress)
-
-	# stat +/- buttons
-	for i in range(len(StatPress)):
-		Button = NewLifeWindow.GetControl (11+2*i)
-		Button.OnPress (IncreasePress)
-		Button.OnMouseEnter (StatPress[i])
-		Button.SetVarAssoc ("Pressed", i)
-		Button.SetActionInterval (200)
-
-		Button = NewLifeWindow.GetControl (12+2*i)
-		Button.OnPress (DecreasePress)
-		Button.OnMouseEnter (StatPress[i])
-		Button.SetVarAssoc ("Pressed", i)
-		Button.SetActionInterval (200)
-
-	NewLifeLabel = NewLifeWindow.GetControl(0x10000023)
-	if LevelUp:
-		NewLifeLabel.SetText(19356)
-	else:
-		NewLifeLabel.SetText(1899)
-
-	TextArea = NewLifeWindow.GetControl(23)
-	TextArea.SetText(18495)
-
-	TotLabel = NewLifeWindow.GetControl(0x10000020)
-	AcLabel = NewLifeWindow.GetControl(0x1000001E)
-	HpLabel = NewLifeWindow.GetControl(0x1000001F)
-
-	Label = NewLifeWindow.GetControl(0x10000021)
-	Label.SetText(254)
-
-	PhotoButton = NewLifeWindow.GetControl(35)
-	PhotoButton.SetState(IE_GUI_BUTTON_LOCKED)
-	PhotoButton.SetFlags(IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_PICTURE, OP_SET)
-	PhotoButton.OnMouseEnter (OverPhoto)
-	PhotoButton.SetPicture("STPNOC")
-
-	AcceptButton = NewLifeWindow.GetControl(0)
-	AcceptButton.SetText(4192)
-	AcceptButton.OnPress (AcceptPress)
-	AcceptButton.MakeDefault()
-
-	CancelButton = NewLifeWindow.GetControl(1)
-	CancelButton.SetText(4196)
-	CancelButton.OnPress (CancelPress)
-	if LevelUp:
-		CancelButton.SetState(IE_GUI_BUTTON_DISABLED)
+	Wire (handles)
 
 	UpdateLabels()
 
 	NewLifeWindow.Focus()
 	return
+
+def BuildClassic():
+	win = GemRB.LoadWindow(0, "GUICG")
+	h = {"window": win}
+	h["statlabels"] = [win.GetControl(0x10000018 + i) for i in range(6)]
+	h["statbtn"] = [win.GetControl(i + 2) for i in range(6)]
+	for b in h["statbtn"]:
+		b.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+	for key, ctl, text in (("ac", 8, 5025), ("hp", 9, 5026), ("pts", 10, 5027)):
+		Button = win.GetControl(ctl)
+		Button.SetFlags(IE_GUI_BUTTON_RADIOBUTTON, OP_SET)
+		Button.SetState(IE_GUI_BUTTON_LOCKED)
+		Button.SetSprites("", 0, 0, 0, 0, 0)
+		Button.SetText(text)
+		h[key] = Button
+	h["plus"] = [win.GetControl(11 + 2*i) for i in range(6)]
+	h["minus"] = [win.GetControl(12 + 2*i) for i in range(6)]
+	h["title"] = win.GetControl(0x10000023)
+	h["text"] = win.GetControl(23)
+	h["tot"] = win.GetControl(0x10000020)
+	h["aclabel"] = win.GetControl(0x1000001E)
+	h["hplabel"] = win.GetControl(0x1000001F)
+	win.GetControl(0x10000021).SetText(254)
+	Photo = win.GetControl(35)
+	Photo.SetState(IE_GUI_BUTTON_LOCKED)
+	Photo.SetFlags(IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_PICTURE, OP_SET)
+	h["photo"] = Photo
+	h["accept"] = win.GetControl(0)
+	h["cancel"] = win.GetControl(1)
+	return h
+
+def BuildEE():
+	import re
+	ctrls = EEUI.Controls ("CHARGEN")
+	# EE numbers the abilities 1 STR, 2 DEX, 3 CON, 4 INT, 5 WIS, 6 CHA; ours go STR INT WIS DEX CON CHA
+	ee_of = [1, 4, 5, 2, 3, 6]
+	by_var = {}
+	plus, minus, hover = {}, {}, {}
+	extras = {}
+	for c in ctrls:
+		lua = c.get ("text_opts", {}).get ("lua")
+		if lua:
+			by_var[lua] = c["index"]
+		act = c.get ("raw", {}).get ("action", "")
+		m = re.search (r"OnAbilityPlusMinusButtonClick\((\d), (true|false)\)", act)
+		if m:
+			(plus if m.group (2) == "true" else minus)[int (m.group (1))] = c["index"]
+		m = re.match (r"showAbilityHelpText\((\d)\)", act)
+		if m and c["type"] == "text" and c.get ("bam") == "CGATTR":
+			hover[int (m.group (1))] = c["index"]
+		for key, strref in (("ac", 5025), ("hp", 5026), ("pts", 5027)):
+			if c["type"] == "text" and (c.get ("text") or {}).get ("strref") == strref:
+				extras[key] = c["index"]
+		if c["type"] == "label" and (c.get ("text") or {}).get ("strref") == 1899:
+			extras["title"] = c["index"]
+		if c["type"] == "label" and c.get ("style") == "normal":
+			extras["text"] = c["index"]
+		if c["type"] == "label" and c.get ("frame") and c["frame"][2] > 200 and c["frame"][3] > 200 and not c.get ("style") and not c.get ("mosaic"):
+			extras["photo"] = c["index"]
+		if c.get ("bam") == "CGACCEPT":
+			extras["accept"] = c["index"]
+		if c["type"] == "button" and (c.get ("text") or {}).get ("strref") == 4196:
+			extras["cancel"] = c["index"]
+	skip = set ()
+	for c in ctrls:   # the second title and the name label have no classic function
+		if c["index"] == 1 or c.get ("text_opts", {}).get ("lua") == "chargen.name":
+			skip.add (c["index"])
+	override = {extras["text"]: "textarea", extras["photo"]: "button"}
+	win, ctl = EEUI.Build ("CHARGEN", skip=skip, override=override)
+	h = {"window": win}
+	h["statlabels"] = [ctl[by_var["chargen.ability[%d].roll" % e]] for e in ee_of]
+	h["statbtn"] = [ctl[hover[e]] for e in ee_of]
+	h["ac"], h["hp"], h["pts"] = ctl[extras["ac"]], ctl[extras["hp"]], ctl[extras["pts"]]
+	h["plus"] = [ctl[plus[e]] for e in ee_of]
+	h["minus"] = [ctl[minus[e]] for e in ee_of]
+	h["title"] = ctl[extras["title"]]
+	h["text"] = ctl[extras["text"]]
+	h["tot"] = ctl[by_var["chargen.extraAbilityPoints"]]
+	h["aclabel"] = ctl[by_var["chargen.AC"]]
+	h["hplabel"] = ctl[by_var["chargen.hitpoints"]]
+	h["photo"] = ctl[extras["photo"]]
+	h["accept"] = ctl[extras["accept"]]
+	h["cancel"] = ctl[extras["cancel"]]
+	for lab in h["statlabels"] + [h["tot"], h["aclabel"], h["hplabel"]]:
+		lab.SetFont ("EXOFONT")
+	return h
+
+def Wire(h):
+	"""Attach chargen's logic to the controls of whichever window was built."""
+	global TextArea, StatLabels, TotLabel, AcLabel, HpLabel
+	for i in range(6):
+		StatLabels[i] = h["statlabels"][i]
+		h["statbtn"][i].OnMouseEnter (StatPress[i])
+	h["ac"].OnMouseEnter (AcPress)
+	h["hp"].OnMouseEnter (HpPress)
+	h["pts"].OnMouseEnter (PointPress)
+	for i in range(len(StatPress)):
+		Button = h["plus"][i]
+		Button.OnPress (IncreasePress)
+		Button.OnMouseEnter (StatPress[i])
+		Button.SetVarAssoc ("Pressed", i)
+		Button.SetActionInterval (200)
+
+		Button = h["minus"][i]
+		Button.OnPress (DecreasePress)
+		Button.OnMouseEnter (StatPress[i])
+		Button.SetVarAssoc ("Pressed", i)
+		Button.SetActionInterval (200)
+
+	h["title"].SetText(19356 if LevelUp else 1899)
+
+	TextArea = h["text"]
+	TextArea.SetText(18495)
+
+	TotLabel = h["tot"]
+	AcLabel = h["aclabel"]
+	HpLabel = h["hplabel"]
+
+	PhotoButton = h["photo"]
+	PhotoButton.OnMouseEnter (OverPhoto)
+	PhotoButton.SetPicture("STPNOC")
+
+	AcceptButton = h["accept"]
+	AcceptButton.SetText(4192)
+	AcceptButton.OnPress (AcceptPress)
+	AcceptButton.MakeDefault()
+
+	CancelButton = h["cancel"]
+	CancelButton.SetText(4196)
+	CancelButton.OnPress (CancelPress)
+	if LevelUp:
+		CancelButton.SetState(IE_GUI_BUTTON_DISABLED)
 
 def UpdateLabels():
 	global AcPoints, HpPoints

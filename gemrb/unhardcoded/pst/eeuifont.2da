@@ -1,10 +1,10 @@
 2DA V1.0
 *
               FONT      COLOR
-normal        TRMTFONT  *
-normal_parchment TRMTFONT *
-white_parchment TRMTFONT *
-parchment     TRMTFONT  *
+normal        FONTDLG   *
+normal_parchment FONTDLG *
+white_parchment FONTDLG *
+parchment     FONTDLG   *
 title         EXOFONT   *
 button        FONTDLG   *
 label         FONTDLG   *

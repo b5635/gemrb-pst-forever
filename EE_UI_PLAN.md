@@ -450,3 +450,16 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   over chargen (`shots/ee_p7_cancel.png`). Not seen: Yes button, 3-button box, info box, delete-
   save boxes, Escape (dev key tool does not reach `MakeEscape`), `EEUI=0` for these boxes
   (guarded by `PopupAvailable`, unchanged classic path).
+- 2026-11-17: Phase 8 (character generation). `NewLife.py` split into `BuildClassic()`,
+  `BuildEE()` and one `Wire(handles)` (stat labels, hover regions, +/- buttons, AC/HP/points,
+  title, text area, portrait, Accept/Cancel). `BuildEE` finds controls in the CHARGEN layout by
+  their EE meaning (ability numbers 1 STR, 2 DEX, 3 CON, 4 INT, 5 WIS, 6 CHA mapped to GemRB's
+  STR INT WIS DEX CON CHA; `text lua` names like `chargen.AC`), skips the second title and the
+  name label (no classic function). `EEUI.Build(..., override={index: 'button'|'textarea'})` builds
+  the description box as a text area and the centre hole as the portrait button. `eeuifont.2da`:
+  `normal*`, `parchment`, `white_parchment` now FONTDLG (TRMTFONT is unreadable at this size).
+  Value labels use EXOFONT. Seen in game: the EE wheel with plate, art, portrait (`shots/ee_p8_a.png`,
+  `ee_p8_c.png`), two STR `+` clicks: STR 11, points 21 -> 19, hover text updates; Accept with
+  points left shows the EE info popup (`shots/ee_p8_e.png`). Not seen: `-` buttons, Cancel Yes/No
+  from this screen, Accept with 0 points (enters the game), level-up use (`OpenLUStatsWindow(1)`),
+  `EEUI=0` chargen (path unchanged: `BuildClassic` is the old code).

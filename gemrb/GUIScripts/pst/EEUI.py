@@ -189,12 +189,16 @@ def _MakeLabel (win, cid, c):
 def _MakeTextArea (win, cid, c):
 	x, y, w, h = _Frame (c)
 	style = c.get ("style", "normal")
-	ta = win.CreateTextArea (cid, x, y, w, h)
-	ta.SetFont (StyleFont (style))
+	ta = win.CreateTextArea (cid, x, y, w, h, StyleFont (style))
 	ta.SetColor (StyleColor (style))
 	if c.get ("text"):
 		ta.SetText (Text (c["text"]))
 	return ta
+
+def Controls (menu):
+	"""The menu's layout control dicts (empty list when there is none)."""
+	doc = Load (menu)
+	return doc["controls"] if doc else []
 
 # EE controls whose text is set by Lua at run time (`text lua "name"`)
 LUA_TEXT = {
@@ -212,12 +216,14 @@ def Find (menu, **match):
 			return c["index"]
 	return None
 
-def Build (menu, windowId=None, plate=None, skip=()):
+def Build (menu, windowId=None, plate=None, skip=(), override=None):
 	"""Create the window for an EE menu. Returns (window, controls).
 
 	plate: a background picture name to draw behind the controls; None uses the menu's own
 	plate (EE's Infinity_SetBackground), False draws none.
-	skip: control indices to leave out (EE-only controls that have no classic function)."""
+	skip: control indices to leave out (EE-only controls that have no classic function).
+	override: {index: 'button' | 'textarea' | 'label'} to build a control as another kind."""
+	override = override or {}
 	doc = Load (menu)
 	if doc is None:
 		raise RuntimeError ("EEUI: no layout for " + menu)
@@ -248,7 +254,7 @@ def Build (menu, windowId=None, plate=None, skip=()):
 				skip = set (skip) | {c["index"]}
 				break
 	for c in doc["controls"]:
-		kind = c["type"]
+		kind = override.get (c["index"], c["type"])
 		cid = c["index"] + 1
 		if "frame" not in c or c["index"] in skip:
 			continue
@@ -258,7 +264,7 @@ def Build (menu, windowId=None, plate=None, skip=()):
 			ctl = _MakeLabel (win, cid, c)
 		elif kind == "text":
 			ctl = _MakeLabel (win, cid, c)
-		elif kind == "list":
+		elif kind in ("list", "textarea"):
 			ctl = _MakeTextArea (win, cid, c)
 		else:
 			_Warn ("{}: control type '{}' is not built yet ({})".format (menu, kind, c.get ("name", c["index"])))
