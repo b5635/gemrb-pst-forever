@@ -195,6 +195,23 @@ def _MakeTextArea (win, cid, c):
 		ta.SetText (Text (c["text"]))
 	return ta
 
+def Alias (name, ext="bam"):
+	"""Name to use for an EE art file whose classic namesake exists (aliases.txt: EE_NAME ALIAS)."""
+	global _aliases
+	try:
+		_aliases
+	except NameError:
+		_aliases = {}
+		try:
+			with open (os.path.join (Root (), "aliases.txt"), "r") as f:
+				for line in f:
+					p = line.split ()
+					if len (p) == 2:
+						_aliases[p[0].upper ()] = p[1]
+		except OSError:
+			pass
+	return _aliases.get ("%s.%s" % (name.upper (), ext.upper ()), name)
+
 def Controls (menu):
 	"""The menu's layout control dicts (empty list when there is none)."""
 	doc = Load (menu)
@@ -334,3 +351,63 @@ def _Closing (win, handler):
 		win.Close ()
 		handler ()
 	return press
+
+
+# -- list rows --------------------------------------------------------------------------
+
+def BuildRows (win, menu, listIndex, count, idBase=0x100, sel_pictures=None):
+	"""Create `count` rows of the list's row template (EE draws these per saved game).
+
+	Returns (rows, frame): each row is a dict of controls by role: select (a button over the whole
+	row whose picture is the row background), preview, name, time, area, portraits[6]. frame is
+	the list's frame. sel_pictures = (normal, selected) pictures for the row backgrounds."""
+	lst = None
+	for c in Controls (menu):
+		if c["index"] == listIndex:
+			lst = c
+	tmpl = lst["columns"][0]["controls"]
+	x0, y0, lw, lh = lst["frame"]
+	x0, y0 = x0 - _origin[0], y0 - _origin[1]
+	rowh = tmpl[0]["frame"][3]
+	rows = []
+	for i in range (count):
+		ry = y0 + i * rowh
+		base = idBase + i * 32
+		row = {"portraits": [None] * 6}
+		# controls created first are drawn on top: transparent click catcher first, the row
+		# background last
+		sel = win.CreateButton (base, x0, ry, tmpl[0]["frame"][2], rowh)
+		sel.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+		row["select"] = sel
+		for k, c in enumerate (tmpl[1:]):
+			fx, fy, fw, fh = c["frame"]
+			lua = c.get ("text_opts", {}).get ("lua", "")
+			bmp = c.get ("bitmap_lua", "")
+			cid = base + 1 + k
+			if bmp:
+				b = win.CreateButton (cid, x0 + fx, ry + fy, fw, fh)
+				b.SetFlags (IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_PICTURE, OP_SET)
+				b.SetState (IE_GUI_BUTTON_LOCKED)
+				if bmp.endswith ("screenshot"):
+					row["preview"] = b
+				elif "portrait" in bmp:
+					row["portraits"][int (bmp[-1])] = b
+			elif lua:
+				style = c.get ("style", "label")
+				flags = StyleFlags (style)
+				# the row template left-aligns its texts
+				flags = (flags & ~IE_FONT_ALIGN_CENTER & ~IE_FONT_ALIGN_RIGHT) | IE_FONT_ALIGN_LEFT
+				lab = win.CreateLabel (cid, x0 + fx, ry + fy, fw, fh, StyleFont (style), "", flags)
+				lab.SetColor (StyleColor (style))
+				if lua.endswith ("slotName"):
+					row["name"] = lab
+				elif lua.endswith (".time"):
+					row["time"] = lab
+				elif lua.endswith ("areaName"):
+					row["area"] = lab
+		bg = win.CreateLabel (base + 31, x0, ry, tmpl[0]["frame"][2], rowh, "FONTDLG", "", 0)
+		if sel_pictures:
+			bg.SetBackground (sel_pictures[0])
+		row["bg"] = bg
+		rows.append (row)
+	return rows, lst["frame"]

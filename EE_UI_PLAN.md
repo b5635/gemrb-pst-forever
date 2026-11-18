@@ -463,3 +463,24 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   points left shows the EE info popup (`shots/ee_p8_e.png`). Not seen: `-` buttons, Cancel Yes/No
   from this screen, Accept with 0 points (enters the game), level-up use (`OpenLUStatsWindow(1)`),
   `EEUI=0` chargen (path unchanged: `BuildClassic` is the old code).
+- 2026-11-17: Phase 9 (load / save). Converter: `list` controls now carry their row template as
+  `columns[].controls` (children with frames relative to the row, `bitmap_lua`, `text_opts.lua`);
+  `bitmap res` no longer counted as missing art; `extra_art.txt` adds LOADROWB/C, STRROW, ABLROW.
+  `EEUI.BuildRows(win, menu, listIndex, count, sel_pictures)` builds N rows (transparent click
+  catcher on top, content, row background label last: controls created first are drawn on top),
+  `EEUI.Alias(name)` reads `aliases.txt` (EE name -> EU####). `GUILOAD.py` and `GUISAVE.py` now
+  use `BuildClassic()` / `BuildEE()` handles with rows (preview, name, time, 6 portraits) and one
+  scroll bar; EE has one Load/Delete (Save/Delete/New Save) button set acting on the selected row,
+  5 rows instead of 4. `GUISAVE` EE window is shown modal (it covers the HUD). Scroll bar ID
+  0x900 collided with an existing control ("null ref"); EE scrollbars use 0x5000.
+  Seen in game: EE load screen with 5 rows, previews, names, dates, party portraits, selection
+  highlight (`shots/ee_p9_b.png`); Load from it started the game (loading screen,
+  `shots/ee_p9_loaded.png`); EE save screen in a running game incl. Empty slot, selection, Delete
+  disabled on the empty slot, New Save opening the classic name box, Cancel closing it
+  (`shots/ee_p9_save2.png`, `ee_p9_save3.png`). Not done: EE `SAVE_NEWSAVE` popup (the classic
+  name window is used), alignment/faction icons per row (not in classic save data), the two empty
+  portrait ring slots drawn in the row art, Delete confirm from these screens (uses the phase 7
+  popup, not exercised), Save/overwrite actually writing a file, `EEUI=0` load/save, scrolling
+  with more than 5 saves (8 saves here, bar drawn). Clicks via `dev.ps1` land unreliably when the
+  game window is resized/alt-tabbed; screens were driven with `dev.ps1 py` (note: Python modules
+  stay cached in a running game, use `importlib.reload`).

@@ -321,7 +321,9 @@ class Build:
         for key in ("mosaic", "bitmap"):
             m = c.get(key)
             if m:
-                if m[0].v.lower() == "lua":
+                if key == "bitmap" and m[0].v.lower() in ("res", "lua"):
+                    d["bitmap_lua"] = m[-1].v if len(m) > 1 else ""    # picture set at run time
+                elif m[0].v.lower() == "lua":
                     d["mosaic_lua"] = m[1].v if len(m) > 1 else ""
                 else:
                     use = self.art(m[0].v, "mos")
@@ -361,6 +363,18 @@ class Build:
                 raw[key.lower()] = " ".join(t.v for t in v).strip()
         if raw:
             d["raw"] = raw
+        if c.kind == "list":
+            # row template: children of each `column`, frames relative to the row, scaled
+            cols = []
+            for col in c.children:
+                if col.kind != "column":
+                    continue
+                w = col.get("width")
+                cols.append({"width": int(w[0].v) if w and w[0].v.isdigit() else None,
+                             "controls": [self.control(ch, 0, 0, None, k)
+                                          for k, ch in enumerate(col.children)]})
+            if cols:
+                d["columns"] = cols
         return d
 
     def menus(self, menus):

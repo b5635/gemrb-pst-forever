@@ -20,10 +20,12 @@ OptionsWindow = None
 Games = ()
 ScrollBar = 0
 CurrentPreview = None
+Rows = []
+Handles = {}
 
 
 def OpenSaveWindow ():
-	global SaveWindow, OptionsWindow, Games, ScrollBar, CurrentPreview
+	global SaveWindow, OptionsWindow, Games, ScrollBar, CurrentPreview, Rows, Handles, Selected
 
 	# temporarily reenable the game window, so the screenshot does not get tinted darker
 	GameWin = GemRB.GetView("GAMEWIN")
@@ -41,89 +43,154 @@ def OpenSaveWindow ():
 
 		return
 
-	SaveWindow = Window = GemRB.LoadWindow (0, "GUISAVE")
+	if EEUI.Available ("SAVE"):
+		Handles = BuildEE ()
+	else:
+		Handles = BuildClassic ()
+	SaveWindow = Window = Handles["window"]
+	Rows = Handles["rows"]
 	OptionsWindow = GemRB.GetView("OPTWIN")
 
 	# Cancel button
-	CancelButton = Window.GetControl (46)
+	CancelButton = Handles["cancel"]
 	CancelButton.SetText (4196)
 	CancelButton.OnPress (CancelPress)
 	CancelButton.MakeEscape()
 	GemRB.SetVar ("SaveIdx", 0)
+	Selected = None
 
-	for i in range (4):
-		Button = Window.GetControl (14 + i)
-		Button.SetText (28645)
-		Button.OnPress (SaveGamePress)
-		Button.SetState (IE_GUI_BUTTON_DISABLED)
-		Button.SetVarAssoc ("SaveIdx", i)
+	if Handles.get ("save"):
+		# EE: Save, Delete and New Save act on the selected row
+		for key, text, handler in (("save", 28645, SaveGamePress), ("delete", 28640, DeleteGamePress),
+		                           ("new", None, NewSavePress)):
+			if text:
+				Handles[key].SetText (text)
+			Handles[key].OnPress (handler)
+		for key in ("save", "delete"):
+			Handles[key].SetState (IE_GUI_BUTTON_DISABLED)
 
-		Button = Window.GetControl (18 + i)
-		Button.SetText (28640)
-		Button.OnPress (DeleteGamePress)
-		Button.SetState (IE_GUI_BUTTON_DISABLED)
-		Button.SetVarAssoc ("SaveIdx", i)
+	for i, row in enumerate (Rows):
+		for key, text, handler in (("save", 28645, SaveGamePress), ("delete", 28640, DeleteGamePress)):
+			if row.get (key):
+				row[key].SetText (text)
+				row[key].OnPress (handler)
+				row[key].SetState (IE_GUI_BUTTON_DISABLED)
+				row[key].SetVarAssoc ("SaveIdx", i)
+		if row.get ("select"):
+			row["select"].OnPress (lambda *args, i=i: SelectRow (i))
+			row["select"].OnDoublePress (lambda *args, i=i: (SelectRow (i), SaveGamePress ()))
 
-		# area previews
-		Button = Window.GetControl (1 + i)
-		Button.SetFlags (IE_GUI_BUTTON_NO_IMAGE|IE_GUI_BUTTON_PICTURE, OP_SET)
-
-		# PC portraits
-		for j in range (6):
-			Button = Window.GetControl (22 + i*6 + j)
-			Button.SetFlags (IE_GUI_BUTTON_NO_IMAGE|IE_GUI_BUTTON_PICTURE, OP_SET)
-
-	ScrollBar = Window.GetControl (13)
+	ScrollBar = Handles["scrollbar"]
 	ScrollBar.OnChange (ScrollBarPress)
 	Window.SetEventProxy (ScrollBar)
 	Games = GemRB.GetSaveGames()
-	TopIndex = max (0, len(Games) - 4 + 1) #one more for the 'new game'
+	TopIndex = max (0, len(Games) - len (Rows) + 1) #one more for the 'new game'
 
 	GemRB.SetVar ("TopIndex",TopIndex)
 	ScrollBar.SetVarAssoc ("TopIndex", TopIndex)
 	ScrollBarPress ()
+	if Handles.get ("save"):
+		# the EE screen covers the whole display, over the HUD windows
+		Window.ShowModal (MODAL_SHADOW_NONE)
+
+def BuildClassic ():
+	win = GemRB.LoadWindow (0, "GUISAVE")
+	h = {"window": win, "cancel": win.GetControl (46), "rows": []}
+	for i in range (4):
+		row = {"save": win.GetControl (14 + i), "delete": win.GetControl (18 + i),
+		       "preview": win.GetControl (1 + i), "name": win.GetControl (0x10000004+i),
+		       "time": win.GetControl (0x10000008 + i), "portraits": []}
+		row["preview"].SetFlags (IE_GUI_BUTTON_NO_IMAGE|IE_GUI_BUTTON_PICTURE, OP_SET)
+		for j in range (6):
+			Button = win.GetControl (22 + i*6 + j)
+			Button.SetFlags (IE_GUI_BUTTON_NO_IMAGE|IE_GUI_BUTTON_PICTURE, OP_SET)
+			row["portraits"].append (Button)
+		h["rows"].append (row)
+	h["scrollbar"] = win.GetControl (13)
+	return h
+
+ROW_PICTURES = ("LOADROWB", "LOADROWC")
+Selected = None
+
+def BuildEE ():
+	win, ctl = EEUI.Build ("SAVE", skip={0, 2})
+	rows, frame = EEUI.BuildRows (win, "SAVE", 2, 5, sel_pictures=ROW_PICTURES)
+	x, y, w, hgt = frame
+	bar = win.CreateScrollBar (0x5000, {'x': x + w - 24, 'y': y, 'w': 24, 'h': hgt}, EEUI.Alias ("CGSCRL1"))
+	return {"window": win, "cancel": ctl[3], "save": ctl[4], "delete": ctl[5], "new": ctl[6],
+	        "rows": rows, "scrollbar": bar}
+
+def SelectRow (i):
+	"""EE list: pick row i (highlight it, enable Save and Delete)."""
+	global Selected
+	Selected = i
+	GemRB.SetVar ("SaveIdx", i)
+	ScrollBarPress ()
+
+def NewSavePress ():
+	"""EE 'New Save': aim at the empty slot after the last save and open the name box."""
+	global Selected
+	Pos = len (Games)
+	n = len (Rows)
+	TopIndex = max (0, Pos - n + 1)
+	GemRB.SetVar ("TopIndex", TopIndex)
+	ScrollBar.SetVarAssoc ("TopIndex", TopIndex)
+	Selected = Pos - TopIndex
+	GemRB.SetVar ("SaveIdx", Selected)
+	ScrollBarPress ()
+	OpenSaveDetailWindow ()
 
 def ScrollBarPress():
-	Window = SaveWindow
-	# draw load game portraits
+	# draw the saved games
 	Pos = GemRB.GetVar ("TopIndex") or 0
-	for i in range (4):
+	have = False
+	deletable = False
+	for i, row in enumerate (Rows):
 		ActPos = Pos + i
-
-		Button1 = Window.GetControl (14 + i) # save
-		Button2 = Window.GetControl (18 + i) # delete
-		PreviewButton = Window.GetControl (1 + i)
 		if ActPos < len(Games):
 			Slotname = Games[ActPos].GetName ()
 			Slottime = Games[ActPos].GetDate ()
-			Button1.SetState (IE_GUI_BUTTON_ENABLED)
-			Button2.SetState (IE_GUI_BUTTON_ENABLED)
-			PreviewButton.SetPicture (Games[ActPos].GetPreview())
+			Preview = Games[ActPos].GetPreview()
+			states = (True, True)
 		elif ActPos == len(Games):
 			Slotname = 28647 # "Empty"
 			Slottime = ""
-			Button1.SetState (IE_GUI_BUTTON_ENABLED)
-			Button2.SetState (IE_GUI_BUTTON_DISABLED)
-			PreviewButton.SetPicture (None)
+			Preview = None
+			states = (True, False)
 		else:
 			Slotname = ""
 			Slottime = ""
-			Button1.SetState (IE_GUI_BUTTON_DISABLED)
-			Button2.SetState (IE_GUI_BUTTON_DISABLED)
-			PreviewButton.SetPicture (None)
+			Preview = None
+			states = (False, False)
 
-		Label = Window.GetControl (0x10000004+i)
-		Label.SetText (Slotname)
+		for key, on in zip (("save", "delete"), states):
+			if row.get (key):
+				row[key].SetState (IE_GUI_BUTTON_ENABLED if on else IE_GUI_BUTTON_DISABLED)
+		if row.get ("select"):
+			row["select"].SetVisible (states[0])
+			row["bg"].SetVisible (states[0])
+			if states[0]:
+				chosen = Selected == i
+				row["bg"].SetBackground (ROW_PICTURES[1 if chosen else 0])
+				if chosen:
+					have = True
+					deletable = states[1]
+		for key in ("name", "time", "area", "preview"):
+			if row.get (key):
+				row[key].SetVisible (states[0] or not row.get ("select"))
 
-		Label = Window.GetControl (0x10000008 + i)
-		Label.SetText (Slottime)
+		row["name"].SetText (Slotname)
+		row["time"].SetText (Slottime)
+		if row.get ("area"):
+			row["area"].SetText ("")
+		row["preview"].SetPicture (Preview)
 
-		for j in range (6):
-			Button = Window.GetControl (22 + i*6 + j)
-			if ActPos < len(Games):
-				Button.SetPicture (Games[ActPos].GetPortrait(j))
-			else:
-				Button.SetPicture (None)
+		for j, Button in enumerate (row["portraits"]):
+			if Button:
+				Button.SetPicture (Games[ActPos].GetPortrait(j) if ActPos < len(Games) else None)
+	if Handles.get ("save"):
+		Handles["save"].SetState (IE_GUI_BUTTON_ENABLED if have else IE_GUI_BUTTON_DISABLED)
+		Handles["delete"].SetState (IE_GUI_BUTTON_ENABLED if deletable else IE_GUI_BUTTON_DISABLED)
 
 
 def SaveGamePress ():
@@ -131,8 +198,9 @@ def SaveGamePress ():
 	return
 
 def DeleteGameConfirm():
-	global Games
+	global Games, Selected
 
+	Selected = None
 	TopIndex = GemRB.GetVar("TopIndex")
 	Pos = TopIndex +GemRB.GetVar("SaveIdx")
 	GemRB.DeleteSaveGame (Games[Pos])
@@ -140,7 +208,7 @@ def DeleteGameConfirm():
 	if TopIndex>0:
 		TopIndex -= 1
 		GemRB.SetVar ("TopIndex", TopIndex)
-	ScrollBar.SetVarAssoc("TopIndex", TopIndex, 0, max (0, len(Games) - 4 + 1))
+	ScrollBar.SetVarAssoc("TopIndex", TopIndex, 0, max (0, len(Games) - len (Rows) + 1))
 	ScrollBarPress()
 	if ConfirmWindow:
 		ConfirmWindow.Close ()

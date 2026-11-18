@@ -21,3 +21,8 @@ JR*KN.mos
 # Paper dolls
 IVP*.mos
 # Save portraits: not named anywhere in UI.menu; add them here once the save screen phase finds them
+# Row art that UI.menu only reaches through list templates
+LOADROWB
+LOADROWC
+STRROW
+ABLROW
