@@ -351,7 +351,7 @@ class Build:
         sb = c.get("scrollbar")
         if sb:
             d["scrollbar"] = self.art(sb[0].v, "bam") or sb[0].v
-        for key in ("var", "table", "position", "settings", "rowheight", "maxlines", "icon", "slot"):
+        for key in ("var", "table", "position", "settings", "rowheight", "maxlines", "icon", "slot", "slotinfo"):
             v = c.get(key)
             if v:
                 d[key] = " ".join(t.v for t in v)
@@ -407,6 +407,7 @@ class Build:
             if pl:
                 ox, oy, bbox = pl
                 doc["ee_bbox"] = list(bbox)
+                doc["slot_dy"] = self.px(oy)
                 doc["bbox"] = [self.px(ox + bbox[0]), self.px(oy + bbox[1]), self.px(bbox[2]), self.px(bbox[3])]
                 idx = 0
                 for c in m.children:

@@ -130,7 +130,27 @@ def _parse_block(toks: list, i: int, kind: str):
                     continue
             break
         blk.props.append((key, args))
+    if kind == "slot":
+        blk.props = _resplit_slot(blk.props)
     return blk, i + 1
+
+
+_SLOT_KEYS = {"name", "area", "bam", "sequence", "slotinfo", "highlight", "tooltip", "use", "mosaic"}
+
+
+def _resplit_slot(props):
+    """`slot {name "x" area 1 2 3 4 bam "Y" ...}` is written on one line: split at the known keys."""
+    toks = []
+    for k, a in props:
+        toks.append(Tok(k, False, 0, 0))
+        toks.extend(a)
+    out = []
+    for t in toks:
+        if not t.q and t.v.lower() in _SLOT_KEYS:
+            out.append((t.v, []))
+        elif out:
+            out[-1][1].append(t)
+    return out
 
 
 def parse(text: str) -> list:

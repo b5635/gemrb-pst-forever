@@ -494,3 +494,18 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   Feedback, Autopause, Keybindings, Movies) still open the classic windows. They need slider,
   checkbox and list support in `EEUI.Build` and rewiring of `GUIOPTControls` (it addresses controls
   by CHU id). Load/Back/Save buttons from the EE screen were not clicked through.
+- Phase 11 (inventory): `GUIINV.py` builds the EE `INVENTORY` layout when present (`LoadInventoryWindow`),
+  and the classic script logic runs unchanged on it: the EE controls are created with the classic
+  CHU control ids (`EE_SLOT_IDS`, `EE_LABEL_IDS`, `EEUI.Build(ids=...)`; controls without a mapping
+  get 0x3000+index so ids never collide). Parser fix: `slot {name .. area .. bam ..}` is one line,
+  `menu_parser._resplit_slot`; the converter now keeps `slotinfo` and writes `slot_dy` (EE slot areas
+  need the menu's vertical offset taken off to land on the plate). Ground paging uses the EE
+  arrows (pages of 10, `GroundPage`); the CHU scrollbar is skipped. Encumbrance is one two-line
+  button over EE's two labels. EE slots without a PST equivalent are skipped. Seen in game with a
+  save: all equipment, quick weapon/item/quiver and 20 inventory slots line up with the plate and
+  show items, portrait, AC, HP, gold, name, class (`shots/inv2.png`). Not done / not checked: drag
+  and drop, item tooltips and the item info window on EE slots, ground paging with more than 10
+  items (arrow sprites not visible over the group slots in the shot), the portrait keeps the classic
+  picture (orange backdrop), `EEUI=0` fallback, `slot_dy` is applied to every menu with slots (check
+  when containers/stores are converted), and `EEUI.Build` windows can't be rebuilt after
+  `importlib.reload(EEUI)` without bumping `_nextWindow` (dev only).

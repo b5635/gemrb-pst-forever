@@ -12,6 +12,7 @@ import GUICommon
 import CommonTables
 import GUICommonWindows
 import InventoryCommon
+import EEUI
 from GUIDefines import *
 from ie_stats import *
 from ie_slots import *
@@ -91,7 +92,8 @@ def InitInventoryWindow (Window):
 		Button.OnMouseLeave (InventoryCommon.MouseLeaveGround)
 
 	ScrollBar = Window.GetControl (45)
-	ScrollBar.OnChange (lambda: RefreshInventoryWindow(Window))
+	if ScrollBar:
+		ScrollBar.OnChange (lambda: RefreshInventoryWindow(Window))
 
 	# portrait
 	Button = Window.GetControl (44)
@@ -139,7 +141,8 @@ def UpdateInventoryWindow (Window):
 	Count = Container['ItemCount']
 	if Count<1:
 		Count=1
-	ScrollBar.SetVarAssoc ("TopIndex", max(0, (Count - 10 + 1) // 2))
+	if ScrollBar:
+		ScrollBar.SetVarAssoc ("TopIndex", max(0, (Count - 10 + 1) // 2))
 	RefreshInventoryWindow (Window)
 
 	# PST uses unhardcoded/avslots.2da to decide which slots do what per character
@@ -151,8 +154,81 @@ def UpdateInventoryWindow (Window):
 	for i in range (46):
 		InventoryCommon.UpdateSlot (pc, i)
 
-ToggleInventoryWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIINV", GUICommonWindows.ToggleWindow, InitInventoryWindow, UpdateInventoryWindow)
-OpenInventoryWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIINV", GUICommonWindows.OpenWindowOnce, InitInventoryWindow, UpdateInventoryWindow)
+# EE slot name -> classic control id (the classic scripts address slots by CHU control id)
+EE_SLOT_IDS = {
+	"chest0": 6, "wrist0": 8, "earringleft0": 5, "earringright0": 0,
+	"tattoo0": 4, "tattoo1": 1, "tattoo2": 9, "ring0": 7, "ring1": 2, "hand0": 3,
+}
+for _i in range (4):
+	EE_SLOT_IDS["weapon%d" % _i] = 10 + _i
+for _i in range (5):
+	EE_SLOT_IDS["personal%d" % _i] = 14 + _i
+	EE_SLOT_IDS["quiver%d" % _i] = 19 + _i
+for _i in range (20):
+	EE_SLOT_IDS["group%d" % _i] = 24 + _i
+for _i in range (10):
+	EE_SLOT_IDS["ground%d" % _i] = 47 + _i
+
+# EE label/text index -> classic label id
+EE_LABEL_IDS = {4: 0x10000039, 9: 0x1000003a, 11: 0x1000003b, 12: 0x1000003c, 13: 0x1000003d, 6: 0x1000003e, 7: 0x1000003f}
+
+def LoadInventoryWindow (id, pack, pos, loader):
+	"""Window loader: the EE inventory layout when it exists, the CHU window otherwise."""
+	if not EEUI.Available ("INVENTORY"):
+		return loader (id, pack, pos)
+	if GemRB.GetView (pack, id):
+		return loader (id, pack, pos)   # focus or toggle the open one
+	if loader is GUICommonWindows.ToggleWindow and GemRB.GetView ("WIN_STORE"):
+		return None
+	ids = {0: 44}
+	skip = set ()
+	for c in EEUI.Controls ("INVENTORY"):
+		if c["type"] == "slot":
+			key = c.get ("slotinfo", "").replace ("characters[id].equipment.", "")
+			if key in EE_SLOT_IDS:
+				ids[c["index"]] = EE_SLOT_IDS[key]
+			else:
+				skip.add (c["index"])   # EE slots PST has no equivalent for
+		elif c["index"] in EE_LABEL_IDS:
+			ids[c["index"]] = EE_LABEL_IDS[c["index"]]
+		elif c["index"] in (2, 3):
+			skip.add (c["index"])       # encumbrance numbers, drawn by one button
+	arrows = []
+	for c in EEUI.Controls ("INVENTORY"):
+		if c["type"] == "button" and c.get ("bam") == "ARROBUTT":
+			skip.add (c["index"])
+			arrows.append (c)
+
+	def MakeArrows (win):
+		# made first so they are drawn over the group slots that share their corner
+		for c in arrows:
+			x, y, w, h = c["frame"]
+			b = win.CreateButton (0x4000 + c["index"], x, y, w, h)
+			b.SetSprites (c["bam"], c.get ("sequence", 0), 0, 2, 0, 3)
+			step = -10 if c.get ("sequence") == 0 else 10
+			b.OnPress (lambda step=step: GroundPage (win, step))
+
+	win, ctl = EEUI.Build ("INVENTORY", ids=ids, skip=skip, first=MakeArrows)
+	win.AddAlias (pack, id)
+	# encumbrance: one two-line button over EE's two labels
+	enc = win.CreateButton (46, 534, 548, 50, 92)
+	enc.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+	enc.SetFont (EEUI.StyleFont ("normal"))
+	for c in EEUI.Controls ("INVENTORY"):
+		if c["type"] == "button" and c.get ("bam") == "XBUTT":
+			ctl[c["index"]].OnPress (win.Close)
+			ctl[c["index"]].MakeEscape ()
+	return win
+
+def GroundPage (Window, step):
+	pc = GemRB.GameGetSelectedPCSingle ()
+	count = GemRB.GetContainer (pc, 1)['ItemCount']
+	top = GemRB.GetVar ("TopIndex") + step
+	GemRB.SetVar ("TopIndex", max (0, min (top, max (0, count - 1) // 10 * 10)))
+	RefreshInventoryWindow (Window)
+
+ToggleInventoryWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIINV", lambda i, p, pos: LoadInventoryWindow (i, p, pos, GUICommonWindows.ToggleWindow), InitInventoryWindow, UpdateInventoryWindow)
+OpenInventoryWindow = GUICommonWindows.CreateTopWinLoader(3, "GUIINV", lambda i, p, pos: LoadInventoryWindow (i, p, pos, GUICommonWindows.OpenWindowOnce), InitInventoryWindow, UpdateInventoryWindow)
 
 def RefreshInventoryWindow (Window):
 	"""Partial redraw without resetting TopIndex."""

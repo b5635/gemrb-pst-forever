@@ -233,14 +233,18 @@ def Find (menu, **match):
 			return c["index"]
 	return None
 
-def Build (menu, windowId=None, plate=None, skip=(), override=None):
+def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, first=None):
 	"""Create the window for an EE menu. Returns (window, controls).
 
 	plate: a background picture name to draw behind the controls; None uses the menu's own
 	plate (EE's Infinity_SetBackground), False draws none.
 	skip: control indices to leave out (EE-only controls that have no classic function).
-	override: {index: 'button' | 'textarea' | 'label'} to build a control as another kind."""
+	override: {index: 'button' | 'textarea' | 'label'} to build a control as another kind.
+	first: callable(win) run after the window exists and before any control is made; controls made
+	there are drawn on top of all the others.
+	ids: {index: control id} to give controls the id the classic script expects (default index + 1)."""
 	override = override or {}
+	ids = ids or {}
 	doc = Load (menu)
 	if doc is None:
 		raise RuntimeError ("EEUI: no layout for " + menu)
@@ -263,6 +267,8 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None):
 	if plate:
 		win.SetBackground (plate)
 	controls = {}
+	if first:
+		first (win)
 	if doc.get ("modal") and doc.get ("bbox"):
 		# the full-size backdrop label becomes the window background (keeps it under every control)
 		for c in doc["controls"]:
@@ -272,11 +278,18 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None):
 				break
 	for c in doc["controls"]:
 		kind = override.get (c["index"], c["type"])
-		cid = c["index"] + 1
+		cid = ids.get (c["index"], (0x3000 if ids else 1) + c["index"])
 		if "frame" not in c or c["index"] in skip:
 			continue
 		if kind == "button":
 			ctl = _MakeButton (win, cid, c)
+		elif kind == "slot":
+			x, y, w, h = _Frame (c)
+			# EE slot areas are measured from the menu's top, not the centred menu box: measured
+			# against the inventory plate they sit exactly the menu's vertical offset too low
+			y -= doc.get ("slot_dy", 0)
+			ctl = win.CreateButton (cid, x, y, w, h)
+			ctl.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
 		elif kind == "label":
 			ctl = _MakeLabel (win, cid, c)
 		elif kind == "text":
