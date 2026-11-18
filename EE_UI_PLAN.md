@@ -484,3 +484,13 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   with more than 5 saves (8 saves here, bar drawn). Clicks via `dev.ps1` land unreliably when the
   game window is resized/alt-tabbed; screens were driven with `dev.ps1 py` (note: Python modules
   stay cached in a running game, use `importlib.reload`).
+- Phase 10 (part 1, main options): `GUIOPT.py` builds the EE peacock tail (`ESC_MENU` on the
+  OPTBG plate): Gameplay, Graphics, Sound, Save, Load, Quit, Movies, Back (Escape). EE's Language
+  button (start screen only, overlaps Quit) and the version plate are skipped; Keyboard Mappings and
+  GemRB options sit as plain text buttons at the right, since the EE layout has no slot for them.
+  Quit (Cancel/Quit/Save, or Cancel/Quit when no game) and Load confirm use the phase 7 popups.
+  The window gets the alias ("GUIOPT", 0) so the toggle/open-once logic still works. Seen in game
+  (`shots/opt_main.png`, `opt_quit.png`). NOT done yet: the sub-pages (Sound, Graphics, Gameplay,
+  Feedback, Autopause, Keybindings, Movies) still open the classic windows. They need slider,
+  checkbox and list support in `EEUI.Build` and rewiring of `GUIOPTControls` (it addresses controls
+  by CHU id). Load/Back/Save buttons from the EE screen were not clicked through.

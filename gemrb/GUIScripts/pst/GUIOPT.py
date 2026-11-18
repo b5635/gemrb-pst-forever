@@ -24,6 +24,7 @@ import GUICommonWindows
 import GUISAVE
 import GUIOPTControls
 import GUIOPTExtra
+import EEUI
 from ie_sounds import *
 from GUIDefines import *
 
@@ -36,6 +37,14 @@ def InitOptionsWindow (Window):
 
 	Container.CloseContainerWindow ()
 
+	ctl = _eeCtl[0]
+	_eeCtl[0] = None
+	if ctl:
+		BuildEEOptions (Window, ctl)
+	else:
+		BuildClassicOptions (Window)
+
+def BuildClassicOptions (Window):
 	def ConfigOptButton(button, strref, action):
 		button.SetText (strref)
 		button.OnPress (action)
@@ -80,11 +89,64 @@ def InitOptionsWindow (Window):
 	frame = Window.GetControl (5).GetFrame ()
 	GUIOPTExtra.AddGemRBOptionsButton (Window, frame, 115, 80, "OSSAVE")
 
-	return
+def BuildEEOptions (Window, ctl):
+	"""Wire the EE peacock tail. The window itself was built by LoadOptionsWindow."""
+	def Hook (name, action):
+		ctl[name].OnPress (action)
+	Hook ("BACK_BUTTON", Window.Close)
+	Hook ("QUIT_GAME_BUTTON", OpenQuitMsgWindow)
+	Hook ("LOAD_GAME_BUTTON", OpenLoadMsgWindow)
+	Hook ("SAVE_GAME_BUTTON", GUISAVE.OpenSaveWindow)
+	Hook ("GRAPHICS_BUTTON", OpenVideoOptionsWindow)
+	Hook ("SOUND_BUTTON", OpenAudioOptionsWindow)
+	Hook ("GAMEPLAY_BUTTON", OpenGameplayOptionsWindow)
+	Hook ("MOVIES_BUTTON", OpenMoviesWindow)
+	ctl["BACK_BUTTON"].MakeEscape ()
 
-ToggleOptionsWindow = GUICommonWindows.CreateTopWinLoader(0, "GUIOPT", GUICommonWindows.ToggleWindow, InitOptionsWindow)
-OpenOptionsWindow = GUICommonWindows.CreateTopWinLoader(0, "GUIOPT", GUICommonWindows.OpenWindowOnce, InitOptionsWindow)
-	
+	# the keyboard map lives under Gameplay in EE; keep a direct button for it, with the GemRB one
+	frame = {'x': 1010, 'y': 560, 'w': 150, 'h': 36}
+	keys = Window.CreateButton (51, frame['x'], frame['y'], frame['w'], frame['h'])
+	keys.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+	keys.SetFont (EEUI.StyleFont ("button"))
+	keys.SetColor (EEUI.StyleColor ("button"))
+	keys.SetText (29723)
+	keys.OnPress (OpenKeyboardMappingsWindow)
+	gem = Window.CreateButton (50, frame['x'], frame['y'] + 40, frame['w'], frame['h'])
+	gem.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+	gem.SetFont (EEUI.StyleFont ("button"))
+	gem.SetColor (EEUI.StyleColor ("button"))
+	gem.SetText ("GemRB options")
+	gem.OnPress (GUIOPTExtra.OpenGemRBOptionsWindow)
+
+_eeCtl = [None]    # controls of the EE window just built, consumed by InitOptionsWindow
+
+def LoadOptionsWindow (id, pack, pos, loader=GUICommonWindows.OpenWindowOnce):
+	"""Window loader for the options screen: the EE layout when it exists, the CHU one otherwise."""
+	if not EEUI.Available ("ESC_MENU"):
+		_eeCtl[0] = None
+		return loader (id, pack, pos)
+	existing = GemRB.GetView (pack, id)
+	if existing:
+		return loader (id, pack, pos)   # focus or toggle the open one
+	skip = set ()
+	for name in ("LANGUAGE_BUTTON",):    # start-screen only, and it sits on top of Quit
+		idx = EEUI.Find ("ESC_MENU", type="button", name=name)
+		if idx is not None:
+			skip.add (idx)
+	plate = EEUI.Find ("ESC_MENU", type="label", mosaic="VERPLATE")
+	if plate is not None:
+		skip.add (plate)
+	win, ctl = EEUI.Build ("ESC_MENU", skip=skip)
+	win.AddAlias (pack, id)
+	_eeCtl[0] = ctl
+	return win
+
+def ToggleOptionsLoader (id, pack, pos):
+	return LoadOptionsWindow (id, pack, pos, GUICommonWindows.ToggleWindow)
+
+ToggleOptionsWindow = GUICommonWindows.CreateTopWinLoader(0, "GUIOPT", ToggleOptionsLoader, InitOptionsWindow)
+OpenOptionsWindow = GUICommonWindows.CreateTopWinLoader(0, "GUIOPT", LoadOptionsWindow, InitOptionsWindow)
+
 def TrySavingConfiguration():
 	if not GemRB.SaveConfig():
 		print("ARGH, could not write config to disk!!")
@@ -269,6 +331,9 @@ def OpenAutopauseOptionsWindow ():
 ###################################################
 
 def OpenLoadMsgWindow ():
+	if EEUI.PopupAvailable (2):
+		EEUI.Popup (39432, [(4196, None, "e"), (28648, LoadGame, "d")])
+		return
 	Window = GemRB.LoadWindow (3, "GUIOPT")
 
 	# Load
@@ -297,6 +362,12 @@ def LoadGame ():
 ###################################################
 
 def OpenQuitMsgWindow ():
+	if GemRB.GetView("GC") is not None and EEUI.PopupAvailable (3):
+		EEUI.Popup (39430, [(4196, None, "e"), (2595, QuitGame, ""), (28645, SaveGame, "d")])
+		return
+	if GemRB.GetView("GC") is None and EEUI.PopupAvailable (2):
+		EEUI.Popup (39431, [(4196, None, "e"), (2595, QuitGame, "d")])
+		return
 	Window = GemRB.LoadWindow (4, "GUIOPT")
 
 	# Save
