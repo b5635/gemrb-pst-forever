@@ -15,6 +15,7 @@
 import GemRB
 import GUICommon
 import GUICommonWindows
+import EEUI
 from GUIDefines import *
 
 # list of all assigned (0) or completed (1) quests
@@ -67,8 +68,98 @@ def InitJournalWindow (JournalWindow):
 
 	return
 
-ToggleJournalWindow = GUICommonWindows.CreateTopWinLoader(0, "GUIJRNL", GUICommonWindows.ToggleWindow, InitJournalWindow)
-OpenJournalWindow = GUICommonWindows.CreateTopWinLoader(0, "GUIJRNL", GUICommonWindows.OpenWindowOnce, InitJournalWindow)
+
+###################################################
+# EE journal: one window with Journal, Quests and Creatures tabs (EE's JOURNAL menu)
+
+def LoadJournalWindow (id, pack, pos, loader):
+	"""Window loader: the EE journal when its layout exists, the CHU window otherwise."""
+	global QuestsList, QuestDesc, BeastsList, BeastDesc, BeastImage, selected_quest_class, selected_beast_class
+
+	if not EEUI.Available ("JOURNAL"):
+		return loader (id, pack, pos)
+	if GemRB.GetView (pack, id):
+		return loader (id, pack, pos)   # focus or toggle the open one
+	if loader is GUICommonWindows.ToggleWindow and GemRB.GetView ("WIN_STORE"):
+		return None
+
+	global StartTime
+	StartTime = GemRB.LoadTable ("YEARS").GetValue ("STARTTIME", "VALUE")
+	skip = set ()
+	for c in EEUI.Controls ("JOURNAL"):
+		if c["index"] in (5, 6, 7, 15):    # search box and its labels: no search here
+			skip.add (c["index"])
+	win, ctl = EEUI.Build ("JOURNAL", skip=skip, plate=EEUI.Alias ("JRNBG", "mos"), override={11: "textarea", 12: "textarea", 13: "button", 16: "textarea"})
+	win.AddAlias (pack, id)
+
+	QuestsList, QuestDesc = ctl[8], ctl[11]
+	BeastsList, BeastDesc, BeastImage = ctl[14], ctl[16], ctl[13]
+	LogText_ = ctl[12]
+	BeastImage.SetFlags (IE_GUI_BUTTON_PICTURE | IE_GUI_BUTTON_NO_IMAGE, OP_SET)
+	BeastImage.SetState (IE_GUI_BUTTON_LOCKED)
+
+	groups = {
+		"log": (12,),
+		"quests": (8, 9, 10, 11),
+		"beasts": (13, 14, 16, 17, 18),
+	}
+
+	def Show (mode):
+		win.SetBackground (EEUI.Alias ("BEASTBG" if mode == "beasts" else "JRNBG", "mos"))
+		for m, idx in groups.items ():
+			for i in idx:
+				ctl[i].SetVisible (m == mode)
+		if mode == "log":
+			LogText_.SetText (LogText ())
+		elif mode == "quests":
+			EvaluateAllQuests ()
+			PopulateQuestsList ()
+		else:
+			EvaluateAllBeasts ()
+			PopulateBeastsList ()
+
+	global ShowTab
+	ShowTab = Show      # also lets scripts and tests switch tabs
+	ctl[0].OnPress (lambda: Show ("log"))
+	ctl[1].OnPress (lambda: Show ("quests"))
+	ctl[2].OnPress (lambda: Show ("beasts"))
+	ctl[3].OnPress (win.Close)
+	ctl[3].MakeEscape ()
+	ctl[4].OnPress (win.Close)
+
+	def QuestClass (n):
+		global selected_quest_class
+		selected_quest_class = n
+		PopulateQuestsList ()
+	def BeastClass (n):
+		global selected_beast_class
+		selected_beast_class = n
+		PopulateBeastsList ()
+	ctl[9].OnPress (lambda: QuestClass (0))
+	ctl[10].OnPress (lambda: QuestClass (1))
+	ctl[18].OnPress (lambda: BeastClass (0))
+	ctl[17].OnPress (lambda: BeastClass (1))
+
+	QuestsList.SetVarAssoc ('SelectedQuest', None)
+	QuestsList.OnSelect (OnJournalQuestSelect)
+	BeastsList.SetVarAssoc ('SelectedBeast', None)
+	BeastsList.OnSelect (OnJournalBeastSelect)
+
+	Show ("log")
+	_eeBuilt[0] = True
+	return win
+
+_eeBuilt = [False]
+ShowTab = None
+
+def InitJournalOrEE (Window):
+	if _eeBuilt[0]:
+		_eeBuilt[0] = False
+		return    # the EE window is wired by LoadJournalWindow
+	InitJournalWindow (Window)
+
+ToggleJournalWindow = GUICommonWindows.CreateTopWinLoader(0, "GUIJRNL", lambda i, p, pos: LoadJournalWindow (i, p, pos, GUICommonWindows.ToggleWindow), InitJournalOrEE)
+OpenJournalWindow = GUICommonWindows.CreateTopWinLoader(0, "GUIJRNL", lambda i, p, pos: LoadJournalWindow (i, p, pos, GUICommonWindows.OpenWindowOnce), InitJournalOrEE)
 
 def CloseAll(win):
 	win.Close ()
@@ -336,26 +427,8 @@ def EvaluateAllBeasts ():
 
 ###################################################
 
-def OpenLogWindow ():
-	LogWindow = GemRB.LoadWindow (3, "GUIJRNL")
-
-	# Back
-	Button = LogWindow.GetControl (1)
-	Button.SetText (46677)
-	Button.OnPress (LogWindow.Close)
-	Button.MakeEscape()
-	Button.Focus()
-
-	# Done
-	Button = LogWindow.GetControl (0)
-	Button.SetText (20636)
-	Button.OnPress (lambda: CloseAll(LogWindow))
-
-	# text area
-	Text = LogWindow.GetControl (2)
-	LogWindow.SetEventProxy (Text)
-
-	# limit the log to the last entries (original did something similar)
+def LogText ():
+	"""The journal text: the last entries, newest last (the original did something similar)."""
 	js = GemRB.GetJournalSize (0)
 	frame = 250
 	journalText = ""
@@ -378,6 +451,28 @@ def OpenLogWindow ():
 		journalText += "[color=FFFF00]" + GemRB.GetString(19310)+" "+date+":[/color]"
 		journalText += " " + GemRB.GetString (je['Text']) + "\n\n"
 			
+	return journalText
+
+def OpenLogWindow ():
+	LogWindow = GemRB.LoadWindow (3, "GUIJRNL")
+
+	# Back
+	Button = LogWindow.GetControl (1)
+	Button.SetText (46677)
+	Button.OnPress (LogWindow.Close)
+	Button.MakeEscape()
+	Button.Focus()
+
+	# Done
+	Button = LogWindow.GetControl (0)
+	Button.SetText (20636)
+	Button.OnPress (lambda: CloseAll(LogWindow))
+
+	# text area
+	Text = LogWindow.GetControl (2)
+	LogWindow.SetEventProxy (Text)
+
+	journalText = LogText ()
 	Text.SetText (journalText)
 	LogWindow.Focus()
 	

@@ -531,3 +531,14 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   and "Level 1 Spells" label show. Not checked: memorizing/unmemorizing by click, level arrows, spell
   info/unmemorize windows (classic), the priest book (same code, not opened), `EEUI=0`. The empty
   header bar over the name is as in the plate.
+- Phase 14 (journal): `GUIJRNL.py` `LoadJournalWindow` builds EE `JOURNAL` as one window with three tabs
+  (Journal log on the left page, Quests list + description + Assigned/Completed, Creatures list +
+  picture + description + PC/NPC) instead of the classic main window plus three sub-windows. Tabs show
+  or hide control groups (`Show`, also exposed as `GUIJRNL.ShowTab` for tests) and swap the plate
+  (JRNBG / BEASTBG). The classic functions (`PopulateQuestsList`, `OnJournalQuestSelect`,
+  `PopulateBeastsList`, `LogText`, ...) are reused on the EE controls. Search box is left out.
+  Learned: hiding a control with `SetVisible(False)` leaves its old pixels on screen when the window
+  has no background, so every EE window needs a plate. Seen in game: log text, quests tab with
+  entries, creatures tab with Morte/Nameless One and the picture (`shots/jr1-3.png`). Not checked:
+  selecting a quest/creature and its description, Assigned/Completed and PC/NPC buttons by click,
+  the Done button, `EEUI=0`; list text is small and unstyled (FONTDLG white).
