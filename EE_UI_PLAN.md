@@ -439,3 +439,14 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   shows as `095 git` (the classic font has no `.` or `-`, same as classic).
   Not seen: Select Life (Load) from the EE screen; Escape (the dev key tool does not trigger
   `MakeEscape` even on the classic screen); `tb_autotest.ps1` not run (no in-game screen touched).
+- 2026-11-17: Phase 7 (popups). `EEUI.Popup(text, [(label, handler, "de"), ...], image=None)` +
+  `EEUI.PopupAvailable(n)` build a modal EE box from `POPUP_INFO` (1 button), `QuitMenu` (2),
+  `POPUP_THREEBUTTON` (3), buttons listed left to right, handler None just closes. `Build` now
+  makes popups a window the size of the menu's bbox and uses the backdrop label as window
+  background (as a label it covered the other controls). Used by: `Start.QuitPress`,
+  `NewLife.CancelPress` and the "points left" notice, `GUILOAD`/`GUISAVE` `DeleteGamePress`
+  (each falls back to its CHU window when EEUI is off). Seen in game: start-screen quit box with
+  text, No/Yes, image (`shots/ee_p7_quit.png`), No closes it and it reopens, NewLife cancel box
+  over chargen (`shots/ee_p7_cancel.png`). Not seen: Yes button, 3-button box, info box, delete-
+  save boxes, Escape (dev key tool does not reach `MakeEscape`), `EEUI=0` for these boxes
+  (guarded by `PopupAvailable`, unchanged classic path).

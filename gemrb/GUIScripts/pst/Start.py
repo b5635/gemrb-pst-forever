@@ -100,6 +100,9 @@ def Wire(handles):
 	handles["window"].Focus()
 
 def QuitPress():
+	if EEUI.PopupAvailable (2):
+		EEUI.Popup (20582, [(23789, None, "e"), (23787, GemRB.Quit, "d")])
+		return
 	QuitWindow = GemRB.LoadWindow(3, "START")
 	QuitTextArea = QuitWindow.GetControl(0)
 	QuitTextArea.SetText(20582)

@@ -8,6 +8,7 @@
 ###################################################
 
 import GemRB
+import EEUI
 import GUIClasses
 import LoadScreen
 import GUIOPT
@@ -157,6 +158,11 @@ def DeleteGameCancel():
 
 def DeleteGamePress():
 	global ConfirmWindow
+
+	if EEUI.PopupAvailable (2):
+		ConfirmWindow = None
+		EEUI.Popup (28639, [(4196, DeleteGameCancel, "e"), (28640, DeleteGameConfirm, "d")])
+		return
 
 	SaveWindow.SetVisible(False)
 	ConfirmWindow=GemRB.LoadWindow (3, "GUISAVE")

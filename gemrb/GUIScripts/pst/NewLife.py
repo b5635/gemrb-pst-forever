@@ -7,6 +7,7 @@
 ###################################################
 
 import GemRB
+import EEUI
 from GUIDefines import *
 from ie_stats import *
 import CommonTables
@@ -187,6 +188,10 @@ def UpdateLabels():
 	return
 
 def AcceptPress():
+	if TotPoints and EEUI.PopupAvailable (1):
+		EEUI.Popup (46782, [(46783, None, "de")])
+		return
+
 	if TotPoints:
 		QuitWindow = GemRB.LoadWindow(1, "GUICG")
 		TextArea = QuitWindow.GetControl(0)
@@ -222,6 +227,12 @@ def AcceptPress():
 	return
 
 def CancelPress():
+	if EEUI.PopupAvailable (2):
+		def confirm():
+			NewLifeWindow.Close()
+		EEUI.Popup (19406, [(23789, None, "e"), (23787, confirm, "d")])
+		return
+
 	QuitWindow = GemRB.LoadWindow(1, "GUICG")
 	
 	TextArea = QuitWindow.GetControl(0)

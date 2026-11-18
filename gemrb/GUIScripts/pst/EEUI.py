@@ -143,9 +143,11 @@ def _ApplyText (ctl, c, single=False):
 	if text is not None:
 		ctl.SetText (text)
 
+_origin = [0, 0]   # origin of the window being built (popups sit at their bbox)
+
 def _Frame (c):
 	x, y, w, h = c["frame"]
-	return x, y, w, h
+	return x - _origin[0], y - _origin[1], w, h
 
 def _Tooltip (ctl, c):
 	tip = Text (c.get ("tooltip"))
@@ -177,6 +179,8 @@ def _MakeLabel (win, cid, c):
 	lab = win.CreateLabel (cid, x, y, w, h, StyleFont (style), "", StyleFlags (style))
 	if c.get ("mosaic"):
 		lab.SetBackground (c["mosaic"])
+	elif c.get ("bam") and isinstance (c.get ("sequence", 0), int):
+		lab.SetBackground (GemRB.GetSprite (c["bam"], -1, c.get ("sequence", 0), 0))
 	if c.get ("text"):
 		lab.SetColor (StyleColor (style))
 		lab.SetText (Text (c["text"]))
@@ -220,12 +224,29 @@ def Build (menu, windowId=None, plate=None, skip=()):
 	if windowId is None:
 		windowId = _nextWindow[0]
 		_nextWindow[0] += 1
-	win = GemRB.CreateWindow (windowId, WINDOW_PACK, {'x': 0, 'y': 0, 'w': LOGICAL_W, 'h': LOGICAL_H})
+	if doc.get ("modal") and doc.get ("bbox"):
+		# popups: a window the size of the menu, where EE puts it
+		bx, by, bw, bh = doc["bbox"]
+		_origin[0], _origin[1] = bx, by
+		frame = {'x': bx, 'y': by, 'w': bw, 'h': bh}
+		if plate is None:
+			plate = False
+	else:
+		_origin[0], _origin[1] = 0, 0
+		frame = {'x': 0, 'y': 0, 'w': LOGICAL_W, 'h': LOGICAL_H}
+	win = GemRB.CreateWindow (windowId, WINDOW_PACK, frame)
 	if plate is None:
 		plate = PlateOf (doc)
 	if plate:
 		win.SetBackground (plate)
 	controls = {}
+	if doc.get ("modal") and doc.get ("bbox"):
+		# the full-size backdrop label becomes the window background (keeps it under every control)
+		for c in doc["controls"]:
+			if c["type"] == "label" and c.get ("mosaic") and c.get ("frame") == doc["bbox"]:
+				win.SetBackground (c["mosaic"])
+				skip = set (skip) | {c["index"]}
+				break
 	for c in doc["controls"]:
 		kind = c["type"]
 		cid = c["index"] + 1
@@ -257,3 +278,53 @@ def Build (menu, windowId=None, plate=None, skip=()):
 		if c.get ("name"):
 			controls[c["name"]] = ctl
 	return win, controls
+
+
+# -- popups -----------------------------------------------------------------------------
+
+# menu used for 1, 2 and 3 buttons, and the control index of each button from left to right
+_POPUPS = {
+	1: ("POPUP_INFO", (3,)),
+	2: ("QuitMenu", (3, 4)),
+	3: ("POPUP_THREEBUTTON", (5, 4, 3)),
+}
+
+
+def PopupAvailable (nbuttons):
+	return nbuttons in _POPUPS and Available (_POPUPS[nbuttons][0])
+
+def Popup (text, buttons, image=None, shadow=None):
+	"""A modal EE message box. text: strref or str. buttons: [(label, handler, flags)] from left to
+	right, flags a string with 'd' (default key) and/or 'e' (escape key); handler may be None to
+	just close. Returns the window, already shown. The caller must check PopupAvailable first."""
+	menu, slots = _POPUPS[len (buttons)]
+	win, ctl = Build (menu)
+	if shadow is None:
+		shadow = MODAL_SHADOW_GRAY
+	# the layout's text label (lua text in EE) and the picture
+	doc = Load (menu)
+	for c in doc["controls"]:
+		if c["type"] == "label" and c.get ("style") == "label_parchment" and c["index"] in ctl:
+			ctl[c["index"]].SetText (text)
+			ctl[c["index"]].SetColor (StyleColor ("label_parchment"))
+		if image is not None and c["type"] == "label" and c.get ("bam") == "POPUPIMG" and c["index"] in ctl:
+			ctl[c["index"]].SetBackground (GemRB.GetSprite ("POPUPIMG", -1, image, 0))
+	for (label, handler, flags), idx in zip (buttons, slots):
+		b = ctl[idx]
+		style = "button"
+		b.SetFont (StyleFont (style))
+		b.SetColor (StyleColor (style))
+		b.SetText (label)
+		b.OnPress (win.Close if handler is None else _Closing (win, handler))
+		if "d" in flags:
+			b.MakeDefault ()
+		if "e" in flags:
+			b.MakeEscape ()
+	win.ShowModal (shadow)
+	return win
+
+def _Closing (win, handler):
+	def press ():
+		win.Close ()
+		handler ()
+	return press
