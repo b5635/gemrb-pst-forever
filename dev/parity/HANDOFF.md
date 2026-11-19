@@ -41,7 +41,13 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
 ## For audit (Opus spot-checks these; newest first)
 - (none yet)
 
+## Tool changes (newest first; use these)
+- 2026-11-19: `dumps.py` (find/show/lines/case/callers/calls/grep over the full dumps, outline for big
+  functions, cached call index `.re/*/dump/calls_*.tsv`), `maps/dump_areas.md` (where each track's code lives),
+  `case.py`/`facts.py`/`dossier.py`/`ida.py show` read the original from `dec_all`. Dumps spot-checked accurate.
+
 ## Fast tools (all in `tools/parity/`)
+- `dumps.py find|show|lines|case|callers|calls|grep ee|orig ...` – the full decompiles, no IDA (start here).
 - `opuses.py 147 148 [--full]` – every use of an opcode in the original SPL/ITM data (p1/p2/timing/res; header and
   equipped effects only, not SPL casting effects).
 - `dossier.py SPWIxxx` – everything on one spell. `facts.py orig <addr>` – numbers/effects/calls in a function.

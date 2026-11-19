@@ -29,7 +29,7 @@ known: don't re-report it, extend it) and `README.md` (tools, file layout).
    much as you like in **`.re/notes/`** (git-ignored; create it). In committed files (`dev/parity/*.md`,
    `*.tsv`), describe behaviour in your own words: conditions, numbers, order of operations, plus short
    identifiers (addresses, offsets, constants, resrefs, variable names) and line references into the
-   workspace (`.re/orig/dump/dec/4B245B.c:429`). No pasted C blocks.
+   workspace (`.re/orig/dump/dec_all/4B245B.c:432`). No pasted C blocks.
 3. **The original exe is the truth.** Ranking, highest first:
    1. Original `Torment.exe` 1.1 + Fixpack 4.13 + UB 4.12, decompiled in `.re/orig/`.
    2. PST:EE `Torment64` (`.re/ee/`): real C++ names, read it first to understand a feature, but Beamdog
@@ -37,12 +37,13 @@ known: don't re-report it, extend it) and `README.md` (tools, file layout).
    3. IESDP (`tools/parity/iesdp.py`): hints, often wrong for PST (e.g. op 186 "0 = clear": the original clears
       on −1). Never proof.
    4. GemRB comments ("pst does X") are claims to check, not proof.
-4. **One IDA command at a time.** The `.i64` is locked while IDA runs. Never run two `ida.py dec/xrefs/vt`
-   calls in parallel, and never from parallel sub-agents. `find`, `str`, `show` don't start IDA and are safe.
+4. **No IDA unless the dumps lack it.** Every function of both games is already decompiled (`dumps.py`,
+   section 2). `ida.py dec/xrefs/vt` is for vtables, data xrefs and the few functions in `errors.tsv`; then one
+   at a time (the `.i64` is locked while IDA runs), never in parallel, never from parallel sub-agents.
 5. **Commit after each finished batch** (every 10–20 ledger rows or one sub-package), only files under
    `dev/parity/` and `tools/parity/`, message `PST parity <track/WP>: <what>, findings <ids>`. Never commit
    `.re/`. Never push. Never `git add -A`.
-6. **Never invent an address, line or number.** Every `sub_XXXXXX` you write must exist in `.re/orig/dump/dec/`
+6. **Never invent an address, line or number.** Every `sub_XXXXXX` you write must exist in `.re/orig/dump/dec_all/`
    or `.re/orig/dump/funcs.txt`; every GemRB `file:line` must be one you opened this session (line numbers
    drift: also give the function name). If you didn't read it, don't cite it.
 
@@ -70,6 +71,12 @@ All from `D:\gemrb`. Python is `python`.
 
 | Command | What | Cost |
 |---|---|---|
+| `python tools/parity/dumps.py find ee "CGameSprite::PlaySound"` / `find orig CGameDialog` | function names in the full dumps (orig: srcmap class or address) | instant |
+| `python tools/parity/dumps.py show ee "CGameSprite::Hit(" [-g PAT -C 20]` | a function; big ones print an outline (cases, strings) instead of the body; `-g` greps inside | instant |
+| `python tools/parity/dumps.py lines ee "<name>" 120 200` / `case ee "<name>" 125` | a line range / one switch case | instant |
+| `python tools/parity/dumps.py callers orig sub_4B245B` / `calls ee "<name>"` | who calls it / what it calls (cached index; none = virtual, use `ida.py vt`) | instant |
+| `python tools/parity/dumps.py grep ee "VerbalConstant" [--in CGameSprite]` | grep all functions, capped at 60 hits | ~20 s |
+| `dev/parity/maps/dump_areas.md` | which EE functions / original classes hold each track's feature; read one section: `sed -n '/^## A11/,/^## /p'` | - |
 | `python tools/parity/case.py action <id>` | the original's handler case for an action (creature switch `sub_76A7EA` via `byte_76D476`, else base `sub_44B099`) | instant |
 | `python tools/parity/case.py trigger <hexid>` | the original's trigger case (`sub_453258`, `sub_778529`) | instant |
 | `python tools/parity/ida.py show orig <addr>` | print an already decompiled original function | instant |
@@ -96,18 +103,18 @@ o.res("DMORTE", "dlg"); g.where("BALDUR", "bcs"); o.names("bcs"); pstres.text(o.
 `tools/tb_gamedata.py` `GameData().spell("SPWI101")` parses SPL headers and effects.
 
 **Full decompiles exist: IDA is almost never needed (token rule).** `.re/ee/dump/dec_all_named/` holds all
-20,417 EE functions as `<Class>_<Method>_<args>.c` (e.g. `CGameAIBase_ExecuteAction_.c`,
-`CGameSprite_PlaySound_uchar,int,int,int_.c`; address map in `rename_manifest.csv`), and
-`.re/orig/dump/dec_all/` holds 13,976 original functions as `<ADDR>.c`. Use `ls | grep`, `grep -n`, and
-`sed -n A,Bp` on line ranges. **Never `cat` a whole big file** (`CGameAIBase_ExecuteAction_.c` is 168 KB):
-grep for the `case N:` or constant first, then read ~80 lines around it. Run `ida.py dec/xrefs/vt` only when
-a function is truly missing from both folders; callers can usually be found with `grep -l "sub_4B245B(" dec_all/`.
+21,090 EE functions (file names are mangled: look them up by real name through `dumps.py`, which reads
+`rename_manifest.csv`), and `.re/orig/dump/dec_all/` holds 13,973 original functions as `<ADDR>.c`. Spot-checked
+2026-11-19: identical to IDA's single-function output (40/40 original, 644/645 EE; the one EE difference was a
+function the old run failed on). Failures are listed in each folder's `errors.tsv` (library stubs, nothing we use).
+**Never print a whole big function** (`CGameAIBase::ExecuteAction` is 4,735 lines): `dumps.py show` prints an
+outline for anything over 150 lines; then `-g`, `case` or `lines`.
 Work EE-first: understand the feature in `dec_all_named`, then confirm only the deciding condition and numbers
 in the original with one targeted grep (same constant, same resref, same case number). Batch: answer 10
 ledger rows from one read of a dispatcher instead of re-opening it per row.
 
-**Look before you decompile.** ~420 original and ~645 EE functions are already in `.re/orig/dump/dec/` and
-`.re/ee/dump/dec/`. Maps: `dev/parity/maps/` (`actions.tsv`, `triggers.tsv`, `opcodes.tsv`, `projectiles.tsv`,
+**Maps first.** The older partial folders `.re/*/dump/dec/` still feed `export_maps.py`, `derive.py` and the
+spell tools; leave them. Maps: `dev/parity/maps/` (`actions.tsv`, `triggers.tsv`, `opcodes.tsv`, `projectiles.tsv`,
 `orig_index.tsv` = every original function whose role we know, `orig_strings.tsv`). After any new decompile,
 add what you learned to `maps/orig_index.tsv` via `export_maps.py` and the `ORIG` dict in `facts.py`.
 
@@ -335,7 +342,7 @@ Every entry uses this template:
 ```
 ### <ID> <one-line title>
 - **Status:** V | S | P | ?      **Severity:** 1 | 2 | 3      **Uses:** <count>      **By:** sonnet
-- **Original:** sub_XXXXXX (.re/orig/dump/dec/XXXXXX.c:<lines>): what it does, in words, with numbers
+- **Original:** sub_XXXXXX (.re/orig/dump/dec_all/XXXXXX.c:<lines>): what it does, in words, with numbers
 - **EE:** Class::Method (only if it adds something)
 - **GemRB:** path/file.cpp:<line> `Function` (what it does)
 - **Difference:** exactly what differs, with a concrete example ("SetGlobalTimer 10 → original 10 game seconds
@@ -393,7 +400,14 @@ Every entry uses this template:
 6. **When a package is done:** a line in `PARITY_PLAN.md` "Progress" (date, package, counts, top three
    findings); copy every sev-1 and sev-2 V into `findings.md` (next free id in the right section, one table
    row with a link to the detail); refresh `HANDOFF.md`; commit.
-7. **Ask the person** (stop and say so) when: the workspace is missing, a tool is broken in a way you'd need to
+7. **Self-heal: notice repetition and fix the cause.** If you run the same kind of command 3+ times (the same
+   grep with a different id, opening the same dispatcher again, hand-copying a column), stop and ask what
+   would make it one step: a flag on an existing tool, a new column in a map, a cache, a ledger column filled
+   by script. Small tool changes (< ~50 lines in `tools/parity/`) you make yourself, then note them in
+   `HANDOFF.md` "Tool changes" so the next session uses them. Likewise when a tool gives a wrong or misleading
+   answer (e.g. `triggers.tsv` "always false" for events): fix the tool, not just your notes. Re-reading
+   the same file region twice in one session is the warning sign: write down what you needed from it.
+8. **Ask the person** (stop and say so) when: the workspace is missing, a tool is broken in a way you'd need to
    rewrite more than ~50 lines to fix, a check needs engine code (A7's harness), or you find a sev-1 issue you
    think should be fixed before the investigation continues.
 

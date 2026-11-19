@@ -6,7 +6,7 @@
 import os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 WORK = os.environ.get("PARITY_WORK", r"D:\gemrb\.re")
-DEC = os.path.join(WORK, "orig", "dump", "dec")
+DEC = os.path.join(WORK, "orig", "dump", "dec_all")   # full dump (dumps.py); was dump/dec
 
 def cases(path, switch_hint=None):
 	"""split a decompiled switch into {case value: body}; the first top-level switch unless a hint is given"""

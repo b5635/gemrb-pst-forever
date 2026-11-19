@@ -58,7 +58,7 @@ def main():
 				print("     helper %s: %s" % (hs, effs(pstres.gemrb().res(hs, "spl"))), flush=True)
 	addrs = [x for x in q[4:9] if re.fullmatch(r"[0-9A-F]{6}", x or "")] if q else []
 	for a in dict.fromkeys(addrs[2:]):
-		if os.path.exists(os.path.join(WORK, "orig", "dump", "dec", a + ".c")):
+		if os.path.exists(os.path.join(WORK, "orig", "dump", "dec_all", a + ".c")):
 			subprocess.run([sys.executable, os.path.join(HERE, "facts.py"), "orig", a])
 	cls = q[3].rstrip("?") if len(q) > 3 else ""
 	if cls:

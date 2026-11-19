@@ -9,6 +9,9 @@
 #   python tools/parity/ida.py str  orig "Fortress_Death"          search strings -> referencing functions (no IDA run)
 #   python tools/parity/ida.py show orig 4B245B                    print an already decompiled function
 #
+# Prefer tools/parity/dumps.py: every function of both games is already decompiled in .re/*/dump/dec_all*.
+# Run `dec`/`xrefs`/`vt` only for what the dumps lack (vtables, data xrefs, a failed function in errors.tsv).
+#
 # Output: .re/<ee|orig>/dump/dec/<name>.c ; the path is printed. Only one IDA run at a time per database
 # (the .i64 is locked while open): never run two `dec` commands in parallel on the same game.
 import os, re, subprocess, sys
@@ -63,7 +66,9 @@ def main():
 			if pat.search(l): print(l.rstrip())
 	elif cmd == "show":
 		for a in args:
-			p = os.path.join(dec_dir(game), a.upper().replace("SUB_", "") + ".c") if game == "orig" else None
+			p = os.path.join(WORK, game, "dump", "dec_all", a.upper().replace("SUB_", "") + ".c") if game == "orig" else None
+			if not p or not os.path.exists(p):
+				p = os.path.join(dec_dir(game), a.upper().replace("SUB_", "") + ".c") if game == "orig" else None
 			if not p or not os.path.exists(p):
 				cands = [f for f in os.listdir(dec_dir(game)) if a.lower() in f.lower()]
 				p = os.path.join(dec_dir(game), cands[0]) if cands else None
