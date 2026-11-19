@@ -23,6 +23,10 @@ Method and tools: [dev/parity/README.md](dev/parity/README.md).
 
 ## 2. Phases
 
+**Order (decided 2026-11-18): investigate everything first, then fix.** That means: phase 0, then the
+investigation half of phases 1, 4, 5 and 6 (read the original and write the verdicts into findings.md), then
+the fixes in phase 2, 4, 5 and 6, then phase 3 (porting the hardcoded spells) last, then phase 7.
+
 ### Phase 0: audit tooling (done 2026-11-18)
 IDA databases for both exes, the decompile and dump scripts, and the data, opcode, scripting and spell
 comparisons in `tools/parity/`, with generated tables in `dev/parity/`.
@@ -88,3 +92,4 @@ data pack, off by default (Fixpack and UB already cover part of them).
 | Date | What |
 |---|---|
 | 2026-11-18 | Phase 0 done: tools, IDA databases, findings S1–S13, E1–E6, A1–A4, rules checklist. |
+| 2026-11-18 | Investigation round 2: R1–R6 (plane spell warping, Nameless One death and game-over rules, TransferHP), opcodes that are empty in the original, PST branches in generic effects, extra parameters of Ex actions. Still to investigate: per-spell expectations (phase 1), side-by-side reads of the section 8 branches, the remaining Ex actions, rule tables against the original. |

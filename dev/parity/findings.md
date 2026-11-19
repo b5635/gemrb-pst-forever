@@ -93,3 +93,62 @@ confirmed in the original exe, because some of EE's tables are BG2-EE defaults.
 `changed`). Examples: `IRON3.itm` confusion → stun; Tasha's Laughter's to-hit moved to EE's op 278. These are
 Beamdog data fixes, not GemRB engine gaps. Sorting them into "real bug fixes we want as an option" and
 "EE redesign" is a separate pass.
+
+---
+
+# Round 2 (2026-11-18): opcode handlers, rules, actions
+
+## 6. Engine rules GemRB lacks
+
+| # | Finding | Status | Sev |
+|---|---|---|---|
+| R1 | **Spell warping by plane is missing.** The original damage effect (`sub_4B245B`; EE `CGameEffectDamage::ApplyEffect`) checks the *caster's* area. In **Carceri** (AR0900–0902, AR0904, AR3015, AR3016) Chromatic Orb, Fist of Iron and Elysium's Tears roll maximum dice, and Deathbolt gets +1. In **Baator** (AR1000, AR1001) Deathbolt gets +6. In the **Negative Material Plane** (AR1200–AR1204) Deathbolt gets +1. A caster under **Iron Fist** gets a flat bonus on every damage effect: 6 normally, 7 or 12 where Deathbolt is warped, and maximum dice in Carceri. Each case shows a "spell warped" feedback string. TransferHP (192) and Embalming (206) have their own plane rules. GemRB has no plane logic at all. | V (code) | 1 |
+| R2 | **The Nameless One's death rules are missing.** In the original Death effect (`sub_4B5DCF`), when the protagonist dies in the Fortress of Regrets (AR1200/AR1201), `Death_Fortress` goes up by one and `Game_Over` becomes 4 once it passes `Fortress_Death_Counter`; dying in AR1203/AR1204 sets `Game_Over` 4 at once. If **Pharod** dies while `Know_Painted_Door` < 2, `Game_Over` becomes 3. GemRB's `baldur.bcs` *reacts* to `Game_Over` 1–6, but nothing *sets* 3 or 4: the area INIs don't (checked AR1200/1201/1203), and GemRB only reproduces `PM_KILLED`. So the Fortress death limit and the Pharod game-over never happen. | V (code) / S (game) | 1 |
+| R3 | **TransferHP (op 192) is much simpler in GemRB.** The original/EE handler (`sub_4D1C49`, 793 lines) has modes 0–3 (mode 3 takes a percentage), special cases for Sensory Touch (SPIN104), Blood Bridge (SPWI204) and Vampiric Touch (SPWI309; HP above maximum become a temporary max-HP effect, op 18), plane warping, a saving throw and feedback strings. GemRB's `fx_transfer_hp` uses its own mode numbers (0/3, 1/4, 2) with none of those special cases. | V | 2 |
+| R4 | **Pain Mirror / damage reflection** (spell state 0xB6 = 182) is handled inside the damage effect: random 1d5 rolls reflect damage back to the attacker. GemRB does Pain Mirror in `fx_overlay` case 3; whether the numbers match is unchecked. | S | 2 |
+| R5 | `Game_Over` 7 exists in EE's `HandleGameOverConditions`; GemRB handles 1–6. Check that the original has no 7. | S | 3 |
+| R6 | GemRB implements the Nameless One's specialist bonuses (`GUIREC.py:830 HandleSpecializationBonuses`) like `CPlanescape::HandleNamelessBonuses`; the numbers still need checking. | P? | — |
+
+## 7. Opcodes that do nothing in the original
+
+`ApplyEffect` of these is an empty "done" in the original (vtable slot 2; no other override does real work):
+**150 FindTraps, 197 MultipleVVC, 198 ModifyGlobalVariable, 199 ChangeBackground, 212 SpeakWithDead**. In PST they
+are data that the hardcoded projectile objects read (Speak with Dead lives in `CProjectileSpeakWithDead`). In
+PST's own data only GemRB's helper files use them (`chost.spl`, `dbolt.spl`, `lstorm2.spl`, `bstorm2.spl`,
+`dhell.spl`, `speak.eff`; `detect.spl`/`findtrap.spl` are GemRB's shared files), so GemRB treating them as live
+effects is a GemRB design choice, not a parity bug. **P.** Keep this in mind when porting: a spell's SPL may list
+these as data for its projectile.
+
+## 8. PST-only branches inside generic effects
+
+EE's effect classes have `ENGINE_MODE == 3` (PST) branches; each is PST behaviour to compare with GemRB
+(`fxspecial.py`, `fxspecial.json`). All **S** until compared:
+
+| Op | Effect | PST branch (EE) |
+|---|---|---|
+| 6 | CHR | dice-based amount (parameter dice) when the effect has a caster |
+| 9 | ColorGlowPulse | PST-specific handling |
+| 45/128 | Stun | PST sets only the state bit: no extra flag, no portrait icon 55 |
+| 54 | THAC0 | PST limits (set mode capped at 25) |
+| 73 | DamageMod | PST: *set*, capped at 20 |
+| 86–89 | Resist slashing/crushing/piercing/missile | PST: no cap at 150 |
+| 128 | Confusion | PST adds a glow (op 9) sub-effect |
+| 130 | Bless | PST: on non-party creatures it also changes morale |
+| 146/148 | CastSpell(Point) | PST casts through a PST-specific queue |
+| 26 | RemoveCurse | PST mode 1: removes op 381 (Jumble Curse) effects as well |
+| 39 | Sleep | PST adds op 162 sub-effect; `I001ZZZZ` animation |
+| 134 | Petrification | `MULTIJ` handling |
+| 17 | Heal | special case `SPIN822` |
+| 196 | Special | Adder's Kiss (`SPWI201`), `S019ACID`, `S031DELC`, `SP62RDED` |
+| 201 | AddAttachedObject (overlays) | per-spell special cases for 16 spells (Shield, Armor, Prot. from Evil, Flamewalk, …), Carceri warping |
+| 203 | Curse | spell state 127 |
+| 206 | Embalming | spell state 135, plane rules |
+
+## 9. Scripting: the extra parameters, read in the original
+
+| Action | Original behaviour of the extra parameter | GemRB |
+|---|---|---|
+| `MoveToObjectEx(Timeout)` (22) | `sub_785E47`: when the parameter is non-zero it is a countdown, lowered on each update; below 2 the action gives up | ignored: the move never gives up |
+| `JoinPartyEx(JoinGroup)` (19) | `sub_7A0423`: when non-zero it calls an extra party-group join (`sub_4089DC`) | ignored |
+| `PolymorphEx(..., RangeModes)` (146) | the second parameter is stored on the creature (byte +1991) | ignored |
+| `RunAwayFromEx(NoAttacks)` (29), `DeactivateEx(RenderMode)` (125), `FullHealEx` (305), `StartCutSceneEx` (310) | not found yet in the handlers (305/310 go to the base switch) | — |
