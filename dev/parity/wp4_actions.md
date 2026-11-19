@@ -138,3 +138,64 @@ See finding A1: handled (creature case 57), missing in GemRB.
   either, and the engine's own death variable covers it. **For A7:** DLG text with spaces inside variable names:
   `" KNOW_SIGIL"`, `"CW_STATUE_CURSED "`, `"PC_ANNAH_STEALTH "`, `"PILLAR "`, `"JUMBLE "`, `"PORPHIRON "`.
 - Re-check: `python tools/parity/dumps.py show orig sub_463F03 --all`; `grep -n NoNewVariables gemrb/unhardcoded/pst/gemrb.ini`.
+
+### A-17 Help()
+- **Status:** P (sev 3 details)   **Uses:** 1,843
+- **Original:** creature case 13 → `sub_79FB29`: every object of type ANYONE (`dword_96E410` is a CAIObjectType, not a
+  range) within the creature's range (vfuncs +176 range, +168 terrain table; EE `CGameSprite::Help` → `GetAllInRange`
+  with no line-of-sight check) gets a `Help` trigger (3) naming the caller. Done at once.
+- **GemRB:** `Actions.cpp` `Help` → `Map::Shout(actor, 0, false)`: everyone within `WithinAudibleRange` (PST: the
+  caller's visual range) except the caller gets `trigger_help`, `LastHelp` set.
+- **Difference:** the original's list may include the caller itself (no exclusion seen in either version); range
+  vfunc not identified (S). No PST script outcome found that depends on it.
+
+### A-7 CreateCreature(S:NewObject, P:Location)
+- **Status:** P   **Uses:** 2,385
+- **Original:** base case 7 → `sub_4662B7`: no area → fail; point (−1,−1) → the caller's position (`sub_566452`);
+  missing CRE → fail; nearest free spot by the creature's size (`sub_58A600`), placed with vfunc +8; its script name
+  is entered in the area's name → id table (`sub_593599`). No facing parameter in PST's signature.
+- **GemRB:** `CreateCreatureCore(CC_CHECK_IMPASSABLE|CC_CHECK_OVERLAP|CC_SCRIPTNAME)`: −1,−1 → caller (trap launch
+  point for triggers), free-spot search, orientation int0 (always 0 here), `LastMarked` set. Same outcome.
+
+### A-60 ChangeAIScript(S:ScriptFile, I:Level)
+- **Status:** P   **Uses:** 887 (801 BCS: levels 7 ×206, 6 ×106, 0/1/5 rare; 86 DLG `DEFAULT`)
+- **Original:** base case 60 → `sub_465501`: loads the script, creature vfunc +156 = SetScript (EE
+  `CGameSprite::SetScript`: replaces the slot, empty name clears it, nothing else; the queue is not touched).
+- **GemRB:** `Actions.cpp` `ChangeAIScript` → `Scriptable::SetScript`: replaces the slot (deferred if it is running),
+  empty name clears. Same.
+
+### A-164 AddexperienceParty / AddPartyExperience(I:XP)
+- **Status:** V   **Severity:** 3   **Uses:** 579 (3 BCS, 725 DLG forms counted by `actargs.py --dlg`)
+- **Original:** base case 164 → `sub_5C6278`: n = living party members (state 0x800 not set), share = XP / n, and the
+  **remainder goes +1 to the first members**; each gets it through an op-104 effect; then sound `SPTR02`.
+- **GemRB:** `Actions.cpp` `AddExperienceParty` → `Game::ShareXP(xp, SX_DIVIDE)`: XP / living members, remainder
+  dropped; `AddExperience` directly.
+- **Difference:** up to n−1 XP lost per call (`AddPartyExperience(250)` with 3 members: 84/83/83 vs 83/83/83). Op 104
+  path not compared (S: if op 104 does more than add XP). Re-check: `python tools/parity/dumps.py show orig sub_5C6278 --all`.
+
+### A-218 PlaySequence(I:Anim), A-200 SetAnimState(O:Object, I:Anim)
+- **Status:** V   **Severity:** 2   **Uses:** 1,057 / 802 (271 BCS, 531 DLG)
+- **Original:** creature cases 91 / 84 → `sub_78D52B` / `sub_78D6A7`: start the sequence (animation vfunc +180), then
+  **return "running" every update until the sequence has played to its end** (`sub_78DBA8`: animation vfunc +132/+128,
+  or another sequence replaced it). PlaySequence of a fidget (23-26) while a fidget plays is done at once.
+  SetAnimState resolves its object first (missing → done) and waits on that creature's sequence.
+- **GemRB:** `GSUtils.cpp` `PlaySequenceCore`: sets the stance; PST has `OneByteAnimationID = 1`, so it **returns
+  before the `SetWait(duration)`**: the action never blocks. (The comment "the original didn't actually block" is
+  about BG.)
+- **Difference:** in PST, the next action after `PlaySequence(ANIM_TALK)` / `SetAnimState(x, ANIM_MIMEDIE)` starts
+  only when the animation has finished; in GemRB at once. Cutscene and dialogue staging can overlap (e.g. a
+  `SetAnimState(Myself, ANIM_MIMEDIE)` (34 DLG uses) followed by `DestroySelf` / movement).
+- **Re-check:** `python tools/parity/dumps.py show orig sub_78D52B --all`; `sed -n 335,350p gemrb/core/GameScript/GSUtils.cpp`;
+  `grep -n OneByteAnimationID gemrb/unhardcoded/pst/gemrb.ini`.
+
+### A-215 FaceObject(O:Object)
+- **Status:** P   **Uses:** 701. Original creature case 90 → `sub_790955`: object missing → fail; itself → fail;
+  else direction to it (22.5° steps) → Face. GemRB `FaceObject`: same plus a one-tick wait.
+
+### A-208 ReturnToSavedPlace()
+- **Status:** V   **Severity:** 3   **Uses:** 593
+- **Original:** creature case 89 → `sub_77ED40`: saved x or y < 1 → done; walk to it; when the walk ends, **face the
+  saved orientation** (`+6900`, `sub_7472C5`).
+- **GemRB:** `Actions.cpp` `ReturnToSavedLocation`: walks there, never restores `IE_SAVEDFACE` (only
+  `MoveToSavedLocation`-family `Actions.cpp:622` does).
+- **Difference:** NPCs back at their post face wherever they walked from. Re-check: `python tools/parity/dumps.py show orig sub_77ED40 --all`.

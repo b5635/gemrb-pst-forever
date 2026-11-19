@@ -234,6 +234,7 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | A7 | **RestParty fully heals the Nameless One** (op 17 mode 4) while companions get the HP amount. GemRB heals all alike. | V | 2 |
 | A8 | **StartCutSceneEx's int0**: GemRB uses it as "test conditions"; the original sends an unidentified message (vtable 8DC550). | S | 2 |
 | A9 | ~~IncrementGlobalOnce creates missing variables in GemRB~~: wrong, PST's `NoNewVariables = 1` stops creation in GemRB too, and all 1,693 calls use declared variables (round 8). | P | — |
+| A10 | **PlaySequence / SetAnimState block in PST until the animation ends**; GemRB's PST path (`OneByteAnimationID`) returns before its wait, so the next action starts at once. 1,859 uses (cutscenes, dialogue mime animations). | V | 2 |
 
 ## 13. Voice findings, round 7 (detail in [wp_voices.md](wp_voices.md))
 

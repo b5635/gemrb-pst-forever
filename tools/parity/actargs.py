@@ -41,10 +41,11 @@ def main():
 	for k, c in cnt.most_common(top):
 		print("%5d  %s%s" % (c, k, ("   " + " ".join(where[k])) if "--where" in a else ""))
 	if "--dlg" in a:
-		name = None
+		names = []
 		for line in pstres.text(o.res("action", "ids")).splitlines():
 			p = line.split(None, 1)
-			if len(p) == 2 and p[0] == str(aid): name = p[1].split("(")[0]
+			if len(p) == 2 and p[0] == str(aid): names.append(re.escape(p[1].split("(")[0]))
+		name = "(?:%s)" % "|".join(names)
 		dc = collections.Counter()
 		for n in o.names("dlg"):
 			d = o.res(n, "dlg")
@@ -52,7 +53,7 @@ def main():
 			ao, na = struct.unpack_from("<II", d, 0x28)
 			for i in range(na):
 				off, ln = struct.unpack_from("<II", d, ao + i * 8)
-				for m in re.finditer(r"\b%s\s*\([^)]*\)" % re.escape(name), d[off:off + ln].decode("latin1"), re.I):
+				for m in re.finditer(r"\b%s\s*\([^)]*\)" % name, d[off:off + ln].decode("latin1"), re.I):
 					dc[re.sub(r"\s+", " ", m.group(0))] += 1
 		print("DLG text: %d uses, %d distinct" % (sum(dc.values()), len(dc)))
 		for k, c in dc.most_common(top): print("%5d  %s" % (c, k))

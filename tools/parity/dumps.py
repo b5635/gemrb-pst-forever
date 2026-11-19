@@ -168,7 +168,8 @@ def main():
 			for l in open(os.path.join(WORK, "orig", "dump", "srcmap.txt"), encoding="utf-8"):
 				c, subs = l.rstrip("\n").split("\t", 1)
 				if re.search(key, c, re.I): print(c, subs)
-		pat = re.compile(key, re.I)
+		try: pat = re.compile(key, re.I)
+		except re.error: pat = re.compile(re.escape(key), re.I)
 		for a, n, f in manifest(game):
 			if pat.search(n): print(a, n)
 	elif cmd in ("show", "lines", "case", "calls"):
