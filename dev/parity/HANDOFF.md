@@ -36,11 +36,11 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
   the same event numbers → message vtable → Run → `sub_73DEEF`), not by searching.
 
 ## Round 8 (2026-11-19): A1 actions by use count
-- 36 action rows decided this round (ledger: 40 of 310 rows have a verdict; actions 40/147). Detail in
+- 37 action rows decided this round (ledger: 41 of 310 rows have a verdict; actions 41/147). Detail in
   `wp4_actions.md` "Round 8". Rows done: MoveToPoint, Wait, WaitRandom, SmallWait, Face, Attack, SetGlobal,
   IncrementGlobal, BitSet, Help, CreateCreature, ChangeAIScript, AddexperienceParty, PlaySequence, SetAnimState,
   FaceObject, ReturnToSavedPlace, GiveItemCreate, TakePartyGold, StartTimer, StartRandomTimer, Set/IncInternal, Fades,
-  GiveExperience, DestroySelf (S), RunToPoint, PlaySoundNotRanged.
+  GiveExperience, DestroySelf (S), RunToPoint, PlaySoundNotRanged, PermanentStatChange (max HP moves current HP in the original; LEVEL case unread).
 - New findings: **A10** (sev 2) PlaySequence/SetAnimState block until the animation ends in PST, GemRB doesn't;
   **A11** (sev 2) StartRandomTimer rolls max…2·max−min−1 in GemRB; sev 3: WaitRandom never rolls its max,
   AddexperienceParty drops the remainder, ReturnToSavedPlace doesn't restore facing.
