@@ -167,3 +167,14 @@ Progress: 82, 100, 138, 146, 186, 193, 194, 201, 203–211 done. Next: 147, 148,
 - **Status:** P   Original `sub_4C61EB`: skips dead targets; holds (helpless flag + state 0x20) only if the target matches
   p1 in the IDS field chosen by p2 (2 EA … 8 alignment; p1 0 = anyone; class uses the active class of dual-classes).
   GemRB `fx_hold_creature_no_icon` does the same IDS match.
+
+### E-017 Heal (current HP)
+- **Status:** V   **Severity:** 2
+- **Original:** `sub_4B8281`. Does nothing at full HP. Dice rolled per die minus the target's luck (as E-012a). At HP ≤ 0
+  only p2 high word 0x10000 (raise) proceeds, through op 32 first. Modes (p2 low word): **0 add** (capped at max),
+  **1 set** (capped), **2 add p1 % of max HP** (no cap), **4 full heal**; 3 does nothing; 10/11 special. Party members get
+  floating green heal numbers.
+- **GemRB:** `fx_current_hp_modifier`: mode 2 **sets** HP to p1 % of max; mode 4 falls into GemRB's "special heal amount"
+  (lay on hands etc.).
+- **Difference:** SPPR502 (Raise Dead, p1 50, p2 2): original adds 50 % of max, GemRB sets 50 %. Mode 4 (used by RestParty,
+  below) isn't a full heal in GemRB.

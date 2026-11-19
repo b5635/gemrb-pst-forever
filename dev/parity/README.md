@@ -2,6 +2,7 @@
 
 This folder compares GemRB's Planescape: Torment support with the real engine.
 
+- [HANDOFF.md](HANDOFF.md): current state and what to do next. **Read first in a new session.**
 - [findings.md](findings.md): what is wrong or missing, with evidence. **Start here.**
 - [spells.md](spells.md): the 36 hardcoded spells, EE engine vs GemRB (generated).
 - [opcodes.md](opcodes.md): every opcode PST data uses → GemRB fx, EE class, original handler (generated).

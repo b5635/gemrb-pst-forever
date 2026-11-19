@@ -206,3 +206,15 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | E12 | **Detect Evil (op 210) sets `STATE_DETECT_EVIL` (0x1000000)** on the caster in the original, and pulses evil creatures in a cone in front. GemRB sets no state and uses a circle. | V | 3 |
 | E13 | **Jumble Curse (op 211)**: the original handler only plays the hiccup; GemRB also forces 100% spell failure. Unless casting checks op 211 elsewhere, GemRB is harsher. | S | 2 |
 | E14 | **Op 138 sequence ids**: GemRB rejects PST sequence 27 (Minor Embalming). | V | 3 |
+| E15 | **Heal (op 17) percent mode sets instead of adds** (Raise Dead SPPR502: original +50 % of max, GemRB = 50 %). Mode 4 = full heal in the original. | V | 2 |
+| E16 | **Blindness duration for PW Blind** is ticks in GemRB's hook, seconds in the original (see S17). | V | 1 |
+
+## 12. Scripting findings, round 3 (detail in [wp4_actions.md](wp4_actions.md))
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| A5 | **RunAwayFrom(Ex) never attacks in GemRB.** Original: with NoAttacks = 0 the fleeing creature attacks enemies within weapon reach. GemRB reads the flag as "no interrupt" (`GSUtils.cpp:2646`). 874 uses. | V | 2 |
+| A6 | **DeactivateEx can't deactivate party members** in the original; its RenderMode goes to `SetActiveAI`. GemRB hides anyone, ignores RenderMode. 82 uses. | V/S | 2 |
+| A7 | **RestParty fully heals the Nameless One** (op 17 mode 4) while companions get the HP amount. GemRB heals all alike. | V | 2 |
+| A8 | **StartCutSceneEx's int0**: GemRB uses it as "test conditions"; the original sends an unidentified message (vtable 8DC550). | S | 2 |
+| A9 | **IncrementGlobalOnce** doesn't create missing variables in the original. | V | 3 |

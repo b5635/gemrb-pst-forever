@@ -36,8 +36,11 @@ def main():
 			c = PE(os.path.join(WORK, "orig", "Torment.exe")).bytes(0x76D476 + key, 1)[0]
 			body = cases("76A7EA.c", "switch ( v6 )").get(c, "")
 			print("== action %d: sprite switch sub_76A7EA case %d" % (key, c))
-			print(body)
-			if "goto LABEL_214" not in body[:200]: return
+			if "goto LABEL_214" in body.lstrip()[:20]:
+				print("(goto LABEL_214: not handled here)")
+			else:
+				print(body)
+				if "goto LABEL_214" not in body[:200]: return
 			print("(falls through to the base switch)")
 		print("== action %d: base switch sub_44B099" % key)
 		print(cases("44B099.c", "switch ( v479 )").get(key, "(no case: unhandled)"))

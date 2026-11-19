@@ -15,12 +15,15 @@ Tool: `python tools/parity/case.py action <id>` prints the original's handler (c
 - **Difference:** 1) GemRB can deactivate party members 2) RenderMode is ignored.
 
 ### A-29 RunAwayFromEx(O, I:Time, I:NoAttacks)
-- **Status:** V   **Severity:** 2   **Uses:** shared id with RunAwayFrom
-- **Original:** creature case 24 → `sub_78DEDF`. When the action's **int1 (NoAttacks) is 0**, the fleeing creature
-  looks for an enemy (`GetEnemyOf`) and may stop to attack it with its current weapon (IESDP: "occasionally, fleeing
-  creatures stop to attack another creature"). NoAttacks = 1 turns that off.
-- **GemRB:** `Actions.cpp:1598` `RunAwayFrom` → `RunAwayFromCore`: never attacks while fleeing.
-- **Difference:** plain RunAwayFrom(…) in the original can counter-attack; GemRB behaves as if NoAttacks were always 1.
+- **Status:** V   **Severity:** 2   **Uses:** 874
+- **Original:** creature case 24 → `sub_78DEDF`. When the action's **int1 (NoAttacks) is 0**, each update the fleeing
+  creature takes its equipped weapon (none, or a launcher/ammo type → skip), computes its reach (weapon range + both
+  creatures' sizes, × 16), finds the nearest **enemy within that reach** (`sub_474047`, `GetEnemyOf`) and **attacks it**
+  (`sub_78113D`). NoAttacks = 1 turns that off. (IESDP: "occasionally, fleeing creatures stop to attack".)
+- **GemRB:** `Actions.cpp:1598` `RunAwayFrom` → `RunAwayFromCore`: never attacks while fleeing. `GSUtils.cpp:2646`
+  reads int1 as **"don't interrupt"** (`RunAwayFlags::NoInterrupt`), a different meaning.
+- **Difference:** 874 uses. In the original, fleeing creatures hit enemies in reach unless NoAttacks is set; GemRB never
+  does, and gives the flag an unrelated meaning.
 
 ### A-305 FullHealEx(O)
 - **Status:** V   **Severity:** 3   **Uses:** 3
@@ -43,3 +46,22 @@ See findings section 9 (round 2): JoinPartyEx's flag calls `sub_4089DC`; MoveToO
 
 ### A-313 EscapeAreaRunning
 See finding A1: handled (creature case 57), missing in GemRB.
+
+### A-296 RestParty(I:SuggestedDream, I:HP, I:Renting)
+- **Status:** V   **Severity:** 2   **Uses:** 20
+- **Original:** base case 296 → `sub_5C68CC` → `sub_5C6A9E`. Each party member gets op 17 with p1 = HP and mode 0
+  (add HP), **except the Nameless One, who gets mode 4 = full heal**. A rest dream/movie is chosen (1 in 3 chance to
+  keep a tie), and `TIME` plays.
+- **GemRB:** `Actions.cpp:5521` → `Game::RestParty(…, hp)` → `Heal(hp)` for everyone alike.
+- **Difference:** with an HP limit, the Nameless One should still wake fully healed.
+
+### A-202 IncrementGlobalOnce
+- **Status:** V   **Severity:** 3   **Uses:** 1,693
+- **Original:** base case 202: looks both variables up **without creating them**; if either doesn't exist, nothing
+  happens. Otherwise, if var1 is 0, set var1 = 1 and add int0 to var2.
+- **GemRB:** `IncrementGlobalOnce` creates both (CheckVariable returns 0 for a missing one). Matters only for
+  LOCALS/area variables that don't exist yet (PST predeclares its GLOBALs).
+
+### A-10 Enemy()
+- **Status:** P   Original `sub_7A0255`: EA = 255 in all three copies, removes op 5 (charm) from both effect lists. GemRB
+  `Enemy` does the same.
