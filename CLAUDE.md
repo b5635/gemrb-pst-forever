@@ -13,6 +13,8 @@
 
 - `build_install.bat` builds Release and installs to `D:\Games\GemRB`. From a shell run it as
   `cmd /c "D:\gemrb\build_install.bat < NUL"` (it pauses on failure). Run it after every change.
+- Commit as soon as a change is built, tested and works (in game or in the tests): don't wait to
+  be asked. Commit only that change's files, with a message that says what it fixes or adds.
 - New features get a toggle switched on in `tools/dev_settings.ini` (forced into the
   installed `GemRB.cfg` on deploy).
 - Unit tests: target `Test_gemrb_core`, run `build\gemrb\Release\Test_gemrb_core.exe` with
