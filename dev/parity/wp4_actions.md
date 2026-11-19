@@ -199,3 +199,41 @@ See finding A1: handled (creature case 57), missing in GemRB.
 - **GemRB:** `Actions.cpp` `ReturnToSavedLocation`: walks there, never restores `IE_SAVEDFACE` (only
   `MoveToSavedLocation`-family `Actions.cpp:622` does).
 - **Difference:** NPCs back at their post face wherever they walked from. Re-check: `python tools/parity/dumps.py show orig sub_77ED40 --all`.
+
+### A-140 GiveItemCreate(S:ResRef, O:Object, I:Usage1, I:Usage2, I:Usage3)
+- **Status:** P (script level) / S (inventory-full detail)   **Uses:** 483 (2 BCS, 481 DLG, all to creatures)
+- **Original:** base case 140 → `sub_46C019`: no object → fail; no ITM → fail; item made with charges int0/int1/int2
+  (`sub_50B507`); a creature target gets it through message vtable `8DC56C` (party member: feedback 3 first); any
+  other object type: the item is deleted.
+- **EE:** `CMessageAddItem::Run`: stack onto a matching stack with room, else the first free inventory slot; when full,
+  the new item goes in and a **droppable** item already there is swapped out to the ground (+ "inventory full" feedback
+  and sound). The original's Run (slot past 5 of `8DC56C`) not read.
+- **GemRB:** `Actions.cpp` `CreateItem`: `AddSlotItem(SLOT_ONLYINVENTORY)`; when full, the **new** item drops at the
+  target's feet (+ voice/message). Containers accept it (no PST data does that).
+- **Difference:** only which item ends on the ground when the inventory is full (EE; confirm in the original).
+
+### A-117 TakePartyGold(I:Amount)
+- **Status:** P   **Uses:** 363. Original base case 117 → `sub_46C3E3(0)`: amount = min(party gold, int0); a creature
+  caller (type 49) gets the amount added to its gold (+1284, +3266); party gold −amount (message `8DC588`). GemRB
+  `TakePartyGold`: same, but only a caller **not in the party** gets the gold (PST party members hold no gold of
+  their own: no visible difference).
+
+### A-61 StartTimer(I:ID, I:Time)
+- **Status:** P   **Uses:** 345. Original base case 61 → `sub_465B25`: (re)sets timer byte ID to int1 in the creature's
+  list (+926). EE `CGameAIBase::CheckTimers(1)` runs once every 15 AI updates (`ProcessAI`, phase by object id) and
+  raises `TimerExpired(ID)` at ≤ 0: **seconds**. GemRB `Scriptable::StartTimer`: GameTime + int1 × ticks/s. Same.
+
+### A-220 StartRandomTimer(I:ID, I:Min, I:Max)
+- **Status:** V   **Severity:** 2   **Uses:** 268 (all BCS)
+- **Original:** base case 220 (`44B099.c`, case 220): lo = min(int1, int2), hi = max(int1, int2), int1 ← lo +
+  `sub_82015B(hi − lo + 1)` = **lo … hi**, then StartTimer.
+- **GemRB:** `Actions.cpp` `StartRandomTimer`: `core->Roll(1, int2 − int1, int2 − 1)` = **int2 … 2·int2 − int1 − 1**.
+- **Difference:** the timer never fires inside the given range: `StartRandomTimer(1,5,10)` (64 uses) → original 5-10 s,
+  GemRB 10-14 s; `(1,15,30)` (54) → 15-30 vs 30-44 s; `(1,300,600)` (6) → 5-10 min vs 10-15 min. Ambient barks, wander
+  and respawn loops run 1.5-2× slower. Re-check: `python tools/parity/actargs.py 220`;
+  `grep -n "void GameScript::StartRandomTimer" -A4 gemrb/core/GameScript/Actions.cpp`.
+
+### A-273 SetInternal, A-274 IncInternal(O:Object, I:Index, I:Value)
+- **Status:** P   **Uses:** 470 / 386. Original base cases 273/274: object missing → nothing; index < 10, stored as a
+  **16-bit** signed word (`sub_76840D`/`sub_76843A`, creature words +1932…). GemRB: index ≤ 15, 32-bit stat. Data uses
+  indexes 0-9 and small values.
