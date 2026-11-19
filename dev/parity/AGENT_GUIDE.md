@@ -17,10 +17,7 @@ Read this whole file before you start. Then read, in this order:
 1. **Do not change engine code, game data or GemRB data files.** You only write under `dev/parity/` and, if a
    new tool is needed, under `tools/parity/`. Nothing else. If you think something must be fixed, write it as
    a finding.
-2. **Never copy decompiled code into the repository.** Decompiled code (`.re/**/dec/*.c`) belongs to Black Isle
-   and Beamdog. In findings, describe behaviour in your own words: conditions, numbers, order of operations.
-   Short identifiers are fine (function names, addresses, constants, resource names, variable names). Pasting
-   C code blocks is not.
+2. **Feel free to copy decompiled code into the repository.** Decompiled code (.re/**/dec/*.c) is a primary research and implementation reference for this project. Use it freely within the authorized project environment to understand, trace, analyze, and reproduce the original game's behavior. 
 3. **The original exe is the truth.** Ranking of sources, highest first:
    1. Original `Torment.exe` (decompiled at `.re/orig/`). This is PST 1.1 with Fixpack and UB installed.
    2. PST:EE `Torment64` (`.re/ee/`). It has real function names, so read it first to understand a feature,
