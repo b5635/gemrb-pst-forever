@@ -95,6 +95,17 @@ o.res("DMORTE", "dlg"); g.where("BALDUR", "bcs"); o.names("bcs"); pstres.text(o.
 ```
 `tools/tb_gamedata.py` `GameData().spell("SPWI101")` parses SPL headers and effects.
 
+**Full decompiles exist: IDA is almost never needed (token rule).** `.re/ee/dump/dec_all_named/` holds all
+20,417 EE functions as `<Class>_<Method>_<args>.c` (e.g. `CGameAIBase_ExecuteAction_.c`,
+`CGameSprite_PlaySound_uchar,int,int,int_.c`; address map in `rename_manifest.csv`), and
+`.re/orig/dump/dec_all/` holds 13,976 original functions as `<ADDR>.c`. Use `ls | grep`, `grep -n`, and
+`sed -n A,Bp` on line ranges. **Never `cat` a whole big file** (`CGameAIBase_ExecuteAction_.c` is 168 KB):
+grep for the `case N:` or constant first, then read ~80 lines around it. Run `ida.py dec/xrefs/vt` only when
+a function is truly missing from both folders; callers can usually be found with `grep -l "sub_4B245B(" dec_all/`.
+Work EE-first: understand the feature in `dec_all_named`, then confirm only the deciding condition and numbers
+in the original with one targeted grep (same constant, same resref, same case number). Batch: answer 10
+ledger rows from one read of a dispatcher instead of re-opening it per row.
+
 **Look before you decompile.** ~420 original and ~645 EE functions are already in `.re/orig/dump/dec/` and
 `.re/ee/dump/dec/`. Maps: `dev/parity/maps/` (`actions.tsv`, `triggers.tsv`, `opcodes.tsv`, `projectiles.tsv`,
 `orig_index.tsv` = every original function whose role we know, `orig_strings.tsv`). After any new decompile,
