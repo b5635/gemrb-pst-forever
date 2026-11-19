@@ -261,3 +261,18 @@ See finding A1: handled (creature case 57), missing in GemRB.
 
 ### A-312 PlaySoundNotRanged(S:Sound)
 - **Status:** P   **Uses:** 285. Original base case 312: loads the sound and plays it unpositioned. GemRB same (presentation).
+
+### A-217 PermanentStatChange(O:Object, I:Stat, I:Delta, I:Value)
+- **Status:** V (MaxHP) / P (others) / S (LEVEL)   **Severity:** 3   **Uses:** 230 (all DLG: PICKPOCKET 49, TRAPS/STEALTH/
+  LOCKPICKING 22 each, STR 21, CON 20, DEX 17, WIS 15, MAXHITPOINTS 11, INT 10, CHR/AC/fire resist 4, DAMAGEBONUS 3,
+  LUCK 1, LEVEL 1)
+- **Original:** base case 217 → `sub_459DD1` (1,813 lines, one case per stat): delta.ids 1 LOWER (value negated),
+  2 RAISE, 3 SET; a value with bits 0xF000 is a dice code (`sub_4352A8`, unused by data). Each stat is clamped: max HP
+  1-65535, AC −10…10 (case 2), thief skills 0-255 (cases 26-29), STR 1-25 (case 36)… **Max HP (case 1) also moves current
+  HP by the same amount** (clamped ≥ 1) and prints a feedback line. LEVEL (case 34) recomputes XP for the class
+  (the Nameless One's path through `+3342` and `sub_459D1F`; not followed).
+- **GemRB:** `Actions.cpp` `PermanentStatChange`: Lower/Raise/Set on the base stat, clamped by GemRB's stat limits;
+  feedback only on Raise for party members; current HP untouched.
+- **Difference:** `PermanentStatChange(Protagonist, MAXHITPOINTS, Lower, 5)` at 50/80 HP → original 45/75, GemRB 50/75;
+  Raise 3 at 50/80 → original 53/83, GemRB 50/83. LEVEL (1 use) not compared.
+- Re-check: `python tools/parity/dumps.py lines orig sub_459DD1 460 503`; `python tools/parity/actargs.py 217 --dlg`.

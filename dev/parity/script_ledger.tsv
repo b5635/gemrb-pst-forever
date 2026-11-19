@@ -40,7 +40,7 @@ action	121	StartCutSceneMode()	265	base sub_44B099	GameScript::StartCutSceneMode
 action	306	GiveExperience(O:Object*,I:Amount*)	246	base sub_44B099	GameScript::AddXPObject	P	-	opus		
 action	111	DestroySelf()	245	sprite case 59	GameScript::DestroySelf	S	-	opus		GemRB PST hack ends cutscene if runner dies; orig? (A5)
 action	286	SetCorpseEnabled(S:Name*,I:State*)	238	base sub_44B099	GameScript::AmbientActivate	todo				
-action	217	PermanentStatChange(O:Object*,I:StadID*Stats,I:Delta*Delta,I:Modifier*)	230	base sub_44B099	GameScript::PermanentStatChange	todo				
+action	217	PermanentStatChange(O:Object*,I:StadID*Stats,I:Delta*Delta,I:Modifier*)	230	base sub_44B099	GameScript::PermanentStatChange	V	-	opus		MaxHP change also moves current HP in orig; LEVEL case not read (S)
 action	108	EscapeArea()	208	sprite case 57	GameScript::EscapeArea	todo				
 action	150	StartStore(S:Store*,O:Target*)	192	sprite case 76	GameScript::StartStore	todo				
 action	104	MoraleDec(O:Target*,I:Morale*)	189	sprite case 54	GameScript::MoraleDec	todo				
