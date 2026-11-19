@@ -160,6 +160,10 @@ def OpenPortraitWindow (pos=WINDOW_RIGHT|WINDOW_VCENTER):
 	for i, Button in enumerate (GetPortraitButtons (Window)[:CHU_SLOTS]):
 		SetupPortraitButton (Window, Button)
 		SetupHPButton (Window.GetControl (HPButtonID (i)), i)
+		if EEHudActive ():
+			# the classic 65x51 portrait and 63x8 bar fill EE's bigger holes in PRTRTBG
+			Button.SetFlags (IE_GUI_BUTTON_STRETCH, OP_OR)
+			Window.GetControl (HPButtonID (i)).SetFlags (IE_GUI_BUTTON_STRETCH, OP_OR)
 
 	UpdatePortraitWindow()
 	return Window

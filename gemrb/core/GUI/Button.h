@@ -48,6 +48,7 @@ namespace GemRB {
 #define IE_GUI_BUTTON_BG1_PAPERDOLL   0x00200000 // BG1-style paperdoll PictureList
 #define IE_GUI_BUTTON_HORIZONTAL      0x00400000 // horizontal clipping of overlay
 #define IE_GUI_BUTTON_NO_TOOLTIP      0x00800000
+#define IE_GUI_BUTTON_STRETCH         0x01000000 // scale the picture / animation to the button frame
 
 //composite button flags
 #define IE_GUI_BUTTON_NORMAL 0x00000004 // default button, doesn't stick

@@ -186,9 +186,35 @@ def ControlFlags (c, style):
 	v = {"top": IE_FONT_ALIGN_TOP, "center": IE_FONT_ALIGN_MIDDLE, "bottom": IE_FONT_ALIGN_BOTTOM}.get (al[1] if len (al) > 1 else "center", IE_FONT_ALIGN_MIDDLE)
 	return h | v
 
+MIN_TEXT_H = 24
+
 def _MakeLabel (win, cid, c):
 	x, y, w, h = _Frame (c)
 	style = c.get ("style", "label")
+	if c.get ("bam") and isinstance (c.get ("sequence", 0), int) and not c.get ("text"):
+		size = GemRB.GetSprite (c["bam"], -1, c.get ("sequence", 0), 0, 1)
+		if size and (abs (size["w"] - w) > 1 or abs (size["h"] - h) > 1):
+			spr = GemRB.GetSprite (c["bam"], -1, c.get ("sequence", 0), 0)
+			# EE scales a label's art into its area (CONTBACK's bag is 62x67 in a 44x47 label)
+			pic = win.CreateButton (cid, x, y, w, h)
+			pic.SetFlags (IE_GUI_BUTTON_PICTURE | IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_STRETCH, OP_SET)
+			pic.SetPicture (spr)
+			pic.SetState (IE_GUI_BUTTON_LOCKED)
+			return pic
+	if c.get ("mosaic") and not c.get ("text") and not c.get ("text_opts") and w <= 120 and h <= 120:
+		size = GemRB.GetSprite (c["mosaic"], -1, 0, 0, 1)
+		if size and (abs (size["w"] - w) > 1 or abs (size["h"] - h) > 1):
+			# small EE pictures (ICGOLD's coins) are scaled into their area too, not cropped
+			pic = win.CreateButton (cid, x, y, w, h)
+			pic.SetFlags (IE_GUI_BUTTON_PICTURE | IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_STRETCH, OP_SET)
+			pic.SetPicture (c["mosaic"])
+			pic.SetState (IE_GUI_BUTTON_LOCKED)
+			return pic
+	if h < MIN_TEXT_H and not (c.get ("bam") or c.get ("mosaic")):
+		# EE's small text boxes (gold counts) are shorter than the classic fonts: grow them about
+		# their middle so the text is not cut
+		y -= (MIN_TEXT_H - h) // 2
+		h = MIN_TEXT_H
 	lab = win.CreateLabel (cid, x, y, w, h, StyleFont (style), "", ControlFlags (c, style))
 	if c.get ("mosaic"):
 		lab.SetBackground (c["mosaic"])
@@ -235,6 +261,16 @@ LUA_TEXT = {
 	"versionString": lambda: GemRB.Version,
 }
 
+def MenuBoxOffset (menu):
+	"""(dx, dy) from where the converter put a menu (its controls' bounding box centred on the
+	screen) to where EE puts it (its 1024x768 menu box centred): for menus whose controls do not
+	span the whole box, such as ESC_MENU."""
+	doc = Load (menu)
+	ex, ey = doc["ee_bbox"][:2]
+	s = doc["scale"]
+	return (int (round ((ex + (1366 - 1024) / 2) * s)) - doc["bbox"][0],
+		int (round (ey * s)) - doc["bbox"][1])
+
 def Find (menu, **match):
 	"""Index of the first control of the menu whose fields equal all of `match`
 	(for example Find ("START_MAIN", type="button", bam="STARTBUT", sequence=4)), else None."""
@@ -246,7 +282,7 @@ def Find (menu, **match):
 			return c["index"]
 	return None
 
-def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, first=None, reverse=False, fullscreen=False, dy=None, bar=None):
+def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, first=None, reverse=False, fullscreen=False, dy=None, bar=None, dx=0):
 	"""Create the window for an EE menu. Returns (window, controls).
 
 	plate: a background picture name to draw behind the controls; None uses the menu's own
@@ -261,6 +297,7 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 	ids: {index: control id} to give controls the id the classic script expects (default index + 1).
 	dy: move every control down by this many pixels (negative: up) instead of the per-kind slot_dy
 	corrections; for menus whose whole body sits off the plate (the store screens).
+	dx: move every control right by this many pixels (full screens only).
 	bar: (y, height) makes the window a full-width strip there instead of a full screen (the container bar);
 	control frames stay in screen coordinates."""
 	override = override or {}
@@ -284,7 +321,7 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 		_origin[0], _origin[1] = 0, bar[0]
 		frame = {'x': 0, 'y': bar[0], 'w': LOGICAL_W, 'h': bar[1]}
 	else:
-		_origin[0], _origin[1] = 0, -(dy or 0)
+		_origin[0], _origin[1] = -dx, -(dy or 0)
 		frame = {'x': 0, 'y': 0, 'w': LOGICAL_W, 'h': LOGICAL_H}
 	win = GemRB.CreateWindow (windowId, WINDOW_PACK, frame)
 	if plate is None:
@@ -470,5 +507,6 @@ def BuildSpellBook (arrowsAndName=True):
 			skip.add (10 + i)
 		ids[30 + i] = 14 + i
 	# the whole menu sits slot_dy too low on its plate, not just the spell slots
-	win, ctl = Build ("SPELLS", ids=ids, skip=skip, fullscreen=True, reverse=True, dy=-Load ("SPELLS").get ("slot_dy", 0))
+	dx, dy = MenuBoxOffset ("SPELLS")
+	win, ctl = Build ("SPELLS", ids=ids, skip=skip, fullscreen=True, reverse=True, dx=dx, dy=dy)
 	return win

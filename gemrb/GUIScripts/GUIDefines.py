@@ -47,6 +47,7 @@ IE_GUI_BUTTON_CENTER_PICTURES = 0x00100000 # center the button's PictureList
 IE_GUI_BUTTON_BG1_PAPERDOLL   = 0x00200000 # BG1-style paperdoll
 IE_GUI_BUTTON_HORIZONTAL      = 0x00400000 # horizontal clipping of overlay
 IE_GUI_BUTTON_NO_TOOLTIP      = 0x00800000 # disable the tooltip
+IE_GUI_BUTTON_STRETCH         = 0x01000000 # scale the picture / animation to the button frame
 
 #label flags
 IE_GUI_LABEL_USE_COLOR = 1

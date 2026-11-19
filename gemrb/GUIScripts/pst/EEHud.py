@@ -111,7 +111,7 @@ def OpenOptionsWindow ():
 
 def OpenPortraitWindow ():
 	"""PORTWIN with every slot up front (no scripted extra slots): PortraitWindow's ids,
-	portrait 69x54 and hp bar 73x15 on a PRTRTBG back."""
+	portrait 72x56 and hp bar 73x10 on a PRTRTBG back."""
 	n = MAX_PARTY_SIZE
 	win = _HudWindow (WIN_PORT, {'x': 0, 'y': PORTRAIT_TOP, 'w': PORT_SIZE, 'h': PORT_SIZE})
 	import PortraitWindow
@@ -152,9 +152,10 @@ def LayoutPortraits (win=None, count=None):
 	for i in range (MAX_PARTY_SIZE):
 		x, y = (i * S, oy) if row else (0, i * S)
 		pb = win.GetControl (PortraitWindow.PortraitID (i))
-		pb.SetFrame ({'x': x + 5, 'y': y + 4, 'w': 69, 'h': 54})
+		# PRTRTBG (3x art): portrait recess 72x56 at 4,2, bar hole 72x10 at 4,64
+		pb.SetFrame ({'x': x + 4, 'y': y + 2, 'w': 72, 'h': 56})
 		hp = win.GetControl (PortraitWindow.HPButtonID (i))
-		hp.SetFrame ({'x': x + 3, 'y': y + 60, 'w': 73, 'h': 15})
+		hp.SetFrame ({'x': x + 3, 'y': y + 64, 'w': 73, 'h': 10})
 		back = win.GetControl (PORT_BACK + i)
 		back.SetFrame ({'x': x, 'y': y, 'w': S - 1, 'h': S - 1})
 

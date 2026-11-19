@@ -228,6 +228,7 @@ def LoadInventoryWindow (id, pack, pos, loader):
 	win, ctl = EEUI.Build ("INVENTORY", ids=ids, skip=skip, first=MakeArrows, dy=dy)
 	# PST's NUMBER font is 7 px tall and loses its lower half on EE's slots
 	InventoryCommon.SlotFont = EEUI.StyleFont ("normal")
+	InventoryCommon.EESlots = True
 	win.AddAlias (pack, id)
 	if hpman:
 		x, y, w, h = hpman["frame"]

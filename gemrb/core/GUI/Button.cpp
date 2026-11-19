@@ -104,6 +104,18 @@ void Button::DidDraw(const Region& /*drawFrame*/, const Region& /*clip*/)
 }
 
 /** Draws the Control on the Output Display */
+// IE_GUI_BUTTON_STRETCH: the whole sprite scaled onto the button, clipped from the right by `clip`
+static void BlitStretched(const Holder<Sprite2D>& spr, const Region& rgn, double clip, BlitFlags flags)
+{
+	int srcW = int(spr->Frame.w * clip);
+	int dstW = int(rgn.w * clip);
+	if (srcW <= 0 || dstW <= 0) return;
+	Region src(0, 0, srcW, spr->Frame.h);
+	// the driver takes the sprite's origin off the destination again
+	Region dst(rgn.x + spr->Frame.x, rgn.y + spr->Frame.y, dstW, rgn.h);
+	VideoDriver->BlitSprite(spr, src, dst, flags | BlitFlags::BLENDED);
+}
+
 void Button::DrawSelf(const Region& rgn, const Region& /*clip*/)
 {
 	// base blit flags
@@ -174,6 +186,9 @@ void Button::DrawSelf(const Region& rgn, const Region& /*clip*/)
 
 			Region rb = Region(picPos.x, picPos.y, Picture->Frame.w, buttonHeight);
 			VideoDriver->BlitSprite(Picture, rb.origin, &rb, bf);
+		} else if (flags & IE_GUI_BUTTON_STRETCH) {
+			if (sepiaPic) bf |= BlitFlags::SEPIA;
+			BlitStretched(Picture, rgn, Clipping, bf);
 		} else {
 			Region r(picPos.x, picPos.y, (Picture->Frame.w * Clipping), Picture->Frame.h);
 			if (sepiaPic) bf |= BlitFlags::SEPIA;
@@ -189,7 +204,9 @@ void Button::DrawSelf(const Region& rgn, const Region& /*clip*/)
 		Region r(rgn.x + xOffs, rgn.y + yOffs, int(AnimPicture->Frame.w * Clipping), AnimPicture->Frame.h);
 
 		BlitFlags bf2 = bool(animation->flags & Animation::Flags::BlendBlack) ? BlitFlags::ONE_MINUS_DST : BlitFlags::BLENDED;
-		if (flags & IE_GUI_BUTTON_CENTER_PICTURES) {
+		if (flags & IE_GUI_BUTTON_STRETCH) {
+			BlitStretched(AnimPicture, rgn, Clipping, bf2);
+		} else if (flags & IE_GUI_BUTTON_CENTER_PICTURES) {
 			VideoDriver->BlitSprite(AnimPicture, r.origin + AnimPicture->Frame.origin, &r, bf2);
 		} else {
 			VideoDriver->BlitSprite(AnimPicture, r.origin, &r, bf2);
@@ -602,7 +619,7 @@ void Button::SetPicture(Holder<Sprite2D> newpic)
 	if (Picture) {
 		// try fitting to width if rescaling is possible, otherwise we automatically crop
 		unsigned int ratio = CeilDiv(Picture->Frame.w, frame.w);
-		if (ratio > 1) {
+		if (ratio > 1 && !(flags & IE_GUI_BUTTON_STRETCH)) { // a stretched picture keeps its twin
 			Holder<Sprite2D> img = VideoDriver->SpriteScaleDown(Picture, ratio);
 			Picture = std::move(img);
 		}

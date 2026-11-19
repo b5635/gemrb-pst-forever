@@ -698,3 +698,32 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   - Area map scaled to fill its box (`MapControl.SetFit`), as EE does.
   - Full screens get black under the plate: see-through plate pixels showed actors' floating text.
   - Seen in game: `shots/a_*.png`, `shots/s_a_*.png`. Option sub-screens and save screen were fine.
+- UI fixes (owner screenshots, 2026-11-18). Left action bar and portrait column kept as they are.
+  - New button flag `IE_GUI_BUTTON_STRETCH` (`Button.cpp`): picture/animation scaled to the button
+    frame (clipping still applies; `SetPicture` keeps the twin instead of shrinking by whole steps).
+    Portraits (65x51) and HP bars (63x8) now fill PRTRTBG's 72x56 recess and 72x10 bar hole.
+  - `EEUI._MakeLabel`: a text-less bam label whose art is not its box size becomes a stretched
+    picture button (EE scales label art into the area): the CONTBACK bag in inventory, container
+    and stores. `GemRB.GetSprite(..., size=1)` now returns the size for BAM frames too.
+  - Clock uses EE's remade WMTIME (alias) in the EE HUD: fills the 69x42 arch.
+  - Inventory: PST's swap to classic IVSLOT art behind items is skipped on EE slots
+    (`InventoryCommon.EESlots`).
+  - Area map: fitted MapControl no longer paints a black box over the plate's left pipe; viewport
+    box clipped to the map; map box moved onto MAPBG's opening (29 px right).
+  - `EEUI.MenuBoxOffset(menu)` + `Build(dx=)`: EE places a menu by its 1024x768 box, the converter by
+    its controls' box. Applied to ESC_MENU (66, 15: buttons now on the sockets) and JOURNAL (36, -12:
+    tabs, X, Done, picture, list, description on the plate). CHARACTER would get (10, -52); not changed.
+  - Seen in game: `shots/fx2_sheet.png`, `fx2_map.png`, `fx2_opt.png`, `fx2_beast2.png`.
+    `tb_autotest.ps1` passed (first run hit the known mortuary start flake). Nothing committed.
+- UI fixes, part 2 (2026-11-18): EE's menu-box placement (`EEUI.MenuBoxOffset`) now used by every full
+  screen that was off: CHARACTER (10, -52), SPELLS (-5, -36), CHARGEN (-6, -7), AREA_MAP (27, -55; the
+  map box, name label, World Map and X now sit on MAPBG, replacing the earlier +29 px patch) and the
+  store pages (x -22, rows included). The old per-screen `slot_dy` corrections were the vertical half
+  of this. Area map: EE's Show Map Notes gem toggles the notes (Show Walkable has no classic function,
+  left out). Chargen: the name plaque shows the PC's name. `EEUI._MakeLabel`: small text-less mosaic
+  labels are scaled into their box (ICGOLD coins), text labels shorter than 24 px grow about their
+  middle (store gold count was cut). Seen in game: `shots/fx3_rec.png`, `fx4_map.png`, `c4_map.png`,
+  `fx4_cg.png`, `fx5_sheet.png` (inventory, record, spells, store). `tb_autotest.ps1` passed; unit tests:
+  turn-based/font/EE UI 32/32 (the VFS/DataStream tests fail outside their data folder, unrelated).
+  Still open: option sub-pages (Gameplay, Graphics, Sound, ...) are the classic windows over the EE
+  plate (need slider/checkbox support in `EEUI.Build`); the spell book has no X (SPELLS_X not built).

@@ -116,6 +116,8 @@ def OpenTravelWindow (Travel):
 
 _eeBuilt = [False]
 
+_eeNotes = [True]   # Show Map Notes, kept while the game runs
+
 def LoadAreaMapWindow (id, pack, pos, loader):
 	"""Window loader: the EE area map when its layout exists, the CHU window otherwise. Notes (EE's
 	Add Note button and its template) are not in the EE window: a text edit can't be made from script."""
@@ -129,14 +131,16 @@ def LoadAreaMapWindow (id, pack, pos, loader):
 	target = None
 	skip = set ()
 	for c in EEUI.Controls ("AREA_MAP"):
-		if c["index"] in (4, 5, 6, 7) or c["type"] == "template":
+		if c["index"] in (6, 7) or c["type"] == "template":   # Show Walkable: no classic function
 			skip.add (c["index"])
 		elif c["type"] == "button" and c.get ("text", {}).get ("strref") == 4182:
 			skip.add (c["index"])       # Add Note
 		elif c.get ("name") == "AREA_MAP_TARGET":
 			skip.add (c["index"])
 			target = c
-	win, ctl = EEUI.Build ("AREA_MAP", skip=skip)
+	# placed by EE's 1024x768 menu box (centred by its controls' box it sits 27 px left, 55 px low)
+	mdx, mdy = EEUI.MenuBoxOffset ("AREA_MAP")
+	win, ctl = EEUI.Build ("AREA_MAP", skip=skip, dx=mdx, dy=mdy)
 	win.AddAlias (pack, id)
 	win.AddAlias ("WIN_MAP")
 
@@ -147,25 +151,33 @@ def LoadAreaMapWindow (id, pack, pos, loader):
 			ctl[c["index"]].OnPress (win.Close)
 			ctl[c["index"]].MakeEscape ()
 
-	# EE's target box is measured like its slots: from the menu's top, not the centred box
 	x, y, w, h = target["frame"]
-	y -= EEUI.Load ("AREA_MAP").get ("slot_dy", 0)
-	Map = win.CreateMapControl (0x20, x, y, w, h)
+	Map = win.CreateMapControl (0x20, x + mdx, y + mdy, w, h)
 	Map.AddAlias ("MAP")
 	Map.SetFit (True)      # EE scales the area map to fill its box
 	Map.SetVarAssoc ("ShowMapNotes", IE_GUI_MAP_VIEW_NOTES)
 	Map.SetStatus (IE_GUI_MAP_VIEW_NOTES)
 	Map.SetAction (win.Close, IE_ACT_MOUSE_PRESS, GEM_MB_ACTION, 0, 2)
 
+	# Show Map Notes (EE's gem checkbox: frame 0 off, 1 on, 3 disabled)
+	notes = ctl.get (5)
+	if notes:
+		# EE scales the 56x53 gem into the 19x19 button: drawn as a stretched picture
+		notes.SetFlags (IE_GUI_BUTTON_NO_IMAGE | IE_GUI_BUTTON_PICTURE | IE_GUI_BUTTON_STRETCH, OP_SET)
+		def ToggleNotes ():
+			show = not _eeNotes[0]
+			_eeNotes[0] = show
+			Map.SetStatus (IE_GUI_MAP_VIEW_NOTES if show else IE_GUI_MAP_NO_NOTES)
+			notes.SetPicture (GemRB.GetSprite ("CHECKBUT", -1, 0, 1 if show else 0))
+		_eeNotes[0] = not _eeNotes[0]
+		ToggleNotes ()     # applies the remembered setting
+		notes.OnPress (ToggleNotes)
+
 	MapTable = GemRB.LoadTable ("MAPNAME")
 	MapName = MapTable.GetValue (GemRB.GetCurrentArea (), "STRING")
 	for c in EEUI.Controls ("AREA_MAP"):
 		if c["type"] == "label" and "mapScreen:GetMapName" in c.get ("text_opts", {}).get ("lua", ""):
-			lab = ctl[c["index"]]
-			fr = lab.GetFrame ()
-			fr['y'] -= EEUI.Load ("AREA_MAP").get ("slot_dy", 0)    # same offset as the map box
-			lab.SetFrame (fr)
-			lab.SetText (MapName)
+			ctl[c["index"]].SetText (MapName)
 	_eeBuilt[0] = True
 	return win
 

@@ -7,7 +7,13 @@ import GUICommon
 from GUIDefines import *
 
 def CreateClockButton(Button):
-	Button.SetAnimation ("WMTIME", 0, A_ANI_GAMEANIM)
+	import EEHud
+	if EEHud.Active ():
+		# EE's remade clock fills the 69x42 arch of the EE action bar (the classic one is 64x35)
+		import EEUI
+		Button.SetAnimation (EEUI.Alias ("WMTIME"), 0, A_ANI_GAMEANIM)
+	else:
+		Button.SetAnimation ("WMTIME", 0, A_ANI_GAMEANIM)
 	Button.SetState (IE_GUI_BUTTON_LOCKED)
 	Button.SetFlags (IE_GUI_BUTTON_PICTURE, OP_SET)
 	Button.OnPress (lambda: GemRB.GamePause (2, 0))

@@ -3613,6 +3613,13 @@ static PyObject* GemRB_GetSprite(PyObject* /*self*/, PyObject* args)
 		}
 	}
 
+	if (spr && size) {
+		PyObject* dict = PyDict_New();
+		PyDict_SetItemString(dict, "w", DecRef(PyLong_FromLong, spr->Frame.w));
+		PyDict_SetItemString(dict, "h", DecRef(PyLong_FromLong, spr->Frame.h));
+		return dict;
+	}
+
 	if (spr == nullptr) {
 		Size dims;
 		spr = SpriteFromPy(pyObj, &dims);

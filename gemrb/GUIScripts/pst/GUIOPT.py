@@ -136,7 +136,9 @@ def LoadOptionsWindow (id, pack, pos, loader=GUICommonWindows.OpenWindowOnce):
 	plate = EEUI.Find ("ESC_MENU", type="label", mosaic="VERPLATE")
 	if plate is not None:
 		skip.add (plate)
-	win, ctl = EEUI.Build ("ESC_MENU", skip=skip)
+	# ESC_MENU's buttons don't span EE's menu box: centred by their own box they miss the sockets
+	dx, dy = EEUI.MenuBoxOffset ("ESC_MENU")
+	win, ctl = EEUI.Build ("ESC_MENU", skip=skip, dx=dx, dy=dy)
 	win.AddAlias (pack, id)
 	_eeCtl[0] = ctl
 	return win

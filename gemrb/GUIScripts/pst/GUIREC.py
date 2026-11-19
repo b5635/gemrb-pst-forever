@@ -261,7 +261,7 @@ def LoadRecordsWindow (id, pack, pos, loader):
 	if loader is GUICommonWindows.ToggleWindow and GemRB.GetView ("WIN_STORE"):
 		return None
 	win, ctl = EEUI.Build ("CHARACTER", ids=EE_REC_IDS, override={13: "textarea", 28: "button", 7: "button", 6: "button"}, reverse=True,
-		dy=-EEUI.Load ("CHARACTER").get ("slot_dy", 0))   # the whole menu sits slot_dy too low on its plate
+		dx=EEUI.MenuBoxOffset ("CHARACTER")[0], dy=EEUI.MenuBoxOffset ("CHARACTER")[1])   # placed by EE's menu box
 	win.AddAlias (pack, id)
 	for i in (20, 21):
 		ctl[i].SetFont ("FONTDLG")     # EXOFONT only has capitals: names are mixed case

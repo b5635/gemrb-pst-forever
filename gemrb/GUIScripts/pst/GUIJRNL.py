@@ -89,7 +89,9 @@ def LoadJournalWindow (id, pack, pos, loader):
 	# moved right and narrowed by (x, w) to clear the rim and the scrollbar
 	PAD = {8: (20, 36), 12: (22, 40), 14: (30, 40), 11: (20, 36), 16: (22, 40)}
 	skip = {5, 6, 7, 15} | set (PAD)     # 5-7 the search box: no search here; 15 the bestiary picture
-	win, ctl = EEUI.Build ("JOURNAL", skip=skip, plate=EEUI.Alias ("JRNBG", "mos"), override={})
+	# centred by its controls' box the menu sits 36 px left and 12 px low of JRNBG's frames
+	mdx, mdy = EEUI.MenuBoxOffset ("JOURNAL")
+	win, ctl = EEUI.Build ("JOURNAL", skip=skip, plate=EEUI.Alias ("JRNBG", "mos"), override={}, dx=mdx, dy=mdy)
 	win.AddAlias (pack, id)
 	layout = {c["index"]: c for c in EEUI.Controls ("JOURNAL")}
 	for i, (dx, dw) in PAD.items ():
@@ -101,7 +103,7 @@ def LoadJournalWindow (id, pack, pos, loader):
 	LogText_ = ctl[12]
 	# the bestiary picture fills the left page (EE's label 15); 13 is the journal page's picture
 	x, y, w, h = layout[15]["frame"]
-	BeastImage = ctl[15] = win.CreateButton (16, x, y, w, h)
+	BeastImage = ctl[15] = win.CreateButton (16, x + mdx, y + mdy, w, h)
 	BeastImage.SetFlags (IE_GUI_BUTTON_PICTURE | IE_GUI_BUTTON_NO_IMAGE, OP_SET)
 	BeastImage.SetState (IE_GUI_BUTTON_LOCKED)
 

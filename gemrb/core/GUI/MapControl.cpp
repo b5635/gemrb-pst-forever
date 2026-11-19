@@ -155,7 +155,10 @@ Region MapControl::GetViewport() const
 /** Draws the Control on the Output Display */
 void MapControl::DrawSelf(const Region& rgn, const Region& /*clip*/)
 {
-	VideoDriver->DrawRect(rgn, ColorBlack, true);
+	// a fitted map sits on a screen plate: only the map is drawn, not a black box over the plate
+	if (!fitMap) {
+		VideoDriver->DrawRect(rgn, ColorBlack, true);
+	}
 
 	if (MyMap == nullptr) {
 		return;
@@ -171,6 +174,9 @@ void MapControl::DrawSelf(const Region& rgn, const Region& /*clip*/)
 		DrawFog(mosRgn);
 
 	Region vp = GetViewport();
+	if (fitMap) {
+		vp = vp.Intersect(mosRgn);
+	}
 	VideoDriver->DrawRect(vp, ColorGreen, false);
 
 	// Draw PCs' ellipses

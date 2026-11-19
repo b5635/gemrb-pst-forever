@@ -817,7 +817,7 @@ def UpdateSlot (pc, slot):
 			Button.OnPress (None)
 			#dropping is ok, because it will drop in the quick weapon slot and not the default weapon slot.
 		# pst shows the inventory-bag icon bg behind items
-		if GameCheck.IsPST ():
+		if GameCheck.IsPST () and not EESlots:
 			Button.SetSprites ("IVSLOT", 0, 0, 0, 0, 0)
 		elif GameCheck.IsIWD2 () and ControlID in [15, 16, 17]:
 			# perhaps we should do it for all, but so far only the quiver was identified as problematic
@@ -1073,6 +1073,8 @@ def AbilitiesItemWindow (slot_item, pc):
 
 # font for stack counts on item slots (the EE screens set their own)
 SlotFont = "NUMBER"
+# EE inventory slots keep their own art behind items (classic PST swaps in IVSLOT)
+EESlots = False
 
 def UpdateInventorySlot (pc, Button, Slot, Type, Equipped=False):
 	Button.SetFont (SlotFont)

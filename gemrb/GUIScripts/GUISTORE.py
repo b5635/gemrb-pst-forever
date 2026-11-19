@@ -184,6 +184,10 @@ EE_SELECTED = {'r': 255, 'g': 255, 'b': 255}   # label colour of a selected row
 EE_STORE_DY = {"STORE_BUYSELL": -52, "STORE_IDENTIFY": -97, "STORE_HEALING": -97, "STORE_ROOMS": -97}
 EE_CHOOSER_DY = 197
 
+def StoreDX (menu):
+	"""Store pages sit right of their plate when centred by their controls' box: EE's menu-box x."""
+	return EEUI.MenuBoxOffset (menu)[0]
+
 def EEStoreAvailable (menu):
 	return EEUI is not None and EEUI.Available (menu)
 
@@ -233,7 +237,7 @@ def EEPage (base, menu, build):
 	return load
 
 def BuildEEPage (menu, ids, skip, override = None):
-	win, ctl = EEUI.Build (menu, ids = ids, skip = skip, dy = EE_STORE_DY[menu], reverse = True, override = override)
+	win, ctl = EEUI.Build (menu, ids = ids, skip = skip, dy = EE_STORE_DY[menu], dx = StoreDX (menu), reverse = True, override = override)
 	for c in EEUI.Controls (menu):
 		if c.get ("text", {}).get ("literal") == "font" and c["index"] in ctl:
 			ctl[c["index"]].SetText ("")
@@ -292,6 +296,7 @@ def LoadRentWindow (base):
 		ButtonStyle (ctl[9])
 		lst = [c for c in EEUI.Controls ("STORE_ROOMS") if c["type"] == "list"][0]
 		x, y, w, h = lst["frame"]
+		x += StoreDX ("STORE_ROOMS")
 		y += EE_STORE_DY["STORE_ROOMS"]
 		rowh = lst["columns"][0]["controls"][0]["frame"][3]
 		for i in range (4):
@@ -336,7 +341,7 @@ def LoadShopWindow (base):
 		EEShop = True
 		CloseOldPage ()
 		ids = {0: 0x10000001, 1: 0x10000005, 2: 0x10000002, 4: 0x10000003, 5: 0x10000004, 9: 0, 10: 1, 13: 50}
-		win, ctl = EEUI.Build ("STORE_BUYSELL", ids = ids, skip = {6, 7, 8, 11, 12, 14, 15}, dy = EE_STORE_DY["STORE_BUYSELL"], reverse = True)
+		win, ctl = EEUI.Build ("STORE_BUYSELL", ids = ids, skip = {6, 7, 8, 11, 12, 14, 15}, dy = EE_STORE_DY["STORE_BUYSELL"], dx = StoreDX ("STORE_BUYSELL"), reverse = True)
 		win.AddAlias (pack, id)
 		ctl[0].SetText ("")
 		for i in (9, 10, 13):
@@ -366,6 +371,7 @@ def BuildRows (win, menu, lst, count, firstBtn, firstLbl, bar, key, obase):
 	"""count rows of an EE list template: a click catcher (obase + button id), the name/price text,
 	the item icon button and the row picture, plus the list's scroll bar. RowHooks[(key, i)]."""
 	x, y, w, h = lst["frame"]
+	x += StoreDX (menu)
 	y += EE_STORE_DY[menu]
 	tmpl = lst["columns"][0]["controls"]
 	rowh = tmpl[0]["frame"][3]

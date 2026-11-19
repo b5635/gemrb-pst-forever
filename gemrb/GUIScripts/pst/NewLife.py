@@ -83,6 +83,8 @@ def OpenLUStatsWindow(Type = 1, LevelDiff = 0):
 def BuildClassic():
 	win = GemRB.LoadWindow(0, "GUICG")
 	h = {"window": win}
+	if nameLabel is not None:
+		ctl[nameLabel].SetText (GemRB.GetPlayerName (1, 0))
 	h["statlabels"] = [win.GetControl(0x10000018 + i) for i in range(6)]
 	h["statbtn"] = [win.GetControl(i + 2) for i in range(6)]
 	for b in h["statbtn"]:
@@ -143,11 +145,15 @@ def BuildEE():
 		if c["type"] == "button" and (c.get ("text") or {}).get ("strref") == 4196:
 			extras["cancel"] = c["index"]
 	skip = set ()
-	for c in ctrls:   # the second title and the name label have no classic function
-		if c["index"] == 1 or c.get ("text_opts", {}).get ("lua") == "chargen.name":
+	nameLabel = None
+	for c in ctrls:   # the second title has no classic function; the name plaque shows the PC's name
+		if c["index"] == 1:
 			skip.add (c["index"])
+		elif c.get ("text_opts", {}).get ("lua") == "chargen.name":
+			nameLabel = c["index"]
 	override = {extras["text"]: "textarea", extras["photo"]: "button"}
-	win, ctl = EEUI.Build ("CHARGEN", skip=skip, override=override)
+	dx, dy = EEUI.MenuBoxOffset ("CHARGEN")   # placed by EE's menu box, as EE does
+	win, ctl = EEUI.Build ("CHARGEN", skip=skip, override=override, dx=dx, dy=dy)
 	h = {"window": win}
 	h["statlabels"] = [ctl[by_var["chargen.ability[%d].roll" % e]] for e in ee_of]
 	h["statbtn"] = [ctl[hover[e]] for e in ee_of]
