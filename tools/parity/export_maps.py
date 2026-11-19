@@ -191,7 +191,7 @@ known = {
 	"76A7EA": "creature action dispatcher", "44B099": "base action dispatcher", "453258": "base trigger dispatcher",
 	"778529": "creature trigger dispatcher", "41D7BC": "script compiler/parser", "4B5DCF": "creature death handling (Nameless One rules, Game_Over)",
 	"785E47": "MoveToObjectEx timeout", "4089DC": "JoinPartyEx flag helper", "4A56EB": "CGameEffect constructor (opcode, p1, p2, timing, ...)",
-	"5A4864": "object id -> object (GetShare)", "89BC79": "CString from literal", "463F03": "global variable lookup",
+	"5A4864": "object id -> object (GetShare)", "577E7C": "ProjectileRollToHit by object ids (caster id, target id, &crit, bonus, thac0)", "4128C8": "CAIObjectType::GetEnemyOf (hardcoded spells: enemies only)", "40F27B": "CAIObjectType::Set", "577BD4": "ProjectileRollToHit(caster, target, &crit, bonus, thac0) (EE CPlanescape::ProjectileRollToHit)", "7BC70E": "spell-hit notice caster->target (EE SendHitTrigger)", "89BC79": "CString from literal", "463F03": "global variable lookup",
 }
 for a, d in known.items(): role[a].insert(0, d)
 rows = [(a, osize.get(a), srcfile.get(a, ""), "; ".join(dict.fromkeys(role[a])), "y" if odec(a) else "n") for a in sorted(role)]

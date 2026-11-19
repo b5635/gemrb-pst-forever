@@ -26,7 +26,7 @@ SPL, and play their own animations and sounds. GemRB stands in for each one with
 |---|---|---|---|
 | S1 | **Abyssal Fury (SPWI912) does nothing.** Its SPL has no effects; everything lives in `CPsSpellAbyssalFury` (10 KB: picks creatures in range, moves them, applies a death effect and damage scaled by caster level, checks spell states). GemRB has no `fury.pro`; `gemprjtl.ids` lists `FURY`, but no file exists. | V | 1 |
 | S2 | **Blacksphere (SPWI401) has no projectile.** `bsphere.pro` is missing (the `BSPHERE` row in `gemprjtl.ids` has no file). EE builds `CPsSpellBlacksphere` (`BLACK03`, `BLACK05`, `S041CAST`). The SPL's own effects (helpless, visuals) may still land, but without the projectile's timing. | V | 1 |
-| S3 | **Power Word, Blind (SPWI805) is wrong and lands nothing in the suite.** Original logic (`CPsSpellPowerWordBlind::AIUpdate`): sort the creatures in range by current HP and spend a pool of 100 HP from the weakest up. Blindness (op 74) duration depends on the pool: ≤25 → 160–400 ticks, 26–50 → 80–200, >50 → 16–40. A pulse glow (op 9) is added and a hit trigger is sent. GemRB's `PWB` helper applies blindness with no HP pool, and the suite saw no change (in both turn-based and real-time). | V (logic) / S (why nothing lands) | 1 |
+| S3 | **Power Word, Blind (SPWI805) is wrong and lands nothing in the suite.** Original logic (`CPsSpellPowerWordBlind::AIUpdate`): sort the creatures in range by current HP and spend a pool of 100 HP from the weakest up. Blindness (op 74) duration depends on the pool: ≤25 → 160–400 s, 26–50 → 80–200 s, >50 → 16–40 s (seconds; corrected in round 3, see spell_expect.md). A pulse glow (op 9) is added and a hit trigger is sent. GemRB's `PWB` helper applies blindness with no HP pool, and the suite saw no change (in both turn-based and real-time). | V (logic) / S (why nothing lands) | 1 |
 | S4 | **Projectile spells skip the attack roll.** `CPlanescape::ProjectileRollToHit` rolls d20 + caster THAC0 + STR to-hit + DEX missile bonus against the target's AC. It is used by Ice Knife, Bladestorm, Elysium's Tears meteors and Vampiric Touch (`CPsSpellVampiricTouch`). GemRB applies these effects without an attack roll. | S | 1 |
 | S5 | **Traps SPWI001–SPWI010 have no projectile in GemRB.** All of them point at projectile 271, but `gemprjtl.ids` has no row 270. EE gave them projectiles 271 and 291–299 (`spwi001`…`spwi010` in `projectl.ids`); in the original they are `sub_559A5D` cases. Combined with `CPlanescape::DoesTrapHitTarget` (EE), trap spells may not fire or hit correctly. | S | 1 |
 | S6 | **Meteor Storm Bombardment's projectile is a placeholder.** `gemprjtl.ids` row 61 is `<stoned>`, and `mswarm` is GemRB's approximation. The original uses `CPsSpellMeteorStormBombardment` (`METEO02/05/06`, `S061BEAM`, `S061ROCK`). | V | 2 |
@@ -152,3 +152,40 @@ EE's effect classes have `ENGINE_MODE == 3` (PST) branches; each is PST behaviou
 | `JoinPartyEx(JoinGroup)` (19) | `sub_7A0423`: when non-zero it calls an extra party-group join (`sub_4089DC`) | ignored |
 | `PolymorphEx(..., RangeModes)` (146) | the second parameter is stored on the creature (byte +1991) | ignored |
 | `RunAwayFromEx(NoAttacks)` (29), `DeactivateEx(RenderMode)` (125), `FullHealEx` (305), `StartCutSceneEx` (310) | not found yet in the handlers (305/310 go to the base switch) | — |
+
+# Round 3 (2026-11-18): every hardcoded spell read in the original (WP1)
+
+Full per-spell detail: [spell_expect.md](spell_expect.md) (human) and [spell_expect.json](spell_expect.json) (suite).
+Address maps: [maps/projectiles.tsv](maps/projectiles.tsv). Corrections to round 1: S3's durations are seconds, not
+ticks; S4 is now **V** (the original's roll is `sub_577BD4` / `sub_577E7C`, used by Ice Knife, Blade Storm, Elysium's
+Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds a plain projectile).
+
+## 10. New spell findings
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| S14 | **Howl of Pandemonium applies neither stun nor confusion.** The original creates op 45 stun (targets of level ≤ 2) and op 128 confusion (level 3 up to the caster's), save vs spell, 50–300 s, in code. GemRB's `hopand.pro` has no helper: only the SPL's visuals and the caster's missile protection. | V | 1 |
+| S15 | **Globe of Invulnerability lasts 3 s and covers only the caster.** The original globe lives 5 s per level and every 51 ticks re-applies the SPL's 3-second protections to everyone within 120. | V | 1 |
+| S16 | **Power Word, Kill has no 120-HP limit and hits an area.** The original checks the single target's HP at launch (> 120 → fizzle). GemRB's `pwkill.pro` is a radius-15 area with no HP check. | V | 1 |
+| S17 | **Power Word, Blind's blindness has duration 0 in GemRB** (`PWB.spl` op 74 timing 0, duration 0): this is why the suite sees nothing. | V | 1 |
+| S18 | **Hold Undead holds one creature, 50 s, no save.** Original: 1–3 undead, total HD ≤ caster level, 5 × level + 5–20 s, save only for HD ≥ 3. | V | 1 |
+| S19 | **Pacify: fixed 50 s, no target cap, no level limit, undead not excluded, no "already pacified" bit.** Original: 2–8 enemies of level ≤ 6, not undead, 5 × level + 40 s, op 186 sets status 0x400 to stop repeats. | V | 1 |
+| S20 | **Stygian Ice Storm lacks its confusion** (op 128, save vs spell, 10–35 s per target). | V | 1 |
+| S21 | **Fire and Ice bursts once.** The original bursts twice: 3d6 magic fire, then 3d6 magic cold, radius 360, the caster excluded. | V | 2 |
+| S22 | **Elysium's Fires hits one creature once.** Original: 8 fireballs at fixed offsets, radius 240 each, enemies only; a creature near the centre can take several. | V | 1 |
+| S23 | **Elysium's Tears: one hit instead of min(level, 10) meteors**, each with its own attack roll and a 1-fire splash in 80. | V | 1 |
+| S24 | **Shroud of Shadows: 150 s with a saving throw** against the caster's own buff, stealth 0 for 0 s. Original: no save, 10–20 s, stealth +10, AC +3, translucency, overlay 5. | V | 2 |
+| S25 | **Ax of Torment's high-level table is missing** (level > 8: 5d8 fire, 6d8 cold, teleport, petrification, 8d8). GemRB's hold lasts 100 s instead of 3–10 s. | V | 2 |
+| S26 | **Call Lightning: 2d8, radius 10, no save** instead of (level + 2)d8, radius 120, save vs spell. | V | 1 |
+| S27 | **Ignus' Fury adds a flat +16** instead of + caster level. | V | 2 |
+| S28 | **Swarm Curse doesn't spread** (original: radius 36 × min(level, 13), 1d4 + level/3, save vs spell). | V | 2 |
+| S29 | **Blade Storm: 14d8 with a save** instead of (level)d8 with an attack roll vs THAC0 11 and a 2d10 critical. | V | 1 |
+| S30 | **Tasha's Laughter hits women, undead and only enemies.** Original: males, not undead, any side; a creature with INT ≤ 4 ends the spell for the rest (a quirk in both games). | V | 2 |
+| S31 | **Minor Embalming works on anyone.** Original: only undead or creatures with the immortal flag (+3342), else fizzle. GemRB also rejects op 138 sequence 27. | V | 2 |
+| S32 | **Multi-fire spells give no extra casts.** Ice Knife (+min(4, (L−4)/2+1)) and Force Missiles / Elemental Strike (+min(6, (L−7)/2)) set a counter on the caster for extra clicks (`CPlanescape::MultiFireSpell`). | V (EE) / S (orig) | 2 |
+| S33 | **Force Missiles have no level-damage splash** (72 radius, save vs spell negates), and no level-7 minimum header. Ice Knife has no 1d4 + THAC0 −2 splash and no level-3 minimum. | V | 2 |
+| S34 | **Strength spells reverse in Carceri.** `sub_7BD15D`: in AR0900–0902, AR0904, AR3015, AR3016 the roll is subtracted (with a `CARCERSK` check). Extends R1. | V | 2 |
+| S35 | **Radius and filter mismatches:** Celestial Host 1000 vs 400 and no fizzle when no enemy; Rune of Torment 600 vs 400; Meteor Storm 256 vs 400; Desert Hell 2160 vs 400. | V | 2 |
+| S36 | **Movies the original plays and GemRB doesn't:** RUNE (Rune of Torment), METEOR (Meteor Storm), CONFLAG (Conflagration). DRAGON and CANNON are already played by GemRB helpers. | V | 3 |
+| S37 | **Ball Lightning (SPWI301) does nothing in the original either** (projectile 1, no effects). | P | — |
+| S38 | **Chain Lightning Storm, Cloudkill, Mechanus' Cannon, Death Bolt, Missile of Patience damage:** match. | P | — |

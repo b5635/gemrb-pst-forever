@@ -1,0 +1,639 @@
+{
+ "_schema": "targets: radius (pixels), filter (enemies|anyone|male_not_undead|undead), cap; roll: none|attack(thac0)|save(type); effects: code-made effects (op, dice, bonus, damage type, duration_s); see spell_expect.md for the full text",
+ "SPWI912": {
+  "targets": {
+   "single": true
+  },
+  "roll": "save_vs_death",
+  "effects": [
+   {
+    "op": 13,
+    "p2": 8,
+    "on": "fail"
+   },
+   {
+    "op": 12,
+    "pool": [
+     5,
+     50
+    ],
+    "per_hit": [
+     1,
+     5
+    ],
+    "type": "magic",
+    "on": "save"
+   }
+  ],
+  "gemrb": "missing projectile"
+ },
+ "SPWI805": {
+  "targets": {
+   "radius": 180,
+   "filter": "anyone",
+   "hp_below": 100,
+   "sort": "hp_asc",
+   "hp_pool": 100
+  },
+  "roll": "none",
+  "effects": [
+   {
+    "op": 74,
+    "duration_s_by_pool": [
+     [
+      0,
+      25,
+      160,
+      400
+     ],
+     [
+      26,
+      50,
+      80,
+      200
+     ],
+     [
+      51,
+      100,
+      16,
+      40
+     ]
+    ]
+   },
+   {
+    "op": 51,
+    "p1": 1077936128,
+    "same_duration": true
+   }
+  ]
+ },
+ "SPWI909": {
+  "targets": {
+   "single": true,
+   "hp_max": 120,
+   "checked_at": "launch"
+  },
+  "roll": "none",
+  "effects": [],
+  "fizzle_if": "target HP > 120"
+ },
+ "SPWI207": {
+  "targets": {
+   "single": true
+  },
+  "roll": "attack(caster_thac0)",
+  "min_level": 3,
+  "splash": {
+   "radius": 60,
+   "effects": [
+    {
+     "op": 12,
+     "dice": "1d4",
+     "type": "magic_cold",
+     "save": "spell"
+    },
+    {
+     "op": 54,
+     "p1": -2,
+     "save": "spell",
+     "duration_s": "3*level"
+    }
+   ]
+  },
+  "extra_casts": "min(4,(level-4)/2+1)"
+ },
+ "SPWI702": {
+  "targets": {
+   "radius": 320,
+   "filter": "enemies",
+   "sort": "distance"
+  },
+  "roll": "attack(thac0=11)",
+  "effects": [
+   {
+    "op": 12,
+    "dice": "{level}d8",
+    "type": "magic_cold",
+    "save": null
+   },
+   {
+    "op": 12,
+    "dice": "2d10",
+    "type": "magic_cold",
+    "on": "critical"
+   }
+  ]
+ },
+ "SPWI901": {
+  "targets": {
+   "radius": 400,
+   "filter": "enemies"
+  },
+  "roll": "none",
+  "effects": "SPL only (40d3 magic)",
+  "fizzle_if": "no enemy within 400",
+  "movie": "DRAGON"
+ },
+ "SPWI914": {
+  "targets": {
+   "radius": 400,
+   "filter": "enemies"
+  },
+  "roll": "none",
+  "effects": "SPL only (14d6+16 magic)",
+  "movie": "RUNE"
+ },
+ "SPWI401": {
+  "targets": {
+   "single": true
+  },
+  "roll": "SPL save on op 39",
+  "effects": [
+   {
+    "op": 12,
+    "p1": "level",
+    "dice": "1d4",
+    "type": "magic",
+    "timing": "delayed 15"
+   }
+  ],
+  "gemrb": "missing projectile"
+ },
+ "SPWI113": {
+  "targets": {
+   "single": true
+  },
+  "roll": "none",
+  "effects": "SPL by level",
+  "rule": "only one level>10 missile at a time"
+ },
+ "SPWI802": {
+  "targets": {
+   "radius": 400,
+   "filter": "enemies"
+  },
+  "roll": "SPL save",
+  "effects": "SPL only (10d12)",
+  "movie": "METEOR"
+ },
+ "SPWI705": {
+  "targets": {
+   "radius": 400,
+   "filter": "enemies"
+  },
+  "roll": "save",
+  "effects": [
+   {
+    "op": 128,
+    "save": "spell",
+    "duration_s": [
+     10,
+     35
+    ],
+    "power": 7
+   }
+  ]
+ },
+ "SPWI603": {
+  "targets": {
+   "radius": 400,
+   "filter": "anyone"
+  },
+  "roll": "save",
+  "effects": [
+   {
+    "op": 45,
+    "save": "spell",
+    "duration_s": [
+     50,
+     300
+    ],
+    "if_level": "<=2"
+   },
+   {
+    "op": 128,
+    "save": "spell",
+    "duration_s": [
+     50,
+     300
+    ],
+    "if_level": "3..caster_level-1"
+   }
+  ]
+ },
+ "SPWI108": {
+  "targets": {
+   "filter": "enemies_not_undead",
+   "cap": [
+    2,
+    8
+   ],
+   "level_max": 6
+  },
+  "roll": "save",
+  "effects": [
+   {
+    "op": 109,
+    "p2": 2,
+    "save": "spell",
+    "duration_s": "5*level+40"
+   },
+   {
+    "op": 8,
+    "p1": 3355443200
+   },
+   {
+    "op": 186,
+    "p1": 1,
+    "p2": 1024
+   }
+  ]
+ },
+ "SPWI307": {
+  "targets": {
+   "radius": 2160,
+   "filter": "undead",
+   "cap": [
+    1,
+    3
+   ],
+   "hd_pool": "level",
+   "sort": "distance"
+  },
+  "roll": "save if HD>=3",
+  "effects": [
+   {
+    "op": 109,
+    "p1": 4,
+    "p2": 3,
+    "duration_s": "5*level+[5,20]"
+   }
+  ]
+ },
+ "SPWI506": {
+  "targets": {
+   "radius": 360,
+   "filter": "anyone_but_caster",
+   "bursts": 2
+  },
+  "roll": "save",
+  "effects": [
+   {
+    "op": 12,
+    "dice": "3d6",
+    "type": "magic_fire",
+    "save": "spell",
+    "burst": 1
+   },
+   {
+    "op": 12,
+    "dice": "3d6",
+    "type": "magic_cold",
+    "save": "spell",
+    "burst": 2
+   }
+  ]
+ },
+ "SPWI804": {
+  "targets": {
+   "radius": 400,
+   "filter": "enemies"
+  },
+  "roll": "save",
+  "effects": [
+   {
+    "op": 12,
+    "dice": "10d10",
+    "p1": "level",
+    "type": "fire",
+    "save": "spell"
+   }
+  ]
+ },
+ "SPWI212": {
+  "targets": {
+   "spread_radius": "36*min(level,13)"
+  },
+  "roll": "save",
+  "effects": [
+   {
+    "op": 12,
+    "dice": "1d4",
+    "p1": "level/3",
+    "type": "magic",
+    "save": "spell"
+   }
+  ]
+ },
+ "SPWI604": {
+  "targets": {
+   "radius": 400,
+   "filter": "enemies",
+   "sort": "distance"
+  },
+  "roll": "SPL save",
+  "effects": "SPL only (7d10 elec)",
+  "fizzle_if": "no enemy"
+ },
+ "SPWI803": {
+  "targets": {
+   "single": true
+  },
+  "roll": "SPL save vs death",
+  "effects": "SPL only"
+ },
+ "SPWI505": {
+  "targets": {
+   "radius": 400,
+   "filter": "enemies"
+  },
+  "roll": "SPL saves",
+  "effects": "SPL only"
+ },
+ "SPWI902": {
+  "targets": {
+   "single": true
+  },
+  "roll": "none",
+  "effects": [
+   {
+    "op": 66,
+    "p1": 128
+   }
+  ],
+  "movie": "CONFLAG"
+ },
+ "SPWI905": {
+  "targets": {
+   "fireballs": 8,
+   "radius_each": 240,
+   "filter": "enemies"
+  },
+  "roll": "SPL save per fireball",
+  "effects": "SPL (5d4 fire) per fireball"
+ },
+ "SPWI305": {
+  "targets": {
+   "single": true,
+   "meteors": "min(level,10)"
+  },
+  "roll": "attack(caster_thac0) per meteor",
+  "splash": {
+   "radius": 80,
+   "effects": [
+    {
+     "op": 12,
+     "p1": 1,
+     "type": "fire"
+    }
+   ]
+  }
+ },
+ "SPWI501": {
+  "targets": {
+   "radius": 400,
+   "filter": "enemies",
+   "sort": "distance"
+  },
+  "roll": "SPL saves",
+  "effects": "SPL only"
+ },
+ "SPWI309": {
+  "targets": {
+   "single": true
+  },
+  "roll": "none (original); EE: touch attack, undead excluded",
+  "effects": "SPL only"
+ },
+ "SPWI308": {
+  "targets": {
+   "radius": 600,
+   "filter": "male_not_undead",
+   "stop_at": "first creature with INT<=4"
+  },
+  "roll": "SPL saves",
+  "effects": "SPL only"
+ },
+ "SPWI408": {
+  "targets": {
+   "single": true
+  },
+  "roll": "none",
+  "effects": [
+   {
+    "op": 0,
+    "p1": 3
+   },
+   {
+    "op": 59,
+    "p1": 10
+   },
+   {
+    "op": 66,
+    "p1": 128
+   },
+   {
+    "op": 201,
+    "p2": 5
+   }
+  ],
+  "duration_s": [
+   10,
+   13,
+   17,
+   20
+  ]
+ },
+ "SPWI602": {
+  "targets": {
+   "radius": 120,
+   "filter": "anyone",
+   "refresh_ticks": 51
+  },
+  "roll": "none",
+  "lifetime_ticks": "75*level",
+  "effects": "SPL (3 s protections) refreshed"
+ },
+ "SPWI103": {
+  "targets": {
+   "single": true,
+   "must_be": "undead or immortal"
+  },
+  "roll": "none",
+  "effects": "SPL only",
+  "fizzle_if": "living mortal target"
+ },
+ "SPWI211": {
+  "targets": {
+   "single": true
+  },
+  "roll": "none",
+  "effects": [
+   {
+    "op": 44,
+    "p2": 1,
+    "add": {
+     "mage": "1d4",
+     "cleric_thief": "1d6",
+     "other": "1d8"
+    },
+    "clamp": [
+     1,
+     18
+    ],
+    "overflow": "op97 x10 for other"
+   }
+  ],
+  "duration_s": "300*level",
+  "carceri": "reversed"
+ },
+ "SPWI219": {
+  "targets": {
+   "single": true
+  },
+  "roll": "none",
+  "effects": [
+   {
+    "op": 44,
+    "p2": 1,
+    "add": {
+     "mage": "1d4+1",
+     "cleric_thief": "1d6+1",
+     "other": "1d8+1"
+    }
+   }
+  ],
+  "duration_s": "150*level",
+  "carceri": "reversed"
+ },
+ "SPWI406": {
+  "targets": {
+   "single": true
+  },
+  "roll": "none",
+  "effects": [
+   {
+    "op": 44,
+    "p2": 1,
+    "add": {
+     "mage": "1d4+4",
+     "cleric_thief": "1d6+4",
+     "other": "1d8+4"
+    },
+    "ceilings": [
+     21,
+     23,
+     25
+    ]
+   },
+   {
+    "op": 93,
+    "p1": 100,
+    "timing": "delayed 510*[1,3] ticks"
+   }
+  ],
+  "duration_s": "5*level",
+  "carceri": "reversed"
+ },
+ "SPWI405": {
+  "targets": {
+   "single": true
+  },
+  "roll": "none",
+  "min_level": 7,
+  "splash": {
+   "radius": 72,
+   "effects": [
+    {
+     "op": 12,
+     "p1": "level",
+     "type": "magic",
+     "save": "spell"
+    }
+   ]
+  },
+  "extra_casts": "min(6,(level-7)/2)"
+ },
+ "SPWI410": {
+  "targets": {
+   "single": true
+  },
+  "roll": "none",
+  "min_level": 7,
+  "splash": {
+   "radius": 72,
+   "effects": [
+    {
+     "op": 12,
+     "p1": "level",
+     "type": "magic",
+     "save": "spell"
+    }
+   ]
+  },
+  "extra_casts": "min(6,(level-7)/2)"
+ },
+ "SPWI301": {
+  "note": "does nothing in the original either (projectile 1, no effects)"
+ },
+ "SPWI310": {
+  "targets": {
+   "single": true
+  },
+  "roll": "save",
+  "effects": {
+   "level<=8": [
+    "1d8 missile",
+    "2d8 missile",
+    "hold 3/6/10 s"
+   ],
+   "level>8": [
+    "5d8 fire",
+    "6d8 cold",
+    "teleport +-300",
+    "petrify (save vs death)",
+    "8d8 missile"
+   ]
+  }
+ },
+ "SPWI807": {
+  "targets": {
+   "single": true
+  },
+  "roll": "none",
+  "effects": "SPL only (20d4+10 elec)",
+  "movie": "CANNON"
+ },
+ "SPPR204": {
+  "targets": {
+   "single": true
+  },
+  "attacks": "(level+2)/3",
+  "roll": "attack(caster_thac0 + enchantment)",
+  "enchantment": "min(3,level/6+1)",
+  "effects": [
+   {
+    "op": 12,
+    "dice": "2d4",
+    "p1": "enchantment+2",
+    "type": "crushing",
+    "per": "hit"
+   }
+  ]
+ },
+ "SPPR301": {
+  "targets": {
+   "radius": 120,
+   "filter": "anyone"
+  },
+  "roll": "save",
+  "effects": [
+   {
+    "op": 12,
+    "dice": "{level+2}d8",
+    "type": "electricity",
+    "save": "spell"
+   }
+  ]
+ }
+}

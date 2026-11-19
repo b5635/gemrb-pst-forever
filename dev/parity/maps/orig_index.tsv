@@ -1,7 +1,8 @@
 # Original Torment.exe functions whose role we know. Decompiled bodies: .re/orig/dump/dec/<addr>.c (git-ignored)
 addr	size	assert_source	role	decompiled
 4089DC	81		JoinPartyEx flag helper	n
-40F27B	28		action 152 ChangeAIType (sprite case 77)	n
+40F27B	28		CAIObjectType::Set; action 152 ChangeAIType (sprite case 77)	n
+4128C8	187		CAIObjectType::GetEnemyOf (hardcoded spells: enemies only)	n
 41D7BC	55574		script compiler/parser	y
 43A252	27		action 137 StartDialog (sprite case 67)	n
 43A3C1	39		action 108 EscapeArea (sprite case 57)	n
@@ -225,6 +226,8 @@ addr	size	assert_source	role	decompiled
 56B042	1428	CProjectile	projectile 237 CPsSpellHoldUndead AIUpdate; projectile 240 CPsSpellTashasLaughter AIUpdate	y
 57100A	285		projectile 267  ctor	n
 572024	338		projectile 243  ctor; uses resrefs of CPsSpellCloudKill; uses resrefs of CPsSpellTashasLaughter	n
+577BD4	680		ProjectileRollToHit(caster, target, &crit, bonus, thac0) (EE CPlanescape::ProjectileRollToHit)	y
+577E7C	189		ProjectileRollToHit by object ids (caster id, target id, &crit, bonus, thac0)	n
 578020	480		projectile 288  ctor	n
 578200	480		projectile 289 CPsSpellEmbalming ctor	y
 5792F0	37		projectile 226  ctor; projectile 263 CPsSpellVampiricTouch ctor	n
@@ -258,7 +261,7 @@ addr	size	assert_source	role	decompiled
 6B1129	365		projectile 221 CPsSpellIceKnife ctor; uses resrefs of CPsSpellIceKnife	y
 6B180F	355		projectile 221 CPsSpellIceKnife Fire	y
 6B1972	1823		projectile 221 CPsSpellIceKnife AIUpdate; uses resrefs of CPsSpellIceKnife	y
-6B23B5	1392		uses resrefs of CPsSpellIceKnife	n
+6B23B5	1392		uses resrefs of CPsSpellIceKnife	y
 6B2925	154		projectile 222 CPsSpellPacify ctor	y
 6B29BF	480		projectile 222 CPsSpellPacify Fire	y
 6B2B9F	1933		projectile 222 CPsSpellPacify AIUpdate; uses resrefs of CPsSpellPacify	y
@@ -417,6 +420,7 @@ addr	size	assert_source	role	decompiled
 7AF6DE	190		action 147 RemoveSpell (sprite case 73)	n
 7B1EE7	358		action 149 EquipMostDamagingMelee (sprite case 75)	n
 7B328C	64		action 203 IncrementKillStat (sprite case 86)	n
+7BC70E	1030		spell-hit notice caster->target (EE SendHitTrigger)	y
 7CD354	9174		uses resrefs of CPsSpellAbyssalFury; uses resrefs of CPsSpellForceMissile; uses resrefs of CPsSpellHowlOfPandemonium; uses resrefs of CPsSpellPowerWordBlind; uses resrefs of CPsSpellStygianIceStorm	n
 81FD5A	148		action 6 ? (sprite case 4); action 201 SetGlobalTint (sprite case 85)	n
 89BC79	82		CString from literal	n
