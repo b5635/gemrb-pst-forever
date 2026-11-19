@@ -1,6 +1,6 @@
 # WP2: effect opcodes, original vs GemRB
 
-Progress: 82, 100, 138, 146–148, 186–196, 201, 203–211 done. Next: 12, 13, then 0, 54, 73, 17, 39, 45, 109, 128 by use count. Original handler = ApplyEffect (vtable slot 2,
+Progress: 12, 82, 100, 138, 146–148, 186–196, 201, 203–211 done. Next: 13, then 0, 54, 73, 17, 39, 45, 109, 128 by use count. Original handler = ApplyEffect (vtable slot 2,
 `dev/parity/maps/opcodes.tsv`), decompiled at `.re/orig/dump/dec/<addr>.c`. Effect fields: p1 `+8`, p2 `+12`, timing
 `+16`, duration `+18`, resource `+24`. Creature derived stats start at `+3204` (state bits); `+3220` THAC0,
 `+3222`–`+3226` the five saving throws, `+3245` to-hit bonus, `+3883` luck. Statuses as in AGENT_GUIDE section 4.1.
@@ -283,3 +283,83 @@ header and equipped effects, not SPL casting effects: those were checked by hand
 - **Difference:** Ball Lightning never splits; Adder's Kiss hits once instead of level / 3 + 1 times (level 9: 4 hits,
   ~20 total, vs one, ~5). The factory's delay unit (`sub_4A56EB`, 75 × i) isn't settled: 5 s steps if it's ticks.
 - **Corrects S37:** Ball Lightning works in the original, through this casting effect.
+
+### E-012 Damage, in full
+`sub_4B245B` (1,262 lines). Read in order of what it does; E-012a (luck on dice), E-208 (Iron Fist) and R1 (Carceri) are
+not repeated. Creature fields learnt here: **+21266** word = Cloak of Warding / Infernal Shield absorb pool (set by op 201
+case 0/14 to 3–12 + L), **+21268** Shield flag, **+21269** Black Barbed Shield flag, **+21270** byte = reflections left
+(Pain Mirror 1, Balance in All Things L / 5), **+21271** Guardian Mantle flag, **+21272** word = Armor pool (L + 8).
+All data uses mode 0 (172 uses: fire 51, magic 50, piercing 19, electricity 15, acid 9, crushing 9, cold 6, …).
+
+#### E-012b Damage on a petrified or frozen creature kills it
+- **Status:** V   **Severity:** 2
+- **Original:** first thing after the immunity checks: base state 0x80 (`STONE_DEATH`) → applies op 13 Death p2 0x40;
+  state 0x40 (`FROZEN_DEATH`) → op 13 p2 0x80; the damage itself is dropped.
+- **GemRB:** `Actor.cpp` `Actor::Damage`: the "instant death if petrified or frozen" branch needs `CanGetChunked`, which
+  returns false for every PST creature (`Actor.cpp:4382`). The damage is applied normally.
+- **Difference:** a petrified creature (Ax of Torment's level > 8 outcome, op 134) shatters at the next damage effect in
+  the original and survives in GemRB.
+
+#### E-012c Plane bonuses by spell (extends R1)
+- **Status:** V   **Severity:** 2
+- **Original:** for the effect's source spell: in **Carceri**, Chromatic Orb (`SPWI101`), Fist of Iron (`SPWI104`) and
+  Elysium's Tears (`SPWI305`) roll **maximum dice**; Deathbolt (`SPWI803`) gets **+1**. In **Baator** Deathbolt gets
+  **+6**; on the **Negative Material Plane** Deathbolt gets **+1**. `MAGIC02` plays when any bonus applied.
+- **GemRB:** none (R1).
+
+#### E-012d Damage absorbers and Guardian Mantle
+- **Status:** V (original) / ? (GemRB)   **Severity:** 2
+- **Original:** before resistances, unless the damage was cancelled:
+  - **Guardian Mantle** (+21271): unless the damage type is in 0x6400000, the **source** makes a saving throw at −4
+    (an op 0 effect's save check with fresh d20 rolls); depending on the result the **whole damage is ignored**.
+    The direction of the check (save succeeds → blocked or the reverse) still needs one look at the save method.
+  - **Cloak of Warding / Infernal Shield pool** (+21266): absorbs up to 127 per hit; the damage is reduced by the pool.
+  - **Armor pool** (+21272): counted down by min(damage, 127) but **does not reduce effect damage** (it only absorbs
+    elsewhere, presumably weapon hits).
+  - `S034DMG2` plays on the target when Shield, Black Barbed Shield, Guardian Mantle or a pool is active.
+- **GemRB:** Cloak of Warding is a stoneskin count (`fx_overlay` case 0, `IE_STONESKINS`); Guardian Mantle is
+  `IMM_GUARDIAN` immunity; whether either touches effect damage in `Actor::Damage` wasn't traced.
+
+#### E-012e Pain Mirror reflects to every enemy around the target (resolves R4)
+- **Status:** V   **Severity:** 2
+- **Original:** while the target's reflection counter (+21270) is above 0 and it has an attacker: plays `S013SMSH` and
+  `PAINM05`, and **every enemy of the target within 120** (`sub_4128C8` + `sub_47699E`) takes op 12 **magic** damage
+  equal to the damage taken (**× 2 in Carceri**). The counter drops by one per damage event; at 0 the op 9 glow
+  (0x30000C) is removed. Pain Mirror sets 1 (one reflection), Balance in All Things L / 5. The target still takes its
+  damage.
+- **GemRB:** `PSTOpcodes.cpp:1000` `fx_overlay` case 3/16: `DamageLastHitter(target->LastDamage, LastDamageType)`: only the
+  **last hitter**, the **original damage type**, no count limit beyond the effect's life, no Carceri doubling.
+- **Difference:** a fireball reflected by Pain Mirror: original hits all enemies within 120 once with magic damage;
+  GemRB hits the last attacker with fire damage (fire resistance applies), possibly several times.
+
+#### E-012f Difficulty scaling: party members, not enemy sources
+- **Status:** V   **Severity:** 2
+- **Original:** mode 0 only, after resistances: **if the target is a party member**, damage += damage × difficulty % / 100
+  (one of two game-option percentages, `+9122` / `+9126` of the options object, chosen by a flag at `+3586`). Then, for
+  a party member with **max HP < 14**, damage above max HP is cut to **max HP − 1** (a low-level character can't be
+  killed outright by one big effect).
+- **GemRB:** `Actor.cpp` `Actor::Damage`: damage += difficulty % **when the hitter's EA is above GOODCUTOFF** (enemy
+  source), whatever the target; no low-HP rule.
+- **Difference:** an enemy's spell hitting another enemy is scaled in GemRB, not in the original; a trap/environment
+  damage with no hostile source hits the party unscaled in GemRB; a level-1 Nameless One (max HP < 14) can be one-shot
+  in GemRB.
+
+#### E-012g Modes other than 0
+- **Status:** V   **Severity:** 3 (no PST data uses them; only matters for ports)
+- **Original:** p2 low word **0** subtract, **1** set HP to the amount (capped at max), **2** HP = **current HP × p1 / 100**,
+  **4** lose p1 % of **max** HP, 3 and others: nothing. Resistances and difficulty apply to mode 0 only.
+- **GemRB:** `FXOpcodes.cpp:1377` `modtype = p2 & 3`: 1 sets (no cap), **2 loses p1 % of max HP** (the original's mode
+  4), mode 4 → 0 (flat p1 damage). Resistance applies in every mode.
+
+#### E-012h Smaller points
+- **Status:** P/S   **Severity:** 3
+- Effect byte +6 == 255 halves the damage before anything else (meaning of the byte not identified).
+- Resistances: percent per damage type from derived bytes (+3865 … +3875, +3973, +3974), integer truncation; same idea as
+  GemRB's `ModifyDamage`. Not compared value by value.
+- Death from effect damage is always op 13 **p2 4 (normal death)**, whatever the damage type; GemRB never chunks in PST
+  (`CanGetChunked`). P.
+- Non-poison damage has a 1-in-10 chance of a "hurt" sound-set line (`off_8DC96C`, entry 12); floating damage numbers
+  (party colour differs); the creature plays the damage sequence (4) unless its current sequence is in a skip list
+  (4, 6, 9, 10, 12–14, 29–31, 35). Presentation.
+- **Mirror images:** GemRB lets an image absorb effect damage (`Actor::Damage`, unless `SF_BYPASS_MIRROR_IMAGE`); no
+  mirror-image check was seen in the original op 12 (S).
