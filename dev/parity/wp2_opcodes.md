@@ -1,6 +1,6 @@
 # WP2: effect opcodes, original vs GemRB
 
-Progress: 12, 82, 100, 138, 146–148, 186–196, 201, 203–211 done. Next: 13, then 0, 54, 73, 17, 39, 45, 109, 128 by use count. Original handler = ApplyEffect (vtable slot 2,
+Progress: 6, 12, 13, 39, 42, 44, 45, 73, 82, 98, 100, 120, 128, 129, 138, 146–148, 186–196, 201, 203–211 done. Next: the rest by use count (dev/parity/maps/opcodes.tsv). Original handler = ApplyEffect (vtable slot 2,
 `dev/parity/maps/opcodes.tsv`), decompiled at `.re/orig/dump/dec/<addr>.c`. Effect fields: p1 `+8`, p2 `+12`, timing
 `+16`, duration `+18`, resource `+24`. Creature derived stats start at `+3204` (state bits); `+3220` THAC0,
 `+3222`–`+3226` the five saving throws, `+3245` to-hit bonus, `+3883` luck. Statuses as in AGENT_GUIDE section 4.1.
@@ -10,7 +10,7 @@ Progress: 12, 82, 100, 138, 146–148, 186–196, 201, 203–211 done. Next: 13,
 ### E-203 Curse makes saving throws *better* in GemRB
 - **Status:** V   **Severity:** 2
 - **Original:** `sub_4D6BAF`. Once (if derived state bit 0x10 isn't set yet): set bit 0x10, **add p1 to THAC0** (`+3220`)
-  and to **all five saving-throw values** (`+3222`–`+3226`), and subtract p1 from derived byte `+3281` (unidentified).
+  and to **all five saving-throw values** (`+3222`–`+3226`), and subtract p1 from derived byte `+3281` (the damage bonus, see E-073: curse is also −p1 damage).
   Higher THAC0 and save values are worse: the curse is a penalty to both.
 - **GemRB:** `PSTOpcodes.cpp:1068` `fx_curse`: to-hit −p1 (right), but `STAT_SUB(IE_SAVEVS*, p1)`. GemRB's AD&D save
   stats are the number to roll (`Actor.cpp:3302` comment and `GetSavingThrow`), so subtracting **lowers the target**:
@@ -363,3 +363,125 @@ All data uses mode 0 (172 uses: fire 51, magic 50, piercing 19, electricity 15, 
   (4, 6, 9, 10, 12–14, 29–31, 35). Presentation.
 - **Mirror images:** GemRB lets an image absorb effect damage (`Actor::Damage`, unless `SF_BYPASS_MIRROR_IMAGE`); no
   mirror-image check was seen in the original op 12 (S).
+
+---
+
+### E-013 Death: no level bands, p2 ignored, companion game-over rules
+- **Status:** V (code) / S (game)   **Severity:** 2 (1 for the game-over part, see R2)
+- **Original:** `sub_4B5DCF`. Skips the target if its animation object says it is already dead (vtable slot +120) or
+  creature flag `+20958` is set. Otherwise: already-dead state (0x800) only plays sequence 6. Parameters are **never
+  read**: p1 and p2 are ignored, there is **no level band and no HP threshold** in this effect (the "bands" of Cloudkill
+  are in the spell itself, SPWI501 header levels, not in op 13). The save (SPWI501/803 = spell save 0x4, SPWI909 none)
+  is handled before the handler, as for any effect.
+  Steps: companion game-over rules (below); clear two state bits on the creature (`+1288` 0x80/0x40);
+  remove the creature's own **op 109 (Hold) and op 162** effects; mark everything in its list at `+9624` as done unless its
+  type is 5 or 9; clear derived/base bits 0x4000 and 0x80000; **HP = 0**, set base and derived state **0x800 (dead)**; play
+  sequence 6; select the next party leader if the dead one was the leader; remove it from the party formation; send the
+  death event to scripts. The effect is not kept (returns done).
+- **Companion rules** (name table `off_9607A0`/`dword_9607C4`, matched on the script name at `+1172`): NAMELESS 0,
+  ANNAH 1, IGNUS 2, GRACE 3, NORDOM 4, VHAIL 5, MORTE 6, DAKKON 7, others −1.
+  - Any companion (not 0, not −1): `PM_KILLED` = 1 when a check on the current area/object holds (`sub_40F297`, S).
+  - **ANNAH (1): if `Pharod_Dead` == 1 and `Know_Painted_Door` < 2, `Game_Over` = 3.**
+  - **NAMELESS (0):** the game's death UI is raised (death window); in AR1200/AR1201 `Death_Fortress` += 1 and
+    `Game_Over` = 4 once it exceeds `Fortress_Death_Counter`; in AR1203/AR1204 `Game_Over` = 4 at once.
+- **GemRB:** `FXOpcodes.cpp:1418` `fx_death`: maps p2 to a damage type (p2 4 and 0 → crushing / acid, flags for
+  chunk/petrify/freeze that no PST data uses), cures frozen/petrified bits, morale 10, then `Actor::Damage(0)` +
+  `Actor::Die` (`Actor.cpp:5725`): cures poison/hold/stun, sets dead, triggers, XP, `PM_KILLED` when a **party member is
+  killed by a party member** (`Actor.cpp:5826`).
+- **Difference:** (1) the p2 switch is dead code for PST data (only p2 0 and 4 are used: P). (2) The companion game-over
+  rules (`Game_Over` 3 and 4, `Death_Fortress`) are not reproduced: **R2 stands, but the Game_Over 3 rule is about Annah,
+  not Pharod** (corrected in findings). (3) `PM_KILLED`: original condition unknown, GemRB sets it for party-kills-party.
+  (4) Original removes the creature's own Hold effects only; GemRB's Cure:Hold/Poison/Stun are broader (harmless).
+- **Data affected:** Cloudkill SPWI501 (3 headers), Deathbolt SPWI803 (10), Power Word Kill SPWI909 (5). Scripts can also
+  kill through `Kill()` / `ApplySpell` with these.
+
+---
+
+### E-129 Aid: fixed 8 HP per p1, not 1d8 per p1
+- **Status:** V   **Severity:** 2
+- **Original:** `sub_4C9A26`. Guard: derived state **0x8000000** (= GemRB `STATE_AID`); if set, nothing (non-cumulative). Else set
+  it, then: damage bonus byte `+3281` += p1, THAC0 `+3220` −= p1, all five saves `+3222..+3226` −= p1. **First application
+  only:** p2 = **8 × p1** (a plain loop adding 8, no dice); current HP += p2 if below max. Every pass: max HP (`+3208`) += p2.
+  No morale change, no icon.
+- **GemRB:** `FXOpcodes.cpp:4214` `fx_set_aid_state`: `p2 = Roll(p1, 8, 0)` = **p1d8**, rest the same (state, max HP, saves,
+  to-hit, damage bonus); adds a portrait icon and colour pulse in enhanced-effects games.
+- **Difference:** Aid (p1 = 1) gives **8 HP every cast** in the original, **1–8 (avg 4.5)** in GemRB.
+- **Data affected:** SPPR201 Aid (23 effect lines, all p1 = 1, p2 = 0).
+
+### E-073 Damage bonus (also the unidentified byte in E-203)
+- **Status:** P   **Severity:** 3
+- **Original:** `sub_4C15F9`: derived signed byte `+3281` += p1, clamped to **−20..+20**; p2 ignored. This byte is the
+  **damage bonus**, so E-203 Curse (`−p1`) and E-129 Aid (`+p1`) both change damage, not an "unidentified" stat.
+- **GemRB:** `FXOpcodes.cpp:3010` `STAT_MOD(IE_DAMAGEBONUS)` (p2 0 add / 1 set / 2 percent): same for PST data (every use p2 = 0,
+  p1 from −4 to +8). No ±20 clamp (not reachable with the data).
+- **Difference:** none for data. **E-203 addendum:** original Curse also gives **−p1 damage**; GemRB `fx_curse` does not touch
+  `IE_DAMAGEBONUS`. Aid's +p1 damage is in GemRB.
+- **Data affected:** 15 uses (LENS*, TTDECEIV, SPWI308, SPIN101).
+
+### E-039 Sleep (State:Helpless)
+- **Status:** S   **Severity:** 3
+- **Original:** `sub_4BC71E`. Dead target: nothing. Timing 1 (permanent): base+derived state **0x20 (helpless)** and flag `+3292` = 1.
+  Otherwise derived 0x20 and `+3292` = 1; **first application:** builds a delayed **op 162** (wake-up) after the remaining
+  duration, an **op 8** and an **op 191** ("I001ZZZZ" Zzz bam) lasting the remaining seconds, interrupts the creature and plays
+  sequence 8. Op 162 (`sub_4CDCBB`) clears `+3292`, clears derived 0x20 and removes the target's op 109 effects. It does **not**
+  set the sleep bit (0x1).
+- **GemRB:** `FXOpcodes.cpp:2207`: sets `STATE_HELPLESS | STATE_SLEEP`, a stance effect (sleep) and a delayed get-up stance;
+  outside EE also `SS_NOAWAKE` ("doesn't wake on damage") and a sleep icon.
+- **Difference:** extra `STATE_SLEEP` bit; GemRB's get-up is an animation stance, the original's wake-up also drops hold effects
+  (109). Whether damage wakes a sleeper in the original: no reference to `+3292` or 0x20 in op 12 (`sub_4B245B`), so likely not (S).
+- **Data affected:** SPWI401 (Sleep, 2 lines).
+
+### E-045 Stun
+- **Status:** P   **Severity:** 3
+- **Original:** `sub_4BDD35`: timing 1 → base state 8 and done; always derived state **8**. Nothing else (no immunity checks,
+  no animation, no duration roll).
+- **GemRB:** `FXOpcodes.cpp:2399`: derived `STATE_STUNNED` + icon; extra branches are IWD/BG2 only (Eye of Fortitude, Bloodrage,
+  p2 = 2 power-word stun); the cutscene skip is GemRB-only, harmless.
+- **Data affected:** SPIN101, DDMACE (p2 0, timing 0): parity.
+
+### E-128 Confusion
+- **Status:** P/S   **Severity:** 3
+- **Original:** `sub_4C971E`. First application: a colour-pulse effect (op 9, p1 `0x180018`) for the effect's duration, a floating
+  string (text 28081, font TRMTFONT) over the target; then derived state **0x80000000**; timing 1 also sets the base bit and ends.
+- **GemRB:** `FXOpcodes.cpp:4190`: `STATE_CONFUSED` (base only for timing 4), icon only if enhanced effects.
+- **Difference:** presentation only (pulse, floating text) for data (timing 0 ×4, timing 3 ×1). GemRB base-sets at timing 4 where
+  the original does at timing 1 (no data uses either). How the confused creature then acts is AI code, not read here.
+- **Data affected:** IRON3, JESTER, NETTLES, TTANARCH, SPWI402.
+
+### E-006 / E-044 Charisma and Strength modifiers
+- **Status:** P   **Severity:** 3
+- **Original:** `sub_4B0EDC` (CHR, derived byte `+3257`, base `+1830`) and `sub_4BD6D1` (STR, derived `+3251`, base `+1824`):
+  p2 **0 add, 1 set, 2 percent**, result clamped **1..25**; p2 ≥ 3 is an error (assert). Timing 1 writes the base and ends.
+  CHR only: on first application with p1 = 0 the amount is rolled as `dice count (+32)` × (1..`sides (+36)`), luck-adjusted
+  (Friends, SPWI114). STR has no dice mode, no STR-extra handling.
+- **GemRB:** `FXOpcodes.cpp:1264` / `:2342`: same modes; STR keeps a p2 = 3 dice branch (Power of One comment) that no PST data
+  reaches; the PST rule that SPWI114 replaces its previous cast is a GemRB addition (`SourceType == 2`): the original handler
+  does not do it, a spell-level rule might (not found, S).
+- **Data affected:** CHR 21 lines (p2 0/1), STR 17 lines (p2 0/1, p1 −1 mostly): parity.
+
+### E-042 Wizard spell slot modifier
+- **Status:** P   **Severity:** 3
+- **Original:** `sub_4BD2B4`. p2 ≠ 0: p2 is a **bitmask of levels** (bit 0 = level 1 … bit 8 = level 9); for each set level where
+  the creature already has slots (`+3568 + 16*i` ≠ 0) add p1 to both slot counts (`+3568`, `+3570`). p2 = 0: **double** the
+  slots of the first p1 levels.
+- **GemRB:** `FXOpcodes.cpp:2293` + `Spellbook.cpp:714`: same rules (no slots at a level → no bonus; p2 = 0 doubles the first p1
+  levels); extra HoW p2 = 0x200 branch unused by PST.
+- **Data affected:** 27 lines (Karach items, ZERO, TTMAGE): parity.
+
+### E-098 Regeneration
+- **Status:** P   **Severity:** 3
+- **Original:** `sub_4C2F70`, for timing 2 (equipped): p2 **0** heal (`+1294`) HP per second, **1** p1 % of that per second,
+  **2** p1 HP per second, **3** 1 HP every p1 seconds (15 × p1 ticks); heals only while HP < derived max (`+3846`). Other
+  timings build a separate aura-like object (not read).
+- **GemRB:** `FXOpcodes.cpp:3480`: same four modes (p2 3 → 1 HP every p1 seconds, scaled by game speed).
+- **Data affected:** all 19 lines use p2 = 3 (p1 4..20); BLOODFLY uses timing 0 (the unread branch).
+
+### E-120 Protection from weapons
+- **Status:** V (one item)   **Severity:** 3
+- **Original:** `sub_4C7F50` builds an immunity record (flag value, flag mask, enchantment level) by p2: 0 level p1; 1 magical (flag
+  64), 2 non-magical, 3 silver (256), 4 non-silver, **5 non-silver and level 0**, 6/7 two-handed (2), 8/9 cursed (16), 10/11 cold
+  iron (512); record added on every pass.
+- **GemRB:** `FXOpcodes.cpp:3924` same table, **except p2 = 5 means *silver* and level 0** (value = silver flag).
+- **Difference:** p2 5 is "not silver" in the original; GemRB makes it "silver". Data: SILVMAG.itm (1 line). The check that uses
+  the record (op 12, `sub_4B245B`) was not compared here.
+- **Data affected:** P1SF…P3SFCF (p2 0/4/11), PLUS1IM…PLUS6IM (p2 0), SILVMAG (p2 5).

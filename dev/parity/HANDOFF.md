@@ -1,4 +1,4 @@
-# Handoff: where the parity investigation stands (2026-11-18, round 4)
+# Handoff: where the parity investigation stands (2026-11-18, round 5)
 
 Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools) and `findings.md` (all findings, by round).
 
@@ -12,7 +12,7 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools) and 
 - **Text maps** of both binaries: `maps/*.tsv` (`tools/parity/export_maps.py`), no IDA needed to look things up.
 
 ## Next, in order
-1. **WP2 rest:** 13 Death level bands (Cloudkill, `sub_4B5DCF`), then 39, 45, 128, 73, 6, 42, 44, 98, 120, 129 by
+1. **WP2 rest:** (13, 39, 45, 128, 73, 6, 42, 44, 98, 120, 129 done, E28-E32) the remaining opcodes by
    `maps/opcodes.tsv` use count. Open in op 12: the Guardian Mantle save direction (E-012d) and whether GemRB's
    Cloak of Warding / Guardian Mantle touch effect damage; the meaning of effect byte +6 (255 = half damage).
 2. **WP4 rest:** top actions by use (`maps/actions.tsv`): PermanentStatChange (230), AddPartyExperience/GiveExperience
