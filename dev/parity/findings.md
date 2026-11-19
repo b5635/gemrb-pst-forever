@@ -234,3 +234,14 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | A7 | **RestParty fully heals the Nameless One** (op 17 mode 4) while companions get the HP amount. GemRB heals all alike. | V | 2 |
 | A8 | **StartCutSceneEx's int0**: GemRB uses it as "test conditions"; the original sends an unidentified message (vtable 8DC550). | S | 2 |
 | A9 | **IncrementGlobalOnce** doesn't create missing variables in the original. | V | 3 |
+
+## 13. Voice findings, round 7 (detail in [wp_voices.md](wp_voices.md))
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| V1 | **Weapon swings speak the wrong lines.** PST slots 14-18 are damage and spell-casting lines; the original plays slots 15-17 when a **spell is cast** and nothing on swings. GemRB plays slots 14-17 by attack stance on swings (Dak'kon slashing says "Damage 2") and nothing on cast. (A11-1) | V | 2 |
+| V2 | **Hide, spell disruption and trap setting speak location comments** (slots 70-72 hold Negative Plane / Carceri / Curst lines in PST); the original never plays them for those. One-line fix in `pst/vcremap.2da`. (A11-5) | V | 2 |
+| V3 | Selection lines play **in order**, rare ones from the **10th** click in sequence; GemRB picks at random, goes rare after 4 clicks and adds a 5 % random rare. (A11-3) | V | 3 |
+| V4 | Sound frequency sliders: level 3 = 40 % (GemRB 50 %), action level 2 = 20 % (GemRB once per selection). (A11-4) | V | 3 |
+| V5 | Being hit plays slot 14 or 18 at 50/50; GemRB only 18. (A11-2) | V | 3 |
+

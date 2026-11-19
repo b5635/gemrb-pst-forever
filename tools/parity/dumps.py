@@ -8,8 +8,10 @@
 #   python tools/parity/dumps.py case  ee   "CGameAIBase::ExecuteAction(" 125   one switch case body
 #   python tools/parity/dumps.py callers orig sub_4B245B              who calls it (cached call index)
 #   python tools/parity/dumps.py calls  ee   "CGameSprite::Hit("     what it calls
-#   python tools/parity/dumps.py grep  ee   "SOUNDOFF|VerbalConstant" [--in CGameSprite]   files:lines, capped
+#   python tools/parity/dumps.py grep  ee   "SOUND_ATTACK" [--in CGameSprite] [-i]   addr name:line, capped (packed file, ~1 s)
 #
+# Local declarations are hidden and multi-line calls joined (line numbers kept); --decl / --raw turn that off.
+# Local declarations are hidden (line numbers kept); --decl shows them.
 # Names: ee uses the demangled name from rename_manifest.csv (a substring; first match unless it is ambiguous).
 # orig: an address (sub_4B245B / 4B245B) or a class from srcmap.txt (find only).
 import csv, os, re, sys
@@ -45,14 +47,29 @@ def resolve(game, key):
 	a, n, f = hits[0]
 	return a, n, os.path.join(DIRS[game], f)
 
+DECL = re.compile(r"^\s+[^=;()]*?\b\w+(\[\d+\])?;\s*//")   # Hex-Rays local declarations: `  int v5; // eax`
+
 def text(path):
-	return open(path, encoding="utf-8", errors="replace").read().replace("\r", "").splitlines()
+	"""lines of a function; local declarations become blank (line numbers kept) unless --decl"""
+	L = open(path, encoding="utf-8", errors="replace").read().replace("\r", "").splitlines()
+	if "--decl" not in sys.argv:
+		L = ["" if DECL.match(l) else l for l in L]
+	if "--raw" not in sys.argv:   # join a call's argument lines onto its first line (others blank, numbers kept)
+		i = 0
+		while i < len(L):
+			d = L[i].count("(") - L[i].count(")")
+			j = i
+			while d > 0 and j + 1 < len(L) and j - i < 40 and not L[j + 1].strip().startswith(("{", "}", "if", "case")):
+				j += 1
+				L[i] += " " + L[j].strip(); d += L[j].count("(") - L[j].count(")"); L[j] = ""
+			i = j + 1
+	return L
 
 def outline(lines):
-	"""switch/case labels, calls to named functions and string literals: enough to pick a line range"""
+	"""switch/case labels, string literals, labels and named calls: enough to pick a line range"""
 	for i, l in enumerate(lines, 1):
 		s = l.strip()
-		if re.match(r"(switch|case |default:)", s) or '"' in s:
+		if re.match(r"(switch|case |default:|LABEL_\d+:)", s) or '"' in s or re.search(r"\b[A-Z]\w+::\w+\(", s):
 			print("%5d  %s" % (i, s[:110]))
 
 CALL = re.compile(r"([A-Za-z_][\w]*(?:::[~\w]+)*)\(")
@@ -82,6 +99,19 @@ def call_index(game):
 		for c, s in idx.items():
 			for x in s: o.write("%s\t%s\n" % (c, x))
 	return idx
+
+def pack(game):
+	"""all functions of a dump in one file, each after a `//@@ <addr> <name>` line (line numbers match the files)"""
+	out = os.path.join(os.path.dirname(DIRS[game]), "all_%s.c" % game)
+	if not os.path.exists(out):
+		print("packing %s (once)..." % game, file=sys.stderr)
+		with open(out, "w", encoding="utf-8") as o:
+			for a, n, f in manifest(game):
+				p = os.path.join(DIRS[game], f)
+				if os.path.exists(p):
+					o.write("//@@ %s %s\n" % (a, n))
+					o.write(open(p, encoding="utf-8", errors="replace").read().replace("\r", "").rstrip("\n") + "\n")
+	return out
 
 def short(name):
 	"""'CGameSprite::Hit(CGameObject *,...)' -> 'CGameSprite::Hit' (how calls appear in the code)"""
@@ -147,7 +177,8 @@ def main():
 		print("== %s %s  (%d lines, %s)" % (a, n, len(L), p))
 		if cmd == "lines":
 			lo, hi = int(rest[0]), int(rest[1])
-			for i in range(lo, min(hi, len(L)) + 1): print("%5d  %s" % (i, L[i - 1]))
+			for i in range(lo, min(hi, len(L)) + 1):
+				if L[i - 1].strip(): print("%5d  %s" % (i, L[i - 1]))
 		elif cmd == "case":
 			want = int(rest[0], 0)
 			out, on, ind = [], False, None
@@ -176,7 +207,8 @@ def main():
 								if shown and j - 1 not in shown: print("  ...")
 								shown.add(j); print("%5d  %s" % (j + 1, L[j]))
 			elif len(L) <= BIG or "--all" in rest:
-				for i, l in enumerate(L, 1): print("%5d  %s" % (i, l))
+				for i, l in enumerate(L, 1):
+					if l.strip(): print("%5d  %s" % (i, l))
 			else:
 				print("(big: outline only; use -g PAT, `lines A B` or `case N`; --all to force)")
 				outline(L)
@@ -192,17 +224,19 @@ def main():
 	elif cmd == "areas":   # python dumps.py areas ee write  -> dev/parity/maps/dump_areas.md
 		write_areas()
 	elif cmd == "grep":
-		pat = re.compile(key, re.I)
+		# one sequential read of a packed copy (built once): opening 20k small files costs ~15 s on Windows
+		pat = re.compile(key, re.I if "-i" in rest else 0)
 		only = rest[rest.index("--in") + 1] if "--in" in rest else None
-		hits = 0
-		for a, n, f in manifest(game):
-			if only and only not in n: continue
-			p = os.path.join(DIRS[game], f)
-			if not os.path.exists(p): continue
-			for i, l in enumerate(text(p), 1):
+		hits, cur, ln = 0, ("", ""), 0
+		with open(pack(game), encoding="utf-8", errors="replace") as fh:
+			for l in fh:
+				if l.startswith("//@@ "):
+					_, ad, nm = l.rstrip("\n").split(" ", 2); cur, ln = (ad, nm), 0; continue
+				ln += 1
+				if only and only not in cur[1]: continue
 				if pat.search(l):
 					hits += 1
-					if hits <= CAP: print("%s %s:%d  %s" % (a, n[:70], i, l.strip()[:100]))
+					if hits <= CAP: print("%s %s:%d  %s" % (cur[0], cur[1][:70], ln, l.strip()[:110]))
 		if hits > CAP: print("(%d more hits: narrow with --in or a tighter pattern)" % (hits - CAP))
 	else:
 		print("unknown command", cmd)

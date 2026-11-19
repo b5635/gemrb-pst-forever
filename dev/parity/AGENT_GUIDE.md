@@ -75,7 +75,7 @@ All from `D:\gemrb`. Python is `python`.
 | `python tools/parity/dumps.py show ee "CGameSprite::Hit(" [-g PAT -C 20]` | a function; big ones print an outline (cases, strings) instead of the body; `-g` greps inside | instant |
 | `python tools/parity/dumps.py lines ee "<name>" 120 200` / `case ee "<name>" 125` | a line range / one switch case | instant |
 | `python tools/parity/dumps.py callers orig sub_4B245B` / `calls ee "<name>"` | who calls it / what it calls (cached index; none = virtual, use `ida.py vt`) | instant |
-| `python tools/parity/dumps.py grep ee "VerbalConstant" [--in CGameSprite]` | grep all functions, capped at 60 hits | ~20 s |
+| `python tools/parity/dumps.py grep orig "sub_73DEEF\(" [--in Name] [-i]` | grep every function of a game (packed copy), `addr name:line`, capped at 60 | ~1 s |
 | `dev/parity/maps/dump_areas.md` | which EE functions / original classes hold each track's feature; read one section: `sed -n '/^## A11/,/^## /p'` | - |
 | `python tools/parity/case.py action <id>` | the original's handler case for an action (creature switch `sub_76A7EA` via `byte_76D476`, else base `sub_44B099`) | instant |
 | `python tools/parity/case.py trigger <hexid>` | the original's trigger case (`sub_453258`, `sub_778529`) | instant |
@@ -108,7 +108,13 @@ o.res("DMORTE", "dlg"); g.where("BALDUR", "bcs"); o.names("bcs"); pstres.text(o.
 2026-11-19: identical to IDA's single-function output (40/40 original, 644/645 EE; the one EE difference was a
 function the old run failed on). Failures are listed in each folder's `errors.tsv` (library stubs, nothing we use).
 **Never print a whole big function** (`CGameAIBase::ExecuteAction` is 4,735 lines): `dumps.py show` prints an
-outline for anything over 150 lines; then `-g`, `case` or `lines`.
+outline for anything over 150 lines; then `-g`, `case` or `lines`. Don't grep the dump folders file by file (Grep tool or
+`grep -r` over 14-20k files takes 15-60 s and times out); `dumps.py grep` reads one packed file.
+**Enter the original through a known door, not a search:** a fact both binaries share (an opcode's original
+address in `maps/opcodes.tsv`, an event/case number, a resref, a message vtable) leads to the original function
+in 2-3 reads. Example (A11): EE op 13 sends sound event 13 → original `4B5DCF` sends a message with 13 →
+its vtable's Run → `sub_73DEEF`, the original voice player. Read data before code when the question is "what is
+in slot N": the CRE/2DA text answers in one call what the code only implies.
 Work EE-first: understand the feature in `dec_all_named`, then confirm only the deciding condition and numbers
 in the original with one targeted grep (same constant, same resref, same case number). Batch: answer 10
 ledger rows from one read of a dispatcher instead of re-opening it per row.

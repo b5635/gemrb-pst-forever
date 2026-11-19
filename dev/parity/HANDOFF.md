@@ -1,4 +1,4 @@
-# Handoff: where the parity investigation stands (2026-11-18, round 6)
+# Handoff: where the parity investigation stands (2026-11-19, round 7)
 
 Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the work packages) and `findings.md` (all findings, by round).
 
@@ -26,6 +26,15 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
 - Needs the person: a GemRB-side harness that parses all 9,648 dialogue strings and logs failures (engine code;
   AGENT_GUIDE A7).
 
+## Round 7 (2026-11-19): tooling on the full dumps, first phase run with it (A11 voices)
+- Dumps spot-checked accurate; `dumps.py` + `maps/dump_areas.md` replace IDA for reading code (see Tool changes).
+- **A11 voices** (`wp_voices.md`): the original's voice player is `sub_73DEEF` (EE `CGameSprite::PlaySound(uchar,...)`).
+  Findings V1-V5: swings speak damage/spell-casting lines and casts speak nothing (V1, the "combat lines feel off"
+  report), hide/disrupt/trap speak location comments (V2), selection order/rare/frequency (V3-V5). Open: locations,
+  banter cases, battle cries on GemRB's side.
+- Cost of the phase: ~25 tool calls, no IDA run. The original was found in 3 steps from a known door (op 13 sends
+  the same event numbers → message vtable → Run → `sub_73DEEF`), not by searching.
+
 ## Next, in order (detail in AGENT_GUIDE section 4)
 1. **Track A, scripts and dialogue, to 100 % of `script_ledger.tsv`:** A1 actions (by use), A2 triggers, A3 event
    triggers, A4 object selectors, A5 script engine, A6 dialogue engine, A7 parser, A8 BALDUR.bcs, A9 INI spawns,
@@ -39,9 +48,12 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
    rolls, E17 scroll caster level, E18 TransferHP, E19 Ball Lightning / Adder's Kiss.
 
 ## For audit (Opus spot-checks these; newest first)
-- (none yet)
+- (none yet; round 7 was written by Opus)
 
 ## Tool changes (newest first; use these)
+- 2026-11-19 (later): `dumps.py grep` reads a packed copy (`.re/*/dump/all_*.c`, built once, ~0.2-2 s per grep
+  instead of 15-60 s; regex is case-sensitive, `-i` for not); `show`/`lines`/`case` hide Hex-Rays local declarations
+  and join multi-line calls (`--decl`, `--raw` to undo); outlines also list labels and named calls.
 - 2026-11-19: `dumps.py` (find/show/lines/case/callers/calls/grep over the full dumps, outline for big
   functions, cached call index `.re/*/dump/calls_*.tsv`), `maps/dump_areas.md` (where each track's code lives),
   `case.py`/`facts.py`/`dossier.py`/`ida.py show` read the original from `dec_all`. Dumps spot-checked accurate.
