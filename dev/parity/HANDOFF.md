@@ -29,7 +29,7 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
 ## Next, in order (detail in AGENT_GUIDE section 4)
 1. **Track A, scripts and dialogue, to 100 % of `script_ledger.tsv`:** A1 actions (by use), A2 triggers, A3 event
    triggers, A4 object selectors, A5 script engine, A6 dialogue engine, A7 parser, A8 BALDUR.bcs, A9 INI spawns,
-   A10 indirect state (death variables, XP, rest).
+   A10 indirect state (death variables, XP, rest), A11 voice lines and sound slots (never investigated).
 2. **Track B, combat:** combat rules (`wp10_combat.md`), effect pipeline (`wp11_effect_pipeline.md`), WP2 rest (77
    used opcodes, batched by family). Open from round 5: Guardian Mantle save direction (E-012d), GemRB's Cloak of
    Warding / Guardian Mantle vs effect damage, effect byte +6.

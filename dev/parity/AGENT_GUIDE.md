@@ -278,6 +278,16 @@ XP on kill (`CKillStats`, split rules), item usage limits that quests test (`Par
 up), store transactions that scripts test (`StartStore`, `TakePartyGold`), rest (`RestParty`, `PSTCanRestParty`:
 when resting is forbidden, what resting runs).
 
+#### A11: voice lines and sound slots (`wp_voices.md`)
+Nobody has compared these yet; the owner reports combat/selection lines feel wrong. 1) How GemRB reads the PST
+CRE sound-slot table (`iesdp.py format cre_v1.2`, its layout differs from BG) vs the original's reader.
+2) Slot → event mapping: `soundoff.ids`, `VerbalConstant`, GemRB's `VB_*` constants vs the original's slots.
+3) When the original plays each line (attack, damaged, dying, select, select-rare, action, bored timer,
+battle cry, leader, tired): conditions, chance, order/rotation, cooldown, which party member. Original: strings
+of sound resrefs, `CGameSprite::PlaySound*`/`VerbalConstant` in EE, then the same constants in the original;
+GemRB: `Actor.cpp` `VerbalConstant`/`ReactToDamage`/`PlaySelectionSound`. Each slot misread or never played is
+sev 2 (sev 1 if a script's `VerbalConstant` plays nothing a cutscene waits for).
+
 ### Track B: combat rules (turn-based priority)
 
 Not covered by any earlier package because EE keeps these in generic, not PST-only, functions. Output
