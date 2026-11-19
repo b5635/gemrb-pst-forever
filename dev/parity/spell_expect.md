@@ -519,9 +519,20 @@ version for `tools/tb_spell_suite.py` is `spell_expect.json`. Durations in effec
 
 ## SPWI301 Ball Lightning
 - **Engine:** EE has `CPsSpellBallLightning` / `CBallLightningSphere` (factory cases 224/225, original ctors `sub_6B54C0`,
-  `sub_6B5B4E`), but **no SPL uses projectile 224 or 225** in either game. SPWI301 has one header (level 5),
-  **projectile 1 and no effects**, identical in the original, EE and GemRB.
-- **Result:** the spell does nothing in the original either (cut content). **Parity (P).** Don't "fix" it.
+  `sub_6B5B4E`). SPWI301's header has projectile 1 and no effects, **but its casting effects (feature block) hold op 196
+  p2 1** (and an op 195 tint). The original's op 196 (`sub_4D3BF2`, see `wp2_opcodes.md` E-196) fires projectile 224
+  with **1–4 balls at random**; each ball carries `S031DELC` and op 12 **electricity** damage by ball count: 1 ball
+  4d12, 2 balls 5d4, 3 balls 2d6, 4 balls 2d4.
+- **GemRB today:** `fx_special_effect` p2 1 casts `BALL.spl` at the last spell target: **always one ball, 4d12**.
+- **Differences:** 1) never splits into 2–4 balls with the smaller dice. (Corrects the earlier "does nothing" verdict,
+  which only looked at the header.)
+
+## SPWI201 Adder's Kiss
+- **Engine:** casting effect op 196 p2 0 (`sub_4D3BF2`); projectile 220.
+- **Effects:** N = caster level / 3 + 1. Op 9 glow and op 51 for 5 × N s; `S019ACID`; **N acid hits of 2d4**, delayed
+  75 × i (i = 0 … N − 1; unit of the factory's duration not settled, 5 s steps if ticks).
+- **GemRB today:** `ADDER.spl`, one 2d4 hit per cast, delayed 0/5/10 … s by header (levels 3, 6, 9 …).
+- **Differences:** 1) one hit instead of N.
 
 ## SPWI310 Ax of Torment
 - **Engine:** projectile 241. Original ctor `sub_6C5975`, AIUpdate `sub_6C5CAA`, Fire `sub_6C5AB7`. EE `CPsSpellAxOfTorment`.

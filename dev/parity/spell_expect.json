@@ -574,7 +574,26 @@
   "extra_casts": "min(6,(level-7)/2)"
  },
  "SPWI301": {
-  "note": "does nothing in the original either (projectile 1, no effects)"
+  "source": "casting effect op 196 p2 1 (orig sub_4D3BF2)",
+  "projectile": 224,
+  "balls": [
+   1,
+   4
+  ],
+  "roll": null,
+  "effects": [
+   {
+    "op": 12,
+    "damage_type": "electricity",
+    "dice_by_balls": {
+     "1": "4d12",
+     "2": "5d4",
+     "3": "2d6",
+     "4": "2d4"
+    }
+   }
+  ],
+  "note": "1-4 balls at random, each carrying the damage for that count; saving throw not determined"
  },
  "SPWI310": {
   "targets": {
@@ -635,5 +654,28 @@
     "save": "spell"
    }
   ]
+ },
+ "SPWI201": {
+  "source": "casting effect op 196 p2 0 (orig sub_4D3BF2)",
+  "projectile": 220,
+  "roll": null,
+  "effects": [
+   {
+    "op": 12,
+    "damage_type": "acid",
+    "dice": "2d4",
+    "count": "caster_level/3+1",
+    "delay_step": 75
+   },
+   {
+    "op": 9,
+    "duration_s": "5*(caster_level/3+1)"
+   },
+   {
+    "op": 51,
+    "duration_s": "5*(caster_level/3+1)"
+   }
+  ],
+  "note": "delay_step 75 is in the factory's duration unit (ticks if 5 s apart, not settled)"
  }
 }

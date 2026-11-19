@@ -187,7 +187,7 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | S34 | **Strength spells reverse in Carceri.** `sub_7BD15D`: in AR0900–0902, AR0904, AR3015, AR3016 the roll is subtracted (with a `CARCERSK` check). Extends R1. | V | 2 |
 | S35 | **Radius and filter mismatches:** Celestial Host 1000 vs 400 and no fizzle when no enemy; Rune of Torment 600 vs 400; Meteor Storm 256 vs 400; Desert Hell 2160 vs 400. | V | 2 |
 | S36 | **Movies the original plays and GemRB doesn't:** RUNE (Rune of Torment), METEOR (Meteor Storm), CONFLAG (Conflagration). DRAGON and CANNON are already played by GemRB helpers. | V | 3 |
-| S37 | **Ball Lightning (SPWI301) does nothing in the original either** (projectile 1, no effects). | P | — |
+| S37 | ~~Ball Lightning does nothing in the original~~ **Corrected in round 4 (E19):** its casting effect op 196 p2 1 fires 1–4 balls (4d12 / 5d4 / 2d6 / 2d4 electricity each); GemRB always fires one 4d12 ball. | V | 1 |
 | S38 | **Chain Lightning Storm, Cloudkill, Mechanus' Cannon, Death Bolt, Missile of Patience damage:** match. | P | — |
 | S39 | **Blood Bridge drains 2 HP instead of caster level + 2** (factory case 226 sets op 192's p1 to level + 2). | V | 2 |
 | S40 | **Faerie Fire lasts 20 s instead of 20 s × caster level** (factory case 259). | V | 2 |
@@ -208,6 +208,12 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | E14 | **Op 138 sequence ids**: GemRB rejects PST sequence 27 (Minor Embalming). | V | 3 |
 | E15 | **Heal (op 17) percent mode sets instead of adds** (Raise Dead SPPR502: original +50 % of max, GemRB = 50 %). Mode 4 = full heal in the original. | V | 2 |
 | E16 | **Blindness duration for PW Blind** is ticks in GemRB's hook, seconds in the original (see S17). | V | 1 |
+| E17 | **Scrolls cast at about half the caster level** (op 148, also op 146): the original casts at max(p1, the spell's first-header minimum level); GemRB uses p1, which PST scrolls set to the spell level (Blade Storm scroll 7 vs 14, Cloudkill 5 vs 9). | V | 2 |
+| E18 | **Transfer HP (op 192)**: GemRB caps the drain at the receiver's missing HP and deals it as **acid** (mode 1) / **crushing** (mode 0) damage. Original: the target loses the full amount as **magic** damage; Vampiric Touch's excess becomes +max HP for 300 s; plane rules and luck apply. | V | 2 |
+| E19 | **Ball Lightning / Adder's Kiss (op 196)**: original 1–4 balls with a damage table, and level / 3 + 1 acid hits of 2d4; GemRB one 4d12 ball and one 2d4 hit. | V | 1 |
+| E20 | **Learn spell (op 147)** can fail in GemRB above Normal difficulty (INT learn roll); the original never rolls. 83 scrolls. | V | 2 |
+| E21 | **Play BAM (ops 187–191)**: placement of "random"/detached animations, timed animations cut short, animations on corpses. Presentation. | V | 3 |
+| E22 | **Tint screen (op 195)**: GemRB uses 50 % black instead of the colour, no one-at-a-time rule. Presentation. | P | 3 |
 
 ## 12. Scripting findings, round 3 (detail in [wp4_actions.md](wp4_actions.md))
 

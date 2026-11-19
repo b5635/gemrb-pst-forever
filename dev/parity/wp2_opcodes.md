@@ -1,6 +1,6 @@
 # WP2: effect opcodes, original vs GemRB
 
-Progress: 82, 100, 138, 146, 186, 193, 194, 201, 203–211 done. Next: 147, 148, 187–192, 195, 196, then 12, 13, 0, 54, 73, 17, 39, 45, 109, 128 by use count. Original handler = ApplyEffect (vtable slot 2,
+Progress: 82, 100, 138, 146–148, 186–196, 201, 203–211 done. Next: 12, 13, then 0, 54, 73, 17, 39, 45, 109, 128 by use count. Original handler = ApplyEffect (vtable slot 2,
 `dev/parity/maps/opcodes.tsv`), decompiled at `.re/orig/dump/dec/<addr>.c`. Effect fields: p1 `+8`, p2 `+12`, timing
 `+16`, duration `+18`, resource `+24`. Creature derived stats start at `+3204` (state bits); `+3220` THAC0,
 `+3222`–`+3226` the five saving throws, `+3245` to-hit bonus, `+3883` luck. Statuses as in AGENT_GUIDE section 4.1.
@@ -178,3 +178,108 @@ Progress: 82, 100, 138, 146, 186, 193, 194, 201, 203–211 done. Next: 147, 148,
   (lay on hands etc.).
 - **Difference:** SPPR502 (Raise Dead, p1 50, p2 2): original adds 50 % of max, GemRB sets 50 %. Mode 4 (used by RestParty,
   below) isn't a full heal in GemRB.
+
+---
+## Round 4 (2026-11-18): 147, 148, 187–196
+
+Data counts come from `python tools/parity/opuses.py <op>` (SPL + ITM of the original game with Fixpack/UB; it reads
+header and equipped effects, not SPL casting effects: those were checked by hand for 195/196).
+
+### E-147 Learn spell
+- **Status:** V   **Severity:** 2
+- **Original:** `sub_4CCA02`. The spell level is **the fifth character of the resref** (`SPWI305` → 3), not the SPL
+  header. p2 picks the list: **0 mage** (`sub_760FD6`, known-spell type 1), **1 priest** (`sub_760FA6`, type 0),
+  **2 innate** (`sub_761006`, type 2). `sub_760F37` adds the spell unless that list already has it. **No ability roll,
+  no class check, no message, no XP.**
+- **GemRB:** `FXOpcodes.cpp:4789` `fx_learn_spell` → `Actor::LearnSpell(res, p1 ^ LS_STATS)` (`Actor.cpp:6523`). With
+  p1 0 that is `LS_STATS`: **above Normal difficulty a luck-adjusted d100 must be ≤ the INT learn chance or learning
+  fails** (`Actor.cpp:6543`). Type and level come from the SPL; p2 is ignored.
+- **Difference:** on hard difficulties GemRB can fail to teach a scroll; the original never fails. The type/level
+  sources differ but agree for all PST data.
+- **Data affected:** 83 uses, all p1 0, p2 0, `SPWIxxx` (mage scrolls: `BBSEED`, `BREAST1`–`4`, `CIRCLE02`–`04` …).
+
+### E-148 Cast spell at a point: level floor missing
+- **Status:** V (level) / S (who casts)   **Severity:** 2
+- **Original:** `sub_4CCBBE`, the same pattern as E-146: builds action **114 ForceSpellPoint** at the effect's target point
+  (effect +180/+184), level **max(p1, the spell's first-header minimum level)** (`sub_58C884(0) + 16`), and sends it from
+  the effect's source to **the target creature**, which does the casting. p2 isn't read.
+- **GemRB:** `FXOpcodes.cpp:4800` `fx_cast_spell_point`: p2 0 → the **effect's owner** queues
+  `ForceSpellPointRES(res, pos, p1)`: the level is **p1 alone**.
+- **Difference:** PST scrolls set p1 to the spell's *level*, so GemRB casts them at about half the original caster
+  level: Cloudkill (`C_2501`) 5 vs 9, Chain Lightning Storm (`MANACLE`) 6 vs 12, Acid Storm (`ACID`) 7 vs 14, Blade
+  Storm 7 vs 14 (its damage is level × d8, S29: half), Meteor Storm (`METEOR`) 8 vs 16, Celestial Host / Rune of Torment
+  9 vs 18. The caster swap only matters for items not used on oneself (none confirmed in data).
+- **Data affected:** 40 uses: every mage/priest scroll and charms (`CFLYCHRM`, `LENS11`, `MURK`, `RATCHARM`, `TT*`).
+- **Op 146 has the same floor** (E-146): that part of E-146 is **V** by the same reading.
+
+### E-187 Play BAM (blended)
+- **Status:** V   **Severity:** 3
+- **Original:** `sub_4D09F4`. Skips dead targets (HP ≤ −10 or state 0x800). p1 = colour (tint if non-zero). **p2 bit 0
+  = two-part animation** (front/back halves: the cycle count is halved and part i plays cycle i). **p2 bit 1 =
+  detached:** placed in the area at a **random spot inside the target's sprite box** (x ± half width, y up to the full
+  height) and doesn't follow it; without bit 1 it is **attached to the creature** (`sub_7662B4`). Lifetime: timing
+  permanent (1) → plays its sequence; any other timing → lives for the effect's duration (+774).
+- **GemRB:** `PSTOpcodes.cpp:152` `fx_play_bam_blended`: bit 1 → at `fx->Pos` (the effect's point), not a random spot on
+  the creature; bit 0 → loops for one sequence length when the timing is limited; otherwise **plays once**, so a timed
+  animation (timing 0, e.g. SPWI804 ×9) ends early. No dead-target skip.
+- **Difference:** presentation only: bit-1 placement, bit-0 meaning, timed animations cut short, animations on corpses.
+- **Data affected:** 269 uses (p2 0: 160, p2 1: 32, p2 2: 21).
+
+### E-188–191 Play BAM (not blended)
+- **Status:** P (mostly)   **Severity:** 3
+- **Original:** `sub_4D1224`, one handler for all four. p2 flags: 1 random spot inside the target's sprite box, 0x10
+  (passed to the animation ctor, unidentified), 0x100 another animation class (`sub_69CC37`), 0x1000 sticky (follows the
+  creature), 0x30000 layer (0x30000 = both halves), 0x300000 blending, 0x100000 = fade from effect byte +36 instead of a
+  p1 colour. Same dead skip and lifetime rule as op 187.
+- **GemRB:** `PSTOpcodes.cpp:219` `fx_play_bam_not_blended` reads the same flags. Random placement is **0–31 px up-left of
+  `fx->Pos`** instead of anywhere in the sprite box; 0x10 and 0x100 aren't read; non-limited timings play once.
+- **Data affected:** 188: 3, 189: 41, 191: 111 (190 unused).
+
+### E-192 Transfer HP (Vampiric Touch, Kiss, Sensory Touch, draining weapons)
+- **Status:** V   **Severity:** 2
+- **Original:** `sub_4D1C49`. Nothing if the target's HP ≤ 0. Amount = p1 + dice, **each die minus the target's luck**
+  (`sub_82015B`, as E-012a). Plane rules: Sensory Touch (`SPIN104`) and Blood Bridge (`SPWI204`): Carceri → half, Baator →
+  the target saves and a success cancels it (`MAGIC02`), Negative Material → 1; Vampiric Touch (`SPWI309`): Carceri or
+  Negative Material → half (Spell Key exemption as usual). Modes (p2 low word):
+  - **0, target receives:** stops if the target is at full HP; target HP + amount, capped at its max; the **caster** takes
+    op 12 **magic** damage (p2 0x400000) equal to what was actually given.
+  - **1, caster receives:** stops if the caster is at full HP. Caster HP + amount, capped; **for SPWI309 only, the excess
+    becomes an op 18 max-HP bonus for 300 s**. The **target takes the full amount** as op 12 **magic** damage, however
+    much the caster could absorb.
+  - **2** swaps the two HP values; **3**: target + p1 % of its max, caster − amount % of its max; anything else: no transfer.
+  - Floating numbers over both creatures (green for party members).
+- **GemRB:** `PSTOpcodes.cpp:322` `fx_transfer_hp`: amount = **min(p1 + dice, receiver's missing HP)** in both modes; the
+  donor takes `Damage(amount, p2, …)`, so the damage type **is p2: 0 crushing, 1 acid** (`includes/damages.h`). Mode 3
+  acts as 0, mode 4 as 1. No luck, no plane rules, no temporary max HP.
+- **Difference:** 1) Vampiric Touch at level 5 (4d6, avg 14), caster missing 5 HP: original 14 damage to the target,
+  caster +5 HP and +9 max HP for 300 s; GemRB 5 damage, +5 HP. 2) GemRB deals **acid** (mode 1) or **crushing** (mode 0)
+  damage, so acid/physical resistance applies instead of magic resistance. 3) No plane rules (R1), no luck (E8).
+- **Data affected:** 16 uses: SPWI309 (11 headers, 2d6–12d6), SPIN107 Kiss (2d4), SPIN104 Sensory Touch (1d10), `BUTCHER`
+  (1d2), `GKISS`, `IRON2` (1d6).
+
+### E-195 Tint screen
+- **Status:** P   **Severity:** 3
+- **Original:** `sub_4D364E`. Ignored while another tint runs, unless p2 is 200 (which ends the current tint). p2 100: fade
+  to the p1 colour over "dice thrown" steps; other values: bit 0 sign, bits 1–2 mode (`dword_8DCB20`), bit 3 additive;
+  lasts the effect's duration unless permanent.
+- **GemRB:** `PSTOpcodes.cpp:448` `fx_tint_screen`: on non-EE PST it **replaces the colour with 50 % black**; no "one
+  tint at a time" rule, no p2 200 cancel.
+- **Data affected:** 28 uses p2 100 (SPWI410 ×19, SPWI116 ×9), SPIN011 p2 5, and casting effects of SPWI301, SPPR502,
+  SPIN108.
+
+### E-196 Special effect: Adder's Kiss and Ball Lightning
+- **Status:** V   **Severity:** 1 (Ball Lightning) / 2 (Adder's Kiss)
+- **Original:** `sub_4D3BF2`. Skips dead targets unless p2 2. The users are **SPL casting effects**: `SPWI201` Adder's Kiss
+  has op 196 p2 0, `SPWI301` Ball Lightning has op 196 p2 1 (plus an op 195 tint).
+  - **p2 0, Adder's Kiss:** projectile 220 carrying op 9 glow and op 51 for 5 × N s, the `S019ACID` visual, and **N acid
+    hits of 2d4** delayed 75 × i (i = 0 … N − 1), **N = caster level / 3 + 1** (level of SPWI201, `sub_7B2F45`).
+  - **p2 1, Ball Lightning:** projectile 224 (`CPsSpellBallLightning`, a `CProjectileMulti`, EE ctor takes the count)
+    with **1–4 balls at random**; each carries `S031DELC` and op 12 **electricity** damage set by the ball count
+    (`dword_8DCB28` / `dword_8DCB38`): **1 ball 4d12, 2 balls 5d4, 3 balls 2d6, 4 balls 2d4** (each).
+  - **p2 2, Raise Dead:** the `SP62RDED` animation at the target.
+- **GemRB:** `PSTOpcodes.cpp:603` `fx_special_effect` casts `ADDER` / `BALL` / `RDEAD` (`gemrb/unhardcoded/pst`).
+  `BALL.spl`: **always one ball, 4d12**. `ADDER.spl`: **one 2d4 hit per cast**, delayed 0/5/10 … s by header (level 3,
+  6, 9 …), instead of N hits.
+- **Difference:** Ball Lightning never splits; Adder's Kiss hits once instead of level / 3 + 1 times (level 9: 4 hits,
+  ~20 total, vs one, ~5). The factory's delay unit (`sub_4A56EB`, 75 × i) isn't settled: 5 s steps if it's ticks.
+- **Corrects S37:** Ball Lightning works in the original, through this casting effect.
