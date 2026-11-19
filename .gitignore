@@ -48,3 +48,6 @@ tools/upscale/work/
 
 # lighting pipeline (review images and resumable state)
 tools/lighting/work/
+
+# local build console dumps
+/build_log.txt

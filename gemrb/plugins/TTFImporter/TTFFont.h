@@ -16,11 +16,14 @@ class TTFFont : public Font {
 private:
 	FT_Face face = nullptr;
 
+	int pxSize = 0; // logical pixel size, for the full-resolution twin
 	const Glyph& AliasBlank(ieWord chr) const;
+	Holder<Sprite2D> RenderHiRes(FT_UInt index, const Region& low, int k) const;
 
 public:
 	TTFFont(Holder<Palette> pal, FT_Face face, int lineheight, int baseline);
 	~TTFFont(void) override;
+	void SetPixelSize(int px) { pxSize = px; }
 
 	const Glyph& GetGlyph(ieWord chr) const override;
 	int GetKerningOffset(ieWord leftChr, ieWord rightChr) const override;

@@ -5,6 +5,7 @@
 #include "Font.h"
 
 #include "Debug.h"
+#include "Interface.h"
 #include "Palette.h"
 
 #include "Logging/Logging.h"
@@ -93,7 +94,13 @@ void Font::GlyphAtlasPage::BlitHi(const Glyph& g, const Sprite2D* hi)
 {
 	if (g.bytesPerPx != 1 || !font->palette || g.size.w <= 0 || g.size.h <= 0) return;
 	int k = IndexedScale(g, hi);
-	Point at(pageXPos - g.pos.x, (g.pos.y < 0) ? -g.pos.y : 0);
+	// SharpFonts: the upscaled glyphs break 1-px strokes ("m" reads as "ııı"). Keep the
+	// twin's scale but fill it with the classic glyph, pixel-doubled, like EE draws these BAMs.
+	if (k >= 2 && !font->renderedTwins && core && core->GetDictionary().Get(StringView("SharpFonts"), 0)) {
+		hi = nullptr;
+	}
+	// same spot BlitGlyphToCanvas used for the 1x pixels (it adds g.pos back on)
+	Point at(pageXPos, std::max(0, int(g.pos.y)));
 	if (at.x < 0 || at.y < 0) return;
 
 	if (!hiPageData && Sheet && Sheet->hiRes && hiScale >= 2) {

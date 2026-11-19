@@ -1278,7 +1278,13 @@ void Interface::LoadSprites()
 void Interface::LoadFonts()
 {
 	Log(MESSAGE, "Core", "Loading Fonts...");
-	AutoTable tab = gamedata->LoadTable("fonts");
+	AutoTable tab;
+	// EEFonts: the Enhanced Edition's TrueType text face (eefonts.2da), drawn at window resolution
+	if (GetDictionary().Get("EEFonts", 0)) {
+		tab = gamedata->LoadTable("eefonts", true);
+		if (tab) Log(MESSAGE, "Core", "EEFonts: using eefonts.2da");
+	}
+	if (!tab) tab = gamedata->LoadTable("fonts");
 	if (!tab) {
 		ThrowException("Cannot find fonts.2da.");
 	}

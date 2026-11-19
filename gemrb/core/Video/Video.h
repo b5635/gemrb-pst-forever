@@ -252,6 +252,8 @@ public:
 	virtual bool SupportsSceneTransform() const { return false; }
 	// True when this driver can draw a sprite's hi-res twin (plugins/GLVideo only).
 	virtual bool SupportsHiResArt() const { return false; }
+	// Whole physical pixels per logical pixel (1 when the driver draws at logical size).
+	virtual int HiResTextScale() const { return 1; }
 	void BeginScene(float zoom, float offsetX, float offsetY, const Region& rect);
 	void EndScene();
 	// big UI text and shapes: draws scaled by zoom with (0,0) at 'at', clipped to rect,

@@ -562,6 +562,12 @@ def main():
     b.root.mkdir(parents=True, exist_ok=True)
     (b.root / "styles.json").write_text(json.dumps({"styles": styles, "colors": colors}, indent=1))
 
+    # EEFonts=1 (gemrb/unhardcoded/pst/eefonts.2da): EE's body-text face
+    try:
+        (b.root / "BOOKMANI.ttf").write_bytes(ee.read("BOOKMANI", "ttf"))
+    except Exception as e:  # noqa: BLE001
+        b.log.append(f"BOOKMANI.ttf not copied: {e}")
+
     menus = mp.parse(menu_text)
     docs, summary = b.menus(menus)
 

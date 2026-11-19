@@ -153,6 +153,7 @@ private:
 
 protected:
 	Holder<Palette> palette;
+	bool renderedTwins = false; // twins drawn by the font itself (TTF), not upscaled art
 	bool background = false;
 	// Lazy font importers must distinguish an uncached glyph from a fallback
 	const Glyph* FindGlyph(ieWord chr) const;

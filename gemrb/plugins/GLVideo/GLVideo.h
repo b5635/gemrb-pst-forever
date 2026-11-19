@@ -143,6 +143,7 @@ public:
 	float RenderScale() const { return renderScale; }
 	bool SupportsSceneTransform() const override { return true; }
 	bool SupportsHiResArt() const override { return true; }
+	int HiResTextScale() const override { return std::max(1, int(renderScale + 0.5f)); }
 	void DrawSceneLighting(const SceneLighting& lighting) override;
 	void SceneBegan() override;
 	void SceneEnding() override;

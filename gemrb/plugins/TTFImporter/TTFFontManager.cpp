@@ -151,7 +151,9 @@ Holder<Font> TTFFontManager::GetFont(unsigned short pxSize, FontStyle /*style*/,
 		//font->underline_height = FT_FLOOR(face->underline_thickness);
 	}
 
-	return MakeHolder<TTFFont>(pal, face, lineHeight, baseline);
+	auto font = MakeHolder<TTFFont>(pal, face, lineHeight, baseline);
+	if (FT_IS_SCALABLE(face)) font->SetPixelSize(pxSize);
+	return font;
 }
 
 }

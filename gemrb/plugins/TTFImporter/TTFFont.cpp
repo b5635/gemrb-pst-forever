@@ -154,9 +154,45 @@ const Glyph& TTFFont::GetGlyph(ieWord chr) const
 	Region r(glyph->bitmap_left, glyph->bitmap_top, sprSize.w, sprSize.h);
 	PixelFormat fmt = PixelFormat::Paletted8Bit(palette, true, 0);
 	Holder<Sprite2D> spr = VideoDriver->CreateSprite(r, pixels, fmt);
+	// render the glyph again at window resolution, so text is not a blown-up 1x bitmap
+	int k = VideoDriver->SupportsHiResArt() ? VideoDriver->HiResTextScale() : 1;
+	if (k >= 2 && pxSize > 0) {
+		spr->hiRes = RenderHiRes(index, r, k);
+	}
 	// FIXME: casting away const
 	const Glyph& ret = const_cast<TTFFont*>(this)->CreateGlyphForCharSprite(chr, spr);
 	return ret;
+}
+
+// The twin must be exactly k times the 1x glyph box, placed the way the 1x glyph is:
+// the k-size bitmap goes at its own bearing relative to k times the 1x bearing, clipped.
+Holder<Sprite2D> TTFFont::RenderHiRes(FT_UInt index, const Region& low, int k) const
+{
+	Holder<Sprite2D> hi;
+	if (FT_Set_Pixel_Sizes(face, 0, pxSize * k)) return hi;
+	if (!FT_Load_Glyph(face, index, FT_LOAD_DEFAULT | FT_LOAD_TARGET_MONO) && !FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL)) {
+		const FT_Bitmap& bm = face->glyph->bitmap;
+		int w = low.w * k;
+		int h = low.h * k;
+		auto* px = static_cast<uint8_t*>(calloc(size_t(w), size_t(h)));
+		if (px) {
+			int ox = face->glyph->bitmap_left - low.x * k;
+			int oy = low.y * k - face->glyph->bitmap_top;
+			for (int y = 0; y < int(bm.rows); ++y) {
+				int dy = y + oy;
+				if (dy < 0 || dy >= h) continue;
+				for (int x = 0; x < int(bm.width); ++x) {
+					int dx = x + ox;
+					if (dx < 0 || dx >= w) continue;
+					px[dy * w + dx] = bm.buffer[y * bm.pitch + x];
+				}
+			}
+			PixelFormat fmt = PixelFormat::Paletted8Bit(palette, true, 0);
+			hi = VideoDriver->CreateSprite(Region(0, 0, w, h), px, fmt);
+		}
+	}
+	FT_Set_Pixel_Sizes(face, 0, pxSize);
+	return hi;
 }
 
 int TTFFont::GetKerningOffset(ieWord leftChr, ieWord rightChr) const
@@ -177,6 +213,7 @@ int TTFFont::GetKerningOffset(ieWord leftChr, ieWord rightChr) const
 TTFFont::TTFFont(Holder<Palette> pal, FT_Face face, int lineheight, int baseline)
 	: Font(std::move(pal), lineheight, baseline, false), face(face)
 {
+	renderedTwins = true;
 	FT_Reference_Face(face); // retain the face or the font manager will destroy it
 	// ttf fonts dont produce glyphs for whitespace
 	PixelFormat fmt = PixelFormat::Paletted8Bit(palette);
