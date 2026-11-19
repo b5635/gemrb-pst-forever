@@ -21,8 +21,11 @@ game with `tools\dev.ps1`, report what was seen in game versus only compiled.
 - **No EE files in git.** EE art, PVRZ pages, generated layouts and derived PNGs go to
   `D:\Games\GemRB\ee_ui\` and `D:\Games\GemRB\upscaled\`. Only our tools, engine code, Python and
   small tables we wrote go into the repo. Never write into Program Files or the GOG folder.
-- **Fonts stay the classic bitmap fonts.** The owner tried EE's Exocet and rejected it. Do not load
-  any EE TTF. EE text styles map to FONTDLG / TRMTFONT / EXOFONT through a table (section 5).
+- **Body text uses EE's BOOKMANI.ttf** (`EEFonts=1`, `gemrb/unhardcoded/pst/eefonts.2da`), rendered at
+  window resolution; the owner prefers it to the classic bitmap body fonts (2026-11-18). Titles and
+  numbers stay classic (EXOFONT, NUMBER*), drawn pixel-doubled (`SharpFonts=1`). EE's Exocet stays
+  rejected. EE text styles map to font names through `eeuifont.2da`; with `EEFonts=1` the body names
+  (FONTDLG, TRMTFONT, NORMAL) resolve to BOOKMANI.
 - **Logical resolution stays 1280×720** (`Width`/`Height` in `GemRB.cfg`). EE's UI is laid out in a
   1366×768 space with 3840×2160 art. Mapping: **layout scale `s = 720 / 768 = 0.9375`**, **art scale
   `k = 2160 / 720 = 3`**. A 3840×2160 EE background is exactly 3× a 1280×720 logical sprite, so it
@@ -70,7 +73,7 @@ moves them into `tools/eeui/`). Their reports are `tools/upscale/work/ee-extract
 | Layouts | `UI.menu`: 94 menus (areas, bams, sequences, mosaics, styles, tooltips, hit polygons) | Yes: converted to JSON (phase 4) |
 | Strings | `L_EN_US.lua` `uiStrings`: 344 keys → strrefs. 183 match the classic `dialog.tlk`, 106 differ, 55 are past its end | Converter rule in section 5 |
 | Text styles | `BGEE.lua` `styles` (normal, title, label, button, list, gold, *_parchment) with colour letters in `fontcolors[]` | Colours yes, fonts no |
-| Fonts | EXOCET, BOOKMANI, NANUM TTF. FONTDLG etc. identical to classic | No (decision above) |
+| Fonts | EXOCET, BOOKMANI, NANUM TTF. FONTDLG etc. identical to classic | BOOKMANI for body text (decision above); EXOCET, NANUM no |
 | Movies | 33 WebM at 960×480 / 640×480 (classic MVE 640×480) | No: GemRB has no WebM decoder. Ask the owner before any work |
 | Shaders | 40 GLSL/DX shaders for EE's renderer | No |
 
