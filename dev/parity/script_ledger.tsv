@@ -1,18 +1,18 @@
 # Script coverage ledger (tools/parity/script_ledger.py). Fill status/finding/by/note by hand; rerun keeps them.
 kind	id	name	uses	orig_handler	gemrb	status	finding	by	audited	note
-action	23	MoveToPoint(P:Point*)	3987	sprite case 19	GameScript::MoveToPoint	todo				
-action	63	Wait(I:Time*)	3531	sprite case 34	GameScript::Wait	todo				
+action	23	MoveToPoint(P:Point*)	3987	sprite case 19	GameScript::MoveToPoint	P	-	opus		blocked NPCs retry 4x with SmallWait 1d8 in orig; sev 3
+action	63	Wait(I:Time*)	3531	sprite case 34	GameScript::Wait	P	-	opus		x15 per second both
 action	10	Enemy()	3165	sprite case 7	GameScript::Enemy	P	A-10	opus		round 2-5; recheck the parts marked S
-action	84	Face(I:Direction*)	3125	sprite case 36	GameScript::Face	todo				
-action	3	Attack(O:Target*)	2812	sprite case 2	GameScript::Attack	todo				
-action	30	SetGlobal(S:Name*,S:Area*,I:Value*)	2763	base sub_44B099	GameScript::SetGlobal	todo				
+action	84	Face(I:Direction*)	3125	sprite case 36	GameScript::Face	P	-	opus		
+action	3	Attack(O:Target*)	2812	sprite case 2	GameScript::Attack	P	-	opus		script level; fist vs sleeper + battle cry 1/6 to track B
+action	30	SetGlobal(S:Name*,S:Area*,I:Value*)	2763	base sub_44B099	GameScript::SetGlobal	P	-	opus		no create both (NoNewVariables); _DEAD/KILL_ cross-table fallback missing, only EiVene_Dead
 action	7	CreateCreature(S:NewObject*,P:Location*)	2385	base sub_44B099	GameScript::CreateCreature	todo				
 action	36	Continue()	2112	sprite case 28	GameScript::Continue	todo				
 action	17	Help()	1843	sprite case 13	GameScript::Help	todo				
-action	202	IncrementGlobalOnce(S:Name1*,S:Area1*,S:Name2*,S:Area2*,I:Val*)	1693	base sub_44B099	GameScript::IncrementGlobalOnce	V	A9	opus		round 2-5; recheck the parts marked S
+action	202	IncrementGlobalOnce(S:Name1*,S:Area1*,S:Name2*,S:Area2*,I:Val*)	1693	base sub_44B099	GameScript::IncrementGlobalOnce	P	-	opus		corrected: NoNewVariables, all vars declared
 action	210	FloatMessage(O:Object*,I:StrRef*)	1643	base sub_44B099	GameScript::DisplayStringHead	todo				
-action	219	WaitRandom(I:MinTime*,I:MaxTime*)	1398	sprite case 34	GameScript::WaitRandom	todo				
-action	109	IncrementGlobal(S:Name*,S:Area*,I:Value*)	1098	base sub_44B099	GameScript::IncrementGlobal	todo				
+action	219	WaitRandom(I:MinTime*,I:MaxTime*)	1398	sprite case 34	GameScript::WaitRandom	V	-	opus		orig lo..hi inclusive, GemRB int0..int1-1; sev 3, wp4 A-219
+action	109	IncrementGlobal(S:Name*,S:Area*,I:Value*)	1098	base sub_44B099	GameScript::IncrementGlobal	P	-	opus		as SetGlobal
 action	218	PlaySequence(I:Anim*AnimStat)	1057	sprite case 91	GameScript::PlaySequence	todo				
 action	60	ChangeAIScript(S:ScriptFile*,I:Level*Scrlev)	887	base sub_44B099	GameScript::ChangeAIScript	todo				
 action	29	RunAwayFrom(O:Creature*,I:Time*AITime)	874	sprite case 24	GameScript::RunAwayFrom	V	A5	opus		round 2-5; recheck the parts marked S
@@ -57,7 +57,7 @@ action	116	TakePartyItem(S:Item*)	137	base sub_44B099	GameScript::TakePartyItem	
 action	19	JoinParty()	136	sprite case 15		S	A2/section 9: JoinGroup flag ignored	opus		round 2-5; recheck the parts marked S
 action	269	SetTeam(O:Object*,I:Value*Team)	135	base sub_44B099	GameScript::SetTeam	todo				
 action	122	EndCutSceneMode()	133	base sub_44B099	GameScript::EndCutSceneMode	todo				
-action	244	BitSet(S:Name*,S:Area*,I:Bit*Bits)	132	base sub_44B099	GameScript::GlobalBOr	todo				
+action	244	BitSet(S:Name*,S:Area*,I:Bit*Bits)	132	base sub_44B099	GameScript::GlobalBOr	P	-	opus		as SetGlobal
 action	303	TimedMoveToPoint(P:Point*,I:Time*)	128	sprite case 107	GameScript::TimedMoveToPoint	todo				
 action	279	EnablePortalTravel(O:Object*,I:Value*)	127	base sub_44B099	GameScript::EnablePortalTravel	todo				
 action	278	ActivatePortalCursor(O:Object*,I:Value*)	122	base sub_44B099	GameScript::ActivatePortalCursor	todo				
@@ -85,7 +85,7 @@ action	126	Activate(O:Object*)	61	base sub_44B099	GameScript::Activate	todo
 action	287	DebugOutput(S:Message*)	58	base sub_44B099	GameScript::Debug	todo				
 action	171	CreatePartyGold(I:Amount*)	57	base sub_44B099	GameScript::CreatePartyGold	todo				
 action	26	PlaySound(S:Sound*)	56	base sub_44B099	GameScript::PlaySound	todo				
-action	83	SmallWait(I:Time*)	54	base sub_44B099	GameScript::SmallWait	todo				
+action	83	SmallWait(I:Time*)	54	base sub_44B099	GameScript::SmallWait	P	-	opus		int0 ticks both
 action	50	MoveViewObject(O:Target*,I:ScrollSpeed*Scroll)	53	base sub_44B099	GameScript::MoveViewObject	todo				
 action	167	StartMovie(S:ResRef*)	50	base sub_44B099	GameScript::StartMovie	todo				
 action	224	TransformPartyItem(S:OldObject*,S:NewObject*,I:Charge1*,I:Charge2*,I:Charge3*)	48	base sub_44B099	GameScript::TransformPartyItem	todo				

@@ -2,11 +2,12 @@
 GemRB-only script BALDUR.bcs. The verdict columns are filled by hand (dev/parity/AGENT_GUIDE.md, track A).
 
 python tools/parity/script_ledger.py          # writes dev/parity/script_ledger.tsv (keeps existing verdicts)
+python tools/parity/script_ledger.py set action 219 V A10 "note"   # set one row's verdict (by = the session's model)
 
 Columns: kind, id, name, uses, orig_handler, gemrb, status, finding, by, audited, note.
 status: todo | P (parity) | V (verified difference, finding written) | S | ? (see AGENT_GUIDE section 5).
 """
-import csv, os, re
+import csv, os, re, sys
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 MAPS = os.path.join(ROOT, "dev", "parity", "maps")
@@ -19,7 +20,21 @@ def load(name):
 	lines = [l for l in open(os.path.join(MAPS, name), encoding="utf-8") if not l.startswith("#")]
 	return list(csv.DictReader(lines, delimiter="\t"))
 
+def set_row(kind, rid, status, finding, note, by):
+	lines = open(OUT, encoding="utf-8").read().splitlines(True)
+	for i, l in enumerate(lines):
+		c = l.rstrip("\n").split("\t")
+		if len(c) == len(COLS) and c[0] == kind and c[1].lower() == rid.lower():
+			c[6:9] = [status, finding, by]; c[10] = note
+			lines[i] = "\t".join(c) + "\n"
+			open(OUT, "w", encoding="utf-8", newline="").writelines(lines)
+			print("set", kind, rid, c[2], status); return
+	sys.exit("no row %s %s" % (kind, rid))
+
 def main():
+	if len(sys.argv) > 1 and sys.argv[1] == "set":
+		a = sys.argv[2:]
+		return set_row(a[0], a[1], a[2], a[3], a[4] if len(a) > 4 else "", a[5] if len(a) > 5 else "opus")
 	old = {}
 	if os.path.exists(OUT):
 		lines = [l for l in open(OUT, encoding="utf-8") if not l.startswith("#")]
