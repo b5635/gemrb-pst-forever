@@ -163,12 +163,15 @@ def SnapPortraits (snap):
 	_row[0] = bool (snap)
 	top = GemRB.GetView ("WIN_TOP")
 	if snap and top:
-		# full screens end where the strip starts: the strip (and the portrait row in it) stays
-		# visible and clickable instead of hiding behind the screen's plate
-		frame = top.GetFrame ()
-		if frame['y'] + frame['h'] > STRIP_Y:
-			frame['h'] = max (0, STRIP_Y - frame['y'])
-			top.SetFrame (frame)
+		# the strip (and the portrait row in it) goes in front of the full screen, so it stays
+		# visible and clickable over the screen's plate. Never shrink the screen to end at the strip
+		# instead: a window resized after it first drew shows its content shifted up.
+		# The HUD windows ignore events, so the keyboard focus stays with the screen. Each call puts
+		# the window right in front of the screen, below the ones raised before it: top first.
+		for name in ("COMBATBAR", "PORTWIN", "ACTWIN", "OPTWIN", "EEHUDPLATE"):
+			win = GemRB.GetView (name)
+			if win:
+				win.OrderAbove (top)
 	LayoutPortraits ()
 	import TurnOrder
 	TurnOrder.UpdateCombatBar ()

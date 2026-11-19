@@ -1520,6 +1520,33 @@ static PyObject* GemRB_Window_Focus(PyObject* self, PyObject* args)
 	Py_RETURN_NONE;
 }
 
+PyDoc_STRVAR(GemRB_Window_OrderAbove__doc,
+	     "===== Window_OrderAbove =====\n\
+\n\
+**Metaclass Prototype:** OrderAbove (GWindow)\n\
+\n\
+**Description:** Draws the window in front of another one. Unlike Focus, a window that ignores\n\
+events does not take the keyboard focus this way (the PST EE HUD over full screens).\n\
+\n\
+**Parameters:**\n\
+  * GWindow - the window to go in front of\n\
+\n\
+**Return value:** N/A");
+
+static PyObject* GemRB_Window_OrderAbove(PyObject* self, PyObject* args)
+{
+	PyObject* pyother = nullptr;
+	PARSE_ARGS(args, "OO", &self, &pyother);
+
+	Window* win = GetView<Window>(self);
+	ABORT_IF_NULL(win);
+	Window* other = GetView<Window>(pyother);
+	ABORT_IF_NULL(other);
+	win->OrderAbove(other);
+
+	Py_RETURN_NONE;
+}
+
 //useful only for ToB and HoW, sets masterscript/worldmap name
 PyDoc_STRVAR(GemRB_SetMasterScript__doc,
 	     "===== SetMasterScript =====\n\
@@ -13746,6 +13773,7 @@ static PyMethodDef GemRBInternalMethods[] = {
 	METHOD(View_SetResizeFlags, METH_VARARGS),
 	METHOD(View_SetTooltip, METH_VARARGS),
 	METHOD(Window_Focus, METH_VARARGS),
+	METHOD(Window_OrderAbove, METH_VARARGS),
 	METHOD(Window_SetAction, METH_VARARGS),
 	METHOD(Window_SetupEquipmentIcons, METH_VARARGS),
 	METHOD(Window_ShowModal, METH_VARARGS),

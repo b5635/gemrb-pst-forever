@@ -188,6 +188,7 @@ class GWindow(GView, Scrollable):
 	methods = {
 		'SetupEquipmentIcons': _GemRB.Window_SetupEquipmentIcons,
 		'Focus': _GemRB.Window_Focus,
+		'OrderAbove': _GemRB.Window_OrderAbove,
 		'ShowModal': _GemRB.Window_ShowModal,
 		'SetAction': _GemRB.Window_SetAction
 	}

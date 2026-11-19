@@ -226,6 +226,64 @@ def make_circ(root: Path, k=3):
     return "EECIRC"
 
 
+# EEARROW: the inventory's ground page arrows (ARROBUTT, 161 px art EE scales into 27 px buttons).
+# Cycles 0 (back) and 1 (forward): normal, pressed, pressed, disabled
+ARROW_SIZE = 27
+
+
+def make_arrow(root: Path, k=3):
+    src = root / "arrobutt.bam"
+    if not src.is_file():
+        return None
+    bam = bam_v2(src.read_bytes(), _Pages(root))
+
+    def frame(cycle, i):
+        cnt, first = bam.cycles[cycle]
+        return bam.frames[bam.lookup[first + min(i, cnt - 1)]].image
+
+    his = []
+    for c in (0, 1):
+        for f in (frame(c, 0), frame(c, 2), frame(c, 2), frame(c, 3)):
+            his.append(Image.fromarray(f).convert("RGBA").resize((ARROW_SIZE * k, ARROW_SIZE * k), Image.LANCZOS))
+    lows = [np.array(f.resize((ARROW_SIZE, ARROW_SIZE), Image.LANCZOS)) for f in his]
+    _write_bam_v1(root / "eearrow.bam", lows, [4, 4])
+    tw = root.parent / "upscaled" / "gui" / "bam" / "EEARROW"
+    tw.mkdir(parents=True, exist_ok=True)
+    for i, f in enumerate(his):
+        f.save(tw / f"{i}.png")
+    return "EEARROW"
+
+
+# Inventory paper dolls (IVP*.mos, 234x319 logical) shown in EE's 195x264 doll button. GemRB only
+# shrinks a button picture by whole steps, so each doll gets a copy at exactly the button size:
+# E<name>.bmp at 1x plus a 3x hi-res twin (upscaled/gui/bmp/E<NAME>.png).
+DOLL_W, DOLL_H = 195, 264
+
+
+def make_dolls(root: Path, k=3):
+    pages = _Pages(root)
+    tw = root.parent / "upscaled" / "gui" / "bmp"
+    tw.mkdir(parents=True, exist_ok=True)
+    made = []
+    for src in sorted(root.glob("ivp*.mos")):
+        raw = inflate(src.read_bytes())
+        if not raw.startswith(b"MOS V2"):
+            continue
+        w, h, blocks = _blocks(raw)
+        img = np.zeros((h, w, 4), np.uint8)
+        for page, sx, sy, bw, bh, bx, by in blocks:
+            img[by:by + bh, bx:bx + bw] = pages.get(page)[sy:sy + bh, sx:sx + bw]
+        hi = Image.fromarray(img).convert("RGBA").resize((DOLL_W * k, DOLL_H * k), Image.LANCZOS)
+        name = "E" + src.stem.upper()
+        hi.save(tw / f"{name}.png")
+        lo = hi.resize((DOLL_W, DOLL_H), Image.LANCZOS)
+        black = Image.new("RGB", lo.size)
+        black.paste(lo, mask=lo.split()[3])
+        black.save(root / f"{name.lower()}.bmp")
+        made.append(name)
+    return made
+
+
 def make_all(root: Path):
     return [n for n in (make_actbar(root), make_dialog_frame(root), make_info_tab(root), make_slot(root),
-                        make_circ(root)) if n]
+                        make_circ(root), make_arrow(root)) if n] + make_dolls(root)

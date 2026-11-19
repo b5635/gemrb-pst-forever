@@ -16,6 +16,7 @@ import EEUI
 from GUIDefines import *
 from ie_stats import *
 from ie_slots import *
+from ie_restype import RES_BAM, RES_BMP
 
 ItemAmountWindow = None
 
@@ -70,7 +71,7 @@ def InitInventoryWindow (Window):
 			Button.SetVarAssoc ("ItemButton", slot)
 
 			Button.SetFlags (IE_GUI_BUTTON_ALIGN_RIGHT | IE_GUI_BUTTON_ALIGN_BOTTOM, OP_OR)
-			Button.SetFont ("NUMBER")
+			Button.SetFont (InventoryCommon.SlotFont)
 
 			color = {'r' : 128, 'g' : 128, 'b' : 255, 'a' : 64}
 			Button.SetBorder (0,color,0,1)
@@ -81,7 +82,7 @@ def InitInventoryWindow (Window):
 	for i in range (10):
 		Button = Window.GetControl (i+47)
 		Button.SetFlags (IE_GUI_BUTTON_ALIGN_RIGHT | IE_GUI_BUTTON_ALIGN_BOTTOM, OP_OR)
-		Button.SetFont ("NUMBER")
+		Button.SetFont (InventoryCommon.SlotFont)
 
 		color = {'r' : 128, 'g' : 128, 'b' : 255, 'a' : 64}
 		Button.SetBorder (0,color,0,1)
@@ -169,6 +170,9 @@ for _i in range (20):
 for _i in range (10):
 	EE_SLOT_IDS["ground%d" % _i] = 47 + _i
 
+# EE encumbrance labels (current, maximum) and the ground page label
+EE_ENC_IDS = {2: 0x7F20, 3: 0x7F21, 5: 0x7F22}
+
 # EE label/text index -> classic label id
 EE_LABEL_IDS = {4: 0x10000039, 9: 0x1000003a, 11: 0x1000003b, 12: 0x1000003c, 13: 0x1000003d, 6: 0x1000003e, 7: 0x1000003f}
 
@@ -191,34 +195,69 @@ def LoadInventoryWindow (id, pack, pos, loader):
 				skip.add (c["index"])   # EE slots PST has no equivalent for
 		elif c["index"] in EE_LABEL_IDS:
 			ids[c["index"]] = EE_LABEL_IDS[c["index"]]
-		elif c["index"] in (2, 3):
-			skip.add (c["index"])       # encumbrance numbers, drawn by one button
+		elif c["index"] in EE_ENC_IDS:
+			ids[c["index"]] = EE_ENC_IDS[c["index"]]
 	arrows = []
+	hpman = None
 	for c in EEUI.Controls ("INVENTORY"):
 		if c["type"] == "button" and c.get ("bam") == "ARROBUTT":
 			skip.add (c["index"])
 			arrows.append (c)
+		elif c.get ("mosaic") == "ICHPMAN":
+			skip.add (c["index"])       # made after the hit point numbers so it is drawn under them
+			hpman = c
+
+	# EE centres the menu on the screen but the plate is drawn from the top: every control (not just
+	# the slots) sits the menu's vertical offset too low
+	dy = -EEUI.Load ("INVENTORY").get ("slot_dy", 0)
 
 	def MakeArrows (win):
 		# made first so they are drawn over the group slots that share their corner
 		for c in arrows:
 			x, y, w, h = c["frame"]
+			y += dy
 			b = win.CreateButton (0x4000 + c["index"], x, y, w, h)
-			b.SetSprites (c["bam"], c.get ("sequence", 0), 0, 2, 0, 3)
+			# EE scales ARROBUTT's 161 px art into the button; EEARROW is it at the button's size
+			if GemRB.HasResource ("EEARROW", RES_BAM):
+				b.SetSprites ("EEARROW", c.get ("sequence", 0), 0, 1, 2, 3)
+			else:
+				b.SetSprites (c["bam"], c.get ("sequence", 0), 0, 2, 0, 3)
 			step = -10 if c.get ("sequence") == 0 else 10
 			b.OnPress (lambda step=step: GroundPage (win, step))
 
-	win, ctl = EEUI.Build ("INVENTORY", ids=ids, skip=skip, first=MakeArrows)
+	win, ctl = EEUI.Build ("INVENTORY", ids=ids, skip=skip, first=MakeArrows, dy=dy)
+	# PST's NUMBER font is 7 px tall and loses its lower half on EE's slots
+	InventoryCommon.SlotFont = EEUI.StyleFont ("normal")
 	win.AddAlias (pack, id)
-	# encumbrance: one two-line button over EE's two labels
-	enc = win.CreateButton (46, 534, 548, 50, 92)
+	if hpman:
+		x, y, w, h = hpman["frame"]
+		man = win.CreateLabel (0x4000 + hpman["index"], x, y + dy, w, h, EEUI.StyleFont ("label"), "", 0)
+		man.SetBackground (hpman["mosaic"])
+	# encumbrance: EE's two labels carry the numbers; the classic scripts still expect button 46,
+	# which stays as an empty, locked button over the bag
+	x, y, w, h = EEUI.Controls ("INVENTORY")[1]["frame"]
+	enc = win.CreateButton (46, x, y + dy, w, h)
 	enc.SetFlags (IE_GUI_BUTTON_NO_IMAGE, OP_SET)
-	enc.SetFont (EEUI.StyleFont ("normal"))
 	for c in EEUI.Controls ("INVENTORY"):
 		if c["type"] == "button" and c.get ("bam") == "XBUTT":
 			ctl[c["index"]].OnPress (win.Close)
 			ctl[c["index"]].MakeEscape ()
 	return win
+
+def SetEEEncumbrance (Window, pc):
+	"""EE's encumbrance labels: carried weight over the bag, the limit under it (EE's getEncumbranceColor)."""
+	cur = GemRB.GetPlayerStat (pc, IE_ENCUMBRANCE)
+	limit = GemRB.GetMaxEncumbrance (pc)
+	if cur > limit:
+		color = {'r': 255, 'g': 0, 'b': 0}
+	elif cur > limit * 0.8:
+		color = {'r': 255, 'g': 255, 'b': 0}
+	else:
+		color = {'r': 255, 'g': 255, 'b': 255}
+	for cid, value in ((EE_ENC_IDS[2], cur), (EE_ENC_IDS[3], limit)):
+		label = Window.GetControl (cid)
+		label.SetText ("%d LB" % value)
+		label.SetColor (color)
 
 def GroundPage (Window, step):
 	pc = GemRB.GameGetSelectedPCSingle ()
@@ -241,9 +280,15 @@ def RefreshInventoryWindow (Window):
 
 	# portrait
 	Button = Window.GetControl (44)
-	Button.SetPicture (GUICommonWindows.GetActorPortrait (pc, 'INVENTORY'))
+	doll = GUICommonWindows.GetActorPortrait (pc, 'INVENTORY')
+	if Window.GetControl (EE_ENC_IDS[2]) and GemRB.HasResource ("E" + doll, RES_BMP):
+		doll = "E" + doll   # the EE doll at the button's size (tools/eeui/derived.py)
+	Button.SetPicture (doll)
 
-	InventoryCommon.SetEncumbranceLabels (Window, 46, None, pc)
+	if Window.GetControl (EE_ENC_IDS[2]):
+		SetEEEncumbrance (Window, pc)
+	else:
+		InventoryCommon.SetEncumbranceLabels (Window, 46, None, pc)
 
 	# armor class
 	ac = GemRB.GetPlayerStat (pc, IE_ARMORCLASS)
@@ -274,6 +319,10 @@ def RefreshInventoryWindow (Window):
 
 	# update ground inventory slots
 	TopIndex = GemRB.GetVar ("TopIndex")
+	page = Window.GetControl (EE_ENC_IDS[5])
+	if page:
+		count = GemRB.GetContainer (pc, 1)['ItemCount']
+		page.SetText ("%d/%d" % (TopIndex // 10 + 1, max (1, (count + 9) // 10)))
 	for i in range (10):
 		Button = Window.GetControl (i+47)
 		Slot = GemRB.GetContainerItem (pc, i+TopIndex)

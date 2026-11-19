@@ -85,23 +85,30 @@ def LoadJournalWindow (id, pack, pos, loader):
 
 	global StartTime
 	StartTime = GemRB.LoadTable ("YEARS").GetValue ("STARTTIME", "VALUE")
-	skip = set ()
-	for c in EEUI.Controls ("JOURNAL"):
-		if c["index"] in (5, 6, 7, 15):    # search box and its labels: no search here
-			skip.add (c["index"])
-	win, ctl = EEUI.Build ("JOURNAL", skip=skip, plate=EEUI.Alias ("JRNBG", "mos"), override={11: "textarea", 12: "textarea", 13: "button", 16: "textarea"})
+	# EE's lists and the log sit on the pages' rims in its frames (EE pads them inside): made below,
+	# moved right and narrowed by (x, w) to clear the rim and the scrollbar
+	PAD = {8: (20, 36), 12: (22, 40), 14: (30, 40), 11: (20, 36), 16: (22, 40)}
+	skip = {5, 6, 7, 15} | set (PAD)     # 5-7 the search box: no search here; 15 the bestiary picture
+	win, ctl = EEUI.Build ("JOURNAL", skip=skip, plate=EEUI.Alias ("JRNBG", "mos"), override={})
 	win.AddAlias (pack, id)
+	layout = {c["index"]: c for c in EEUI.Controls ("JOURNAL")}
+	for i, (dx, dw) in PAD.items ():
+		x, y, w, h = layout[i]["frame"]
+		ctl[i] = EEUI._MakeTextArea (win, i + 1, dict (layout[i], frame=[x + dx, y, w - dw, h]))
 
 	QuestsList, QuestDesc = ctl[8], ctl[11]
-	BeastsList, BeastDesc, BeastImage = ctl[14], ctl[16], ctl[13]
+	BeastsList, BeastDesc = ctl[14], ctl[16]
 	LogText_ = ctl[12]
+	# the bestiary picture fills the left page (EE's label 15); 13 is the journal page's picture
+	x, y, w, h = layout[15]["frame"]
+	BeastImage = ctl[15] = win.CreateButton (16, x, y, w, h)
 	BeastImage.SetFlags (IE_GUI_BUTTON_PICTURE | IE_GUI_BUTTON_NO_IMAGE, OP_SET)
 	BeastImage.SetState (IE_GUI_BUTTON_LOCKED)
 
 	groups = {
-		"log": (12,),
+		"log": (12, 13),
 		"quests": (8, 9, 10, 11),
-		"beasts": (13, 14, 16, 17, 18),
+		"beasts": (14, 15, 16, 17, 18),
 	}
 
 	def Show (mode):

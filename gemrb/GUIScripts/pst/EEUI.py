@@ -289,6 +289,10 @@ def Build (menu, windowId=None, plate=None, skip=(), override=None, ids=None, fi
 	win = GemRB.CreateWindow (windowId, WINDOW_PACK, frame)
 	if plate is None:
 		plate = PlateOf (doc)
+	if plate and not popup and not bar:
+		# full screens: black under the plate, whose few see-through pixels would otherwise show the
+		# game area behind it (actors' floating text in specks)
+		win.SetBackground ({'r': 0, 'g': 0, 'b': 0, 'a': 255})
 	if plate:
 		win.SetBackground (plate)
 	controls = {}
@@ -465,5 +469,6 @@ def BuildSpellBook (arrowsAndName=True):
 		if i >= 12:
 			skip.add (10 + i)
 		ids[30 + i] = 14 + i
-	win, ctl = Build ("SPELLS", ids=ids, skip=skip, fullscreen=True, reverse=True)
+	# the whole menu sits slot_dy too low on its plate, not just the spell slots
+	win, ctl = Build ("SPELLS", ids=ids, skip=skip, fullscreen=True, reverse=True, dy=-Load ("SPELLS").get ("slot_dy", 0))
 	return win

@@ -680,3 +680,21 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   health bar FILLBAR, red to green, over a dark copy of itself; made by `tools/eeui/icons.py`),
   clipped to the movement left. Seen in game out of a fight and in one (`shots/bar1c.png`,
   `shots/bar2c.png`); `tb_autotest.ps1` passed. Nothing committed.
+- UI audit (2026-11-18), every EE screen re-shot and fixed:
+  - Full screens no longer shrink to end at the HUD strip: a window resized after it first drew
+    showed all its content 40 px up (journal tabs cut at the top, everything off its plate). The HUD
+    windows are now raised in front of the screen with the new `Window.OrderAbove` (they ignore
+    events, so the keyboard focus stays with the screen).
+  - Inventory, record and spell book: every control (not only the slots) is moved up by the menu's
+    `slot_dy` (`EEUI.Build(dy=...)`): AC/HP/name/class/gold/X/encumbrance now sit in their sockets.
+  - Inventory: the paper doll is EE's (`E<IVPxxx>.bmp` at the 195x264 button plus a 3x twin, made
+    by `derived.make_dolls`; GemRB only shrinks pictures by whole steps); HP numbers drawn over the
+    HP figure; encumbrance on EE's two labels (`17 LB` over the bag, the limit under it); ground
+    page arrows `EEARROW` at the button size; ground page label `1/1`; stack counts in FONTDLG
+    (`InventoryCommon.SlotFont`; PST's 7 px NUMBER lost its lower half).
+  - Journal: log, quest and creature lists and both descriptions padded off the page rims; EE's
+    JRNLOP picture on the right page in Journal mode; the creature picture fills the left page
+    (EE's label 15). `TextArea` now re-wraps when its scrollbar appears (long text was cut under it).
+  - Area map scaled to fill its box (`MapControl.SetFit`), as EE does.
+  - Full screens get black under the plate: see-through plate pixels showed actors' floating text.
+  - Seen in game: `shots/a_*.png`, `shots/s_a_*.png`. Option sub-screens and save screen were fine.

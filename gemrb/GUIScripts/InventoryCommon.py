@@ -1071,8 +1071,11 @@ def AbilitiesItemWindow (slot_item, pc):
 	Window.ShowModal (MODAL_SHADOW_GRAY)
 	return
 
+# font for stack counts on item slots (the EE screens set their own)
+SlotFont = "NUMBER"
+
 def UpdateInventorySlot (pc, Button, Slot, Type, Equipped=False):
-	Button.SetFont ("NUMBER")
+	Button.SetFont (SlotFont)
 
 	color = {'r' : 128, 'g' : 128, 'b' : 255, 'a' : 64}
 	Button.SetBorder (0, color, 0,1)

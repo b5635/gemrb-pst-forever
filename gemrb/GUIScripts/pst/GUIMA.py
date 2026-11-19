@@ -152,6 +152,7 @@ def LoadAreaMapWindow (id, pack, pos, loader):
 	y -= EEUI.Load ("AREA_MAP").get ("slot_dy", 0)
 	Map = win.CreateMapControl (0x20, x, y, w, h)
 	Map.AddAlias ("MAP")
+	Map.SetFit (True)      # EE scales the area map to fill its box
 	Map.SetVarAssoc ("ShowMapNotes", IE_GUI_MAP_VIEW_NOTES)
 	Map.SetStatus (IE_GUI_MAP_VIEW_NOTES)
 	Map.SetAction (win.Close, IE_ACT_MOUSE_PRESS, GEM_MB_ACTION, 0, 2)

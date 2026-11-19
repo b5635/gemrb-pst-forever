@@ -303,6 +303,15 @@ Region TextArea::UpdateTextFrame()
 
 		textContainer->SetFrame(r);
 		scrollview.Update();
+		// the update can show the scrollbar (the text just outgrew the view), which narrows the
+		// content region: wrap again at the new width, or line ends are cut off under it
+		const Region& after = scrollview.ContentRegion();
+		if (after.w + after.x != cr.w + cr.x) {
+			r = textContainer->Frame();
+			r.w = after.w + after.x - r.x;
+			textContainer->SetFrame(r);
+			scrollview.Update();
+		}
 		return textContainer->Frame();
 	}
 	return Region(Point(0, 0), Size(cr.w + cr.x, 0));

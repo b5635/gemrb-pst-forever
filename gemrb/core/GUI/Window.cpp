@@ -218,6 +218,11 @@ void Window::DidDraw(const Region& /*drawFrame*/, const Region& /*clip*/)
 	}
 }
 
+void Window::OrderAbove(Window* other)
+{
+	manager.OrderRelativeTo(this, other, true);
+}
+
 void Window::Focus()
 {
 	if (!HasFocus()) {

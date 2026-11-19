@@ -113,6 +113,9 @@ public:
 
 	void Close();
 	void Focus();
+	// draw in front of another window without taking the keyboard focus from it (when this one
+	// ignores events, the focus stays with the first window that does not)
+	void OrderAbove(Window* other);
 	bool DisplayModal(ModalShadow = ModalShadow::None);
 
 	void FocusLost();
