@@ -175,6 +175,10 @@ def OpenContainerWindow ():
 		PortraitWindow = GemRB.GetView ("PORTWIN")
 		if PortraitWindow:
 			PortraitWindow.SetVisible (False)
+		# and its own plate replaces the HUD's: that full-width window would draw over the strip
+		Plate = GemRB.GetView ("EEHUDPLATE")
+		if Plate:
+			Plate.SetVisible (False)
 	else:
 		ground_size, leftdiv = (10, 5) if GameCheck.IsIWD2 () else (6, 3)
 		personal_size, rightdiv = 4, 2
@@ -285,6 +289,9 @@ def CloseContainerWindow ():
 		PortraitWindow = GemRB.GetView ("PORTWIN")
 		if PortraitWindow:
 			PortraitWindow.SetVisible (True)
+		Plate = GemRB.GetView ("EEHUDPLATE")
+		if Plate:
+			Plate.SetVisible (True)
 	if not GameCheck.IsPST ():
 		GemRB.GetView ("MSGWIN").SetVisible (True)
 		if GemRB.GetView ("ACTWIN"):
