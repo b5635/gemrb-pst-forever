@@ -237,3 +237,27 @@ See finding A1: handled (creature case 57), missing in GemRB.
 - **Status:** P   **Uses:** 470 / 386. Original base cases 273/274: object missing → nothing; index < 10, stored as a
   **16-bit** signed word (`sub_76840D`/`sub_76843A`, creature words +1932…). GemRB: index ≤ 15, 32-bit stat. Data uses
   indexes 0-9 and small values.
+
+### A-204 FadeToBlack(), A-205 FadeFromBlack()
+- **Status:** P (both instant)   **Uses:** 369 / 364. Original base cases 204/205: set the current area's fade flags
+  (+1036 to-black, +1040 from-black, int0 bit at +1044) and finish at once. GemRB `FadeToColor`/`FadeFromColor` with
+  point.x = 0 → last/default duration, released at once. Fade speed not compared (presentation).
+- **Side rule found here (for A6):** while any of the area flags +1036 / +1040 / +1048 is 1, the original **holds
+  `Dialogue` (action 8, base case 8 and creature case 5 return 0 = retry)** and disables the portrait buttons
+  (`sub_43B89C`). GemRB starts a dialogue during a fade. Re-check: `python tools/parity/dumps.py lines orig sub_44B099 829 862`.
+
+### A-306 GiveExperience(O:Object, I:Amount)
+- **Status:** P   **Uses:** 246. Original base case 306: creature targets only; op-104 effect with int0 (no split),
+  feedback 2, sound `SPTR02`. GemRB `AddXPObject`: `AddExperience(int0)`, message, sound. Same.
+
+### A-111 DestroySelf()
+- **Status:** P / S   **Uses:** 245. Original creature case 59: sets the "remove me" flag +9962, done. GemRB `DestroySelf`
+  + a PST hack: if the creature runs the current cutscene, cutscene mode ends (`Actions.cpp` `DestroySelf`, "#532"). The
+  original has nothing here; whether it ends cutscene mode when the runner disappears is an A5 question.
+
+### A-248 RunToPoint(P:Point)
+- **Status:** P   **Uses:** 274. Original creature case 93 → `sub_786E84` like MoveToPoint (run flag from the action id).
+  GemRB `RunToPoint`. See A-23.
+
+### A-312 PlaySoundNotRanged(S:Sound)
+- **Status:** P   **Uses:** 285. Original base case 312: loads the sound and plays it unpositioned. GemRB same (presentation).

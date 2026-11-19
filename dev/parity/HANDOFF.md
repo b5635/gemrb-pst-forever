@@ -1,4 +1,4 @@
-# Handoff: where the parity investigation stands (2026-11-19, round 7)
+# Handoff: where the parity investigation stands (2026-11-19, round 8)
 
 Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the work packages) and `findings.md` (all findings, by round).
 
@@ -35,6 +35,22 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
 - Cost of the phase: ~25 tool calls, no IDA run. The original was found in 3 steps from a known door (op 13 sends
   the same event numbers → message vtable → Run → `sub_73DEEF`), not by searching.
 
+## Round 8 (2026-11-19): A1 actions by use count
+- 36 action rows decided this round (ledger: 40 of 310 rows have a verdict; actions 40/147). Detail in
+  `wp4_actions.md` "Round 8". Rows done: MoveToPoint, Wait, WaitRandom, SmallWait, Face, Attack, SetGlobal,
+  IncrementGlobal, BitSet, Help, CreateCreature, ChangeAIScript, AddexperienceParty, PlaySequence, SetAnimState,
+  FaceObject, ReturnToSavedPlace, GiveItemCreate, TakePartyGold, StartTimer, StartRandomTimer, Set/IncInternal, Fades,
+  GiveExperience, DestroySelf (S), RunToPoint, PlaySoundNotRanged.
+- New findings: **A10** (sev 2) PlaySequence/SetAnimState block until the animation ends in PST, GemRB doesn't;
+  **A11** (sev 2) StartRandomTimer rolls max…2·max−min−1 in GemRB; sev 3: WaitRandom never rolls its max,
+  AddexperienceParty drops the remainder, ReturnToSavedPlace doesn't restore facing.
+- **Correction:** A9 was wrong (PST `NoNewVariables = 1`: GemRB doesn't create variables either) → P.
+- Notes for later packages: the original holds `Dialogue` while a fade runs (A6, `wp4_actions.md` A-204); DLG variable
+  names with stray spaces (`"PILLAR "`, `" KNOW_SIGIL"`…, A7, listed under A-30); GLOBAL↔KAPUTZ fallback for
+  `_DEAD`/`KILL_` names missing in GemRB (only `EiVene_Dead`, harmless); SetGlobal's `JOIN_*` hook (A8);
+  GemRB's DestroySelf ends cutscene mode for PST (A5).
+- Left `todo` on purpose for A5: Continue (36), CutSceneId (127). FloatMessage (210) needs the creature vtable slot +104.
+
 ## Next, in order (detail in AGENT_GUIDE section 4)
 1. **Track A, scripts and dialogue, to 100 % of `script_ledger.tsv`:** A1 actions (by use), A2 triggers, A3 event
    triggers, A4 object selectors, A5 script engine, A6 dialogue engine, A7 parser, A8 BALDUR.bcs, A9 INI spawns,
@@ -48,9 +64,12 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
    rolls, E17 scroll caster level, E18 TransferHP, E19 Ball Lightning / Adder's Kiss.
 
 ## For audit (Opus spot-checks these; newest first)
-- (none yet; round 7 was written by Opus)
+- (none yet; rounds 7-8 were written by Opus)
 
 ## Tool changes (newest first; use these)
+- 2026-11-19 (round 8): `actargs.py <id> [--dlg] [--where] [--top N]`: how every BCS (and DLG text) calls an action,
+  parameters counted; `script_ledger.py set <kind> <id> <status> <finding> "<note>" [by]` sets one row;
+  `dumps.py find` accepts names with `(` (literal match when the regex is invalid).
 - 2026-11-19 (later): `dumps.py grep` reads a packed copy (`.re/*/dump/all_*.c`, built once, ~0.2-2 s per grep
   instead of 15-60 s; regex is case-sensitive, `-i` for not); `show`/`lines`/`case` hide Hex-Rays local declarations
   and join multi-line calls (`--decl`, `--raw` to undo); outlines also list labels and named calls.

@@ -27,18 +27,18 @@ action	140	GiveItemCreate(S:ResRef*,O:Object*,I:Usage1*,I:Usage2*,I:Usage3*)	483
 action	273	SetInternal(O:Object*,I:Index*Internal,I:Value*)	470	base sub_44B099	GameScript::SetInternal	P	-	opus		orig 16-bit, idx<10
 action	120	StartCutScene(S:CutScene*)	433	base sub_44B099	GameScript::StartCutScene	todo				
 action	274	IncInternal(O:Object*,I:Index*Internal,I:Value*)	386	base sub_44B099	GameScript::IncInternal	P	-	opus		as SetInternal
-action	204	FadeToBlack()	369	base sub_44B099	GameScript::FadeToColor	todo				
-action	205	FadeFromBlack()	364	base sub_44B099	GameScript::FadeFromColor	todo				
+action	204	FadeToBlack()	369	base sub_44B099	GameScript::FadeToColor	P	-	opus		instant both; Dialogue held during fades in orig (A6)
+action	205	FadeFromBlack()	364	base sub_44B099	GameScript::FadeFromColor	P	-	opus		
 action	117	TakePartyGold(I:Amount*)	363	base sub_44B099	GameScript::TakePartyGold	P	-	opus		
 action	61	StartTimer(I:ID*,I:Time*)	345	base sub_44B099	GameScript::StartTimer	P	-	opus		seconds both
 action	31	Spell(O:Target*,I:Spell*Spell)	308	sprite case 25	GameScript::Spell	todo				
-action	312	PlaySoundNotRanged(S:Sound*)	285	base sub_44B099	GameScript::PlaySoundNotRanged	todo				
+action	312	PlaySoundNotRanged(S:Sound*)	285	base sub_44B099	GameScript::PlaySoundNotRanged	P	-	opus		
 action	251	RunningAttack(O:Target*)	284	sprite case 95	GameScript::RunningAttack	todo				
-action	248	RunToPoint(P:Point*)	274	sprite case 93	GameScript::RunToPoint	todo				
+action	248	RunToPoint(P:Point*)	274	sprite case 93	GameScript::RunToPoint	P	-	opus		
 action	220	StartRandomTimer(I:ID*,I:MinTime*,I:MinTime*)	268	base sub_44B099	GameScript::StartRandomTimer	V	A11	opus		GemRB range int2..2*int2-int1-1
 action	121	StartCutSceneMode()	265	base sub_44B099	GameScript::StartCutSceneMode	todo				
-action	306	GiveExperience(O:Object*,I:Amount*)	246	base sub_44B099	GameScript::AddXPObject	todo				
-action	111	DestroySelf()	245	sprite case 59	GameScript::DestroySelf	todo				
+action	306	GiveExperience(O:Object*,I:Amount*)	246	base sub_44B099	GameScript::AddXPObject	P	-	opus		
+action	111	DestroySelf()	245	sprite case 59	GameScript::DestroySelf	S	-	opus		GemRB PST hack ends cutscene if runner dies; orig? (A5)
 action	286	SetCorpseEnabled(S:Name*,I:State*)	238	base sub_44B099	GameScript::AmbientActivate	todo				
 action	217	PermanentStatChange(O:Object*,I:StadID*Stats,I:Delta*Delta,I:Modifier*)	230	base sub_44B099	GameScript::PermanentStatChange	todo				
 action	108	EscapeArea()	208	sprite case 57	GameScript::EscapeArea	todo				
