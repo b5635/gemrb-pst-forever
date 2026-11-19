@@ -208,12 +208,15 @@ addr	size	assert_source	role	decompiled
 4D6B37	120		opcode 202 ApplyEffect	y
 4D6BAF	258		opcode 203 ApplyEffect	y
 4D6CB1	333		opcode 204 ApplyEffect	y
+4D6DFE	723		Prayer aura update	y
 4D70D1	374		opcode 205 ApplyEffect	y
 4D7247	1991		opcode 206 ApplyEffect	y
 4D7A0E	142		opcode 207 ApplyEffect	y
 4D7A9C	62		opcode 208 ApplyEffect	y
 4D7ADA	341		opcode 210 ApplyEffect	y
+4D7CD6	2702		Detect Evil aura update	y
 4D8764	211		opcode 211 ApplyEffect	y
+4D8837	464		Jumble Curse aura update	y
 4D8A07	721		opcode 209 ApplyEffect	y
 4E9A30	28		opcode 212 ApplyEffect	y
 52D2E9	306		action 166 SetNumTimesTalkedTo (sprite case 78); action 282 StopMoving (sprite case 106)	n
@@ -421,6 +424,10 @@ addr	size	assert_source	role	decompiled
 7B1EE7	358		action 149 EquipMostDamagingMelee (sprite case 75)	n
 7B328C	64		action 203 IncrementKillStat (sprite case 86)	n
 7BC70E	1030		spell-hit notice caster->target (EE SendHitTrigger)	y
+7BD15D	263		CPlanescape::IsInCarceri (AR0900-0902, AR0904, AR3015, AR3016; false if the creature carries CARCERSK)	y
+7BD264	195		CPlanescape::IsInBaator (AR1000, AR1001; BAATORSK)	y
+7BD327	246		CPlanescape::IsInNegativeMaterialPlane (AR1200-AR1204; NEGMATSK)	y
 7CD354	9174		uses resrefs of CPsSpellAbyssalFury; uses resrefs of CPsSpellForceMissile; uses resrefs of CPsSpellHowlOfPandemonium; uses resrefs of CPsSpellPowerWordBlind; uses resrefs of CPsSpellStygianIceStorm	n
 81FD5A	148		action 6 ? (sprite case 4); action 201 SetGlobalTint (sprite case 85)	n
+82015B	99		die roll: clamp(rand % size + adj, 0, size-1) (callers add 1)	y
 89BC79	82		CString from literal	n

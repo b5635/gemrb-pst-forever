@@ -189,3 +189,20 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | S36 | **Movies the original plays and GemRB doesn't:** RUNE (Rune of Torment), METEOR (Meteor Storm), CONFLAG (Conflagration). DRAGON and CANNON are already played by GemRB helpers. | V | 3 |
 | S37 | **Ball Lightning (SPWI301) does nothing in the original either** (projectile 1, no effects). | P | — |
 | S38 | **Chain Lightning Storm, Cloudkill, Mechanus' Cannon, Death Bolt, Missile of Patience damage:** match. | P | — |
+| S39 | **Blood Bridge drains 2 HP instead of caster level + 2** (factory case 226 sets op 192's p1 to level + 2). | V | 2 |
+| S40 | **Faerie Fire lasts 20 s instead of 20 s × caster level** (factory case 259). | V | 2 |
+| S42 | **Plane warping has an exemption:** carrying the plane's Spell Key item (`CARCERSK`, `BAATORSK`, `NEGMATSK`) turns the Carceri / Baator / Negative Material checks off for that creature (`CPlanescape::IsInCarceri` etc.). Applies to R1, S34 and Embalm's plane rules. | V | 2 |
+| S41 | **Acid Storm's damage lands after 2 s instead of 20 s** (factory case 247, op 12 delayed 20). Check GemRB's delay unit for timing 4. | S | 3 |
+
+## 11. Opcode findings, round 3 (detail in [wp2_opcodes.md](wp2_opcodes.md))
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| E7 | **Curse (op 203) improves saving throws in GemRB**: it subtracts p1 from the save target numbers; the original adds it (worse saves). Prayer hands this effect to every enemy. | V | 2 |
+| E8 | **Effect damage dice ignore the target's luck.** The original rolls each die minus the target's luck (`sub_82015B`); GemRB rolls the dice once, unlucked, when the effect is queued. | V | 2 |
+| E9 | **Prayer (op 204) is an aura in the original**: every 5 s, everyone within 720 of the caster gets Bless or Curse for 6 s. GemRB applies 60 s once to the whole map. | V | 2 |
+| E10 | **Iron Fist (op 208) gives no to-hit in the original**: +6 damage on fist attacks only (animation 50), max dice in Carceri. GemRB adds +3 to hit. | V | 2 |
+| E11 | **Embalm (op 206)**: Minor is 2d4 (GemRB 1d6+1); plane rules (Carceri half, Negative Material 1, Baator save) missing. | V | 2 |
+| E12 | **Detect Evil (op 210) sets `STATE_DETECT_EVIL` (0x1000000)** on the caster in the original, and pulses evil creatures in a cone in front. GemRB sets no state and uses a circle. | V | 3 |
+| E13 | **Jumble Curse (op 211)**: the original handler only plays the hiccup; GemRB also forces 100% spell failure. Unless casting checks op 211 elsewhere, GemRB is harsher. | S | 2 |
+| E14 | **Op 138 sequence ids**: GemRB rejects PST sequence 27 (Minor Embalming). | V | 3 |

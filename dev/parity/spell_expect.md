@@ -566,3 +566,15 @@ version for `tools/tb_spell_suite.py` is `spell_expect.json`. Durations in effec
 - **Visuals/sounds:** `CALLL03`, `CHAIN04`.
 - **GemRB today:** `callih.pro` area radius 10, success `LIGHTNIN`: op 12 **2d8** electricity, no save, delayed 15.
 - **Differences:** 1) 2d8 instead of (level + 2)d8 2) radius 10 instead of 120 3) no save vs spell.
+
+---
+
+## Plain projectiles with effects added by the factory (`sub_559A5D`)
+
+Three ordinary projectiles get effects in code, in the original's factory itself:
+
+| Projectile | Spell | Original (case in `sub_559A5D`) | GemRB helper | Difference |
+|---|---|---|---|---|
+| 226 BBRIDGE | SPWI204 Blood Bridge | op 192 TransferHP **p1 = caster level + 2** | `BBRIDGE`: op 192 p1 **2** | fixed 2 instead of level + 2 |
+| 247 ASTORM | SPWI701 Acid Storm | radius 400, enemies; op 9 glow 30 (delayed); op 186 status 0x4000, 30; op 12 **1d6 acid**, save vs spell, **delayed 20** | `ASTORM`: same ops, op 12 delayed **2** | damage lands 2 s instead of 20 s after |
+| 259 FFIRE | SPPR105 Faerie Fire | radius 480; op 9 glow and op 0 **AC −2** for **20 s × caster level** (delayed, special 15) | `FAERIE`: op 9 + op 0 −2 for **20 s** | duration not scaled by level |

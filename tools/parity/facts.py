@@ -9,7 +9,7 @@ WORK = os.environ.get("PARITY_WORK", r"D:\gemrb\.re")
 
 # names of original helpers we have identified (extend as you learn more; see dev/parity/maps/orig_index.tsv)
 ORIG = {"4A56EB": "MakeEffect(op,p1,p2,timing,...)", "5A4864": "GetObject(id)", "89BC79": "CString", "81B75E": "ResRef",
-	"89B946": "new", "463F03": "GlobalVar", "404D61": "MakeAction(id,...)", "4EA100": "LoadSPL", "4A5C21": "DecodeEffect(itemeffect)", "577BD4": "ProjectileRollToHit", "577E7C": "ProjectileRollToHit(ids)", "7BC70E": "SendHitTrigger", "476177": "GetAllInRange", "4128C8": "GetEnemyOf", "4ADD0E": "ClearItemEffect(op)"}
+	"89B946": "new", "463F03": "GlobalVar", "404D61": "MakeAction(id,...)", "4EA100": "LoadSPL", "4A5C21": "DecodeEffect(itemeffect)", "577BD4": "ProjectileRollToHit", "577E7C": "ProjectileRollToHit(ids)", "7BC70E": "SendHitTrigger", "476177": "GetAllInRange", "4128C8": "GetEnemyOf", "7BD15D": "IsInCarceri", "7BD264": "IsInBaator", "7BD327": "IsInNegativeMaterialPlane", "82015B": "RollDie(size,adj)", "4ADD0E": "ClearItemEffect(op)"}
 
 def load(game, name):
 	d = os.path.join(WORK, game, "dump", "dec")
