@@ -93,6 +93,12 @@ python tools/parity/iesdp.py trigger pst 0x4092
 python tools/parity/iesdp.py grep pst "Embalm"
 ```
 
+### 1.3a Maps (start here for "where is X")
+
+`dev/parity/maps/*.tsv` (see its README): opcode, action, trigger and projectile number → original function
+addresses; struct offsets; known-function index. Grep them first, then open the `.c` file they name. After you
+decompile something new, run `python tools/parity/export_maps.py`.
+
 ### 1.4 Existing generated tables (read these, don't regenerate unless needed)
 
 - `dev/parity/opcodes.md`: every opcode PST data uses, GemRB function, EE class, original handler address, use count.

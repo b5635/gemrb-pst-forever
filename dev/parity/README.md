@@ -8,6 +8,7 @@ This folder compares GemRB's Planescape: Torment support with the real engine.
 - [scripting.md](scripting.md): actions and triggers used by scripts/dialogs, GemRB status, original handler (generated).
 - [pst_functions.md](pst_functions.md): every PST-only engine function in PST:EE, the rules checklist (generated).
 - The plan: [PARITY_PLAN.md](../../PARITY_PLAN.md).
+- [maps/](maps/README.md): where everything lives in both binaries (address maps, struct offsets), as text. No IDA needed to use them.
 - [AGENT_GUIDE.md](AGENT_GUIDE.md): step-by-step instructions for an agent that continues the investigation.
 
 Tools added for that: `tools/parity/ida.py` (one-command decompile/xrefs/vtables/search), `tools/parity/iesdp.py`
@@ -73,6 +74,7 @@ Then the Python passes, in order:
 | `prodiff.py`, `gemext.py`, `pssum.py` | `prodiff.json`, `gemext.json`, `pssum.md` | The 36 `CPsSpell*` classes: assets, GemRB projectile and its helper SPLs. |
 | `derive.py` | `psbehav.json`, `orig_*.json` | Code-applied effects per spell class; the original's opcode vtables, handled actions and triggers. |
 | `gen_docs.py` | `dev/parity/*.md` | The generated tables in this folder. |
+| `export_maps.py` | `dev/parity/maps/*.tsv` | Address maps (opcodes, actions, triggers, projectiles, known functions, EE symbols, strings). Rerun after new decompiles. |
 
 ## Tips for reading the original
 

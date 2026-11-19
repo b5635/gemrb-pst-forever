@@ -1,0 +1,285 @@
+# Original action dispatch: sub_76A7EA switch on byte_76D476[id] (ids < 0x130), else base switch sub_44B099. Read the case in .re/orig/dump/dec/76A7EA.c or 44B099.c
+id	action_ids	sprite_case	handler	orig_subs_called	uses	gemrb
+0	NoAction()	0	sprite case 0		4	GameScript::NoAction
+1	ActionOverride(O:Actor*,A:Action*)	1	sprite case 1			
+2	AddWayPoint(P:WayPoint*)	108	none			
+3	Attack(O:Target*)	2	sprite case 2	5B8B72 45E41B 40F64F 77EEE0	2812	GameScript::Attack
+4		108	base sub_44B099			
+5	BackStab(O:Target*)	3	sprite case 3	5B8B72 45E41B 81FD5A		
+6		4	sprite case 4	81FD5A		
+7	CreateCreature(S:NewObject*,P:Location*)	108	base sub_44B099	4662B7	2385	GameScript::CreateCreature
+8	Dialogue(O:Object*)	5	sprite case 5	498F4F 5D0D6F 5A4864 7A2868	138	GameScript::Dialogue
+9	DropItem(S:Object*,P:Location*)	6	sprite case 6	7A677D		
+10	Enemy()	7	sprite case 7	7A0255	3165	GameScript::Enemy
+11	EquipItem(S:Object*)	8	sprite case 8	77AEAB 7A8C8B		
+13	FindTraps()	10	sprite case 10	7A8C9E		
+14	GetItem(S:Object*,O:Target*)	11	sprite case 11	77AEAB 7A880D		
+15	GiveItem(S:Object*,O:Target*)	12	sprite case 12	45E41B 7A8820	78	GameScript::GiveItem
+16	GiveOrder(O:Object*,I:Order*Order)	108	base sub_44B099	45E41B 46C958		
+17	Help()	13	sprite case 13	79FB29	1843	GameScript::Help
+18	Hide()	14	sprite case 14	7A8CAF		
+19	JoinParty()	15	sprite case 15	7A0423	136	
+20	LayHands(O:Target*)	16	sprite case 16	45E41B 7A94E9		
+21	LeaveParty()	17	sprite case 17	7A12F0	36	GameScript::LeaveParty
+22	MoveToObject(O:Target*)	18	sprite case 18	5B8B72 45E41B 785E47	113	
+23	MoveToPoint(P:Point*)	19	sprite case 19	5B8B72 76D820 786E84	3987	GameScript::MoveToPoint
+24	Panic()	20	sprite case 20	7A9802		
+25	PickPockets(O:Target*)	21	sprite case 21	45E41B 7A9B03		
+26	PlaySound(S:Sound*)	108	base sub_44B099	463C80	56	GameScript::PlaySound
+27	ProtectPoint(P:Target*,I:Range*)	22	sprite case 22	76D820 794C5D		
+28	RemoveTraps(O:Trap*)	23	sprite case 23	45E41B 7AAA11		
+29	RunAwayFrom(O:Creature*,I:Time*AITime)	24	sprite case 24	5B8B72 45E41B 78DEDF	874	GameScript::RunAwayFrom
+30	SetGlobal(S:Name*,S:Area*,I:Value*)	108	base sub_44B099	464807	2763	GameScript::SetGlobal
+31	Spell(O:Target*,I:Spell*Spell)	25	sprite case 25	45E41B 787F90	308	GameScript::Spell
+33	Turn()	26	sprite case 26	7AC56E		
+34	UseItem(S:Object*,O:Target*)	27	sprite case 27	45E41B 790CE5	1	GameScript::UseItem
+36	Continue()	28	sprite case 28		2112	GameScript::Continue
+37	FollowPath()	108	none			
+38	Swing()	29	sprite case 29	78CE31		
+39	Recoil()	30	sprite case 30	78D354	1	GameScript::Recoil
+40	PlayDead(I:Time*)	31	sprite case 31	78DD17	1	GameScript::PlayDead
+47	Formation(O:Leader*,P:Offset*)	32	sprite case 32	77AEAB 78F0FA		
+48	JumpToPoint(P:Target*)	33	sprite case 33	78FAB3	78	GameScript::JumpToPoint
+49	MoveViewPoint(P:Target*,I:ScrollSpeed*Scroll)	108	base sub_44B099	464AC4	140	GameScript::MoveViewPoint
+50	MoveViewObject(O:Target*,I:ScrollSpeed*Scroll)	108	base sub_44B099	45E93F 464B4C	53	GameScript::MoveViewObject
+51	ClickLButtonPoint(P:Target*,I:ScrollSpeed*Scroll)	108	base sub_44B099	464F58		
+52	ClickLButtonObject(O:Target*,I:ScrollSpeed*Scroll)	108	base sub_44B099	45E93F 464FCC		
+53	ClickRButtonPoint(P:Target*,I:ScrollSpeed*Scroll)	108	base sub_44B099	46525C		
+54	ClickRButtonObject(O:Target*,I:ScrollSpeed*Scroll)	108	base sub_44B099	45E93F 4652D0		
+55	DoubleClickLButtonPoint(P:Target*,I:ScrollSpeed*Scroll)	108	base sub_44B099	4650FF		
+56	DoubleClickLButtonObject(O:Target*,I:ScrollSpeed*Scroll)	108	base sub_44B099	45E93F 465173		
+57	DoubleClickRButtonPoint(P:Target*,I:ScrollSpeed*Scroll)	108	base sub_44B099	46540F		
+58	DoubleClickRButtonObject(O:Target*,I:ScrollSpeed*Scroll)	108	base sub_44B099	45E93F 465483		
+59	MoveCursorPoint(P:Target*,I:ScrollSpeed*Scroll)	108	base sub_44B099	464EA8		
+60	ChangeAIScript(S:ScriptFile*,I:Level*Scrlev)	108	base sub_44B099	465501	887	GameScript::ChangeAIScript
+61	StartTimer(I:ID*,I:Time*)	108	base sub_44B099	465B25	345	GameScript::StartTimer
+62	SendTrigger(O:Target*,I:TriggerNum*)	108	base sub_44B099	45E93F 465BEB	86	GameScript::SendTrigger
+63	Wait(I:Time*)	34	sprite case 34	44B099	3531	GameScript::Wait
+64	UndoExplore()	108	base sub_44B099	598321		
+65	Explore()	108	base sub_44B099	5982CE	10	GameScript::Explore
+66	DayNight(I:TimeOfDay*Time)	108	base sub_44B099	5921CD		
+67	Weather(I:Weather*Weather)	108	base sub_44B099	599F9E		
+68	CallLightning(O:Target*)	108	base sub_44B099	45E41B 5DC492 4A56EB 52D2E9		
+69	VEquip(I:item*)	35	sprite case 35	5B95FF		
+70	NIDSpecial1()	108	none			
+71	NIDSpecial2()	108	none			
+72	NIDSpecial3()	108	none			
+73	NIDSpecial4()	108	none			
+74	NIDSpecial5()	108	none			
+75	NIDSpecial6()	108	none			
+76	NIDSpecial7()	108	none			
+77	NIDSpecial8()	108	none			
+78	NIDSpecial9()	108	none			
+79	NIDSpecial10()	108	none			
+80	NIDSpecial11()	108	none			
+81	NIDSpecial12()	108	none			
+82	CreateItem(S:ResRef*,I:Usage1*,I:Usage2*,I:Usage3*)	108	base sub_44B099	46B02E	41	GameScript::CreateItem
+83	SmallWait(I:Time*)	108	base sub_44B099	465E95	54	GameScript::SmallWait
+84	Face(I:Direction*)	36	sprite case 36	790813	3125	GameScript::Face
+85	RandomWalk()	37	sprite case 37	5B8B72	69	GameScript::RandomWalk
+86	SetInterrupt(I:State*Boolean)	38	sprite case 38		6	GameScript::SetInterrupt
+87	ProtectObject(O:Target*,I:Range*)	39	sprite case 39	45E41B 795883	7	GameScript::ProtectObject
+88	Leader(P:Point*)	40	sprite case 40	79665A		
+89	Follow(P:Point*)	41	sprite case 41	5B8B72		
+90	MoveToPointNoRecticle(P:Point*)	19	sprite case 19	5B8B72 76D820 786E84		
+91	LeaveArea(S:Area*,P:Point*,I:Face*)	42	sprite case 42	798CDC		
+92	SelectWeaponAbility(I:WeaponNum*,I:AbilityNum*)	43	sprite case 43	79F434		
+94	GroupAttack(O:Target*)	45	sprite case 45	45E41B 79F96A		
+95	SpellPoint(P:Target*,I:Spell*Spell)	46	sprite case 46	78A96D	1	GameScript::SpellPoint
+96	Rest()	47	sprite case 47	79FD71		
+97	UseItemPoint(S:Item*,P:Target*,I:Ability*)	48	sprite case 48	792560		
+98	AttackNoSound(O:Target*)	2	sprite case 2	5B8B72 45E41B 40F64F 77EEE0		
+100	RandomFly()	50	sprite case 50	7A2151		
+102	MoraleSet(O:Target*,I:Morale*)	52	sprite case 52	4ADD0E 4A5C21 45E41B 52D2E9	8	GameScript::MoraleSet
+103	MoraleInc(O:Target*,I:Morale*)	53	sprite case 53	4ADD0E 4A5C21 45E41B 52D2E9	73	GameScript::MoraleInc
+104	MoraleDec(O:Target*,I:Morale*)	54	sprite case 54	4ADD0E 4A5C21 45E41B 52D2E9	189	GameScript::MoraleDec
+105	AttackOneRound(O:Target*)	55	sprite case 55	45E41B 77EEE0		
+106	Shout(I:ID*)	108	base sub_44B099	465F30		
+107	MoveToOffset(P:Offset*)	56	sprite case 56	7A7243		
+108	EscapeArea()	57	sprite case 57	43A3C1 7AD135	208	GameScript::EscapeArea
+109	IncrementGlobal(S:Name*,S:Area*,I:Value*)	108	base sub_44B099	466198	1098	GameScript::IncrementGlobal
+110	LeaveAreaLUA(S:Area*,P:Point*,I:Face*)	58	sprite case 58	7972FE	1	GameScript::LeaveAreaLUA
+111	DestroySelf()	59	sprite case 59		245	GameScript::DestroySelf
+112	UseContainer()	60	sprite case 60	7A7465		
+113	ForceSpell(O:Target*,I:Spell*Spell)	108	base sub_44B099		35	GameScript::ForceSpell
+114	ForceSpellPoint(P:Target*,I:Spell*Spell)	108	base sub_44B099	468339		
+115	SetGlobalTimer(S:Name*,S:Area*,I:Time*GTimes)	108	base sub_44B099	46A41E	78	GameScript::SetGlobalTimer
+116	TakePartyItem(S:Item*)	108	base sub_44B099		137	GameScript::TakePartyItem
+117	TakePartyGold(I:Amount*)	108	base sub_44B099	46C3E3	363	GameScript::TakePartyGold
+118	GivePartyGold(I:Amount*)	108	base sub_44B099		180	GameScript::GivePartyGold
+119	DropInventory()	61	sprite case 61	7A68DD	33	GameScript::DropInventory
+120	StartCutScene(S:CutScene*)	108	base sub_44B099		433	GameScript::StartCutScene
+121	StartCutSceneMode()	108	base sub_44B099	52D2E9	265	GameScript::StartCutSceneMode
+122	EndCutSceneMode()	108	base sub_44B099	52D2E9	133	GameScript::EndCutSceneMode
+123	ClearAllActions()	108	base sub_44B099	46B4F1	18	GameScript::ClearAllActions
+124	Berserk()	62	sprite case 62	7AC57F		
+125	Deactivate(O:Object*)	108	base sub_44B099	45E93F 5B8B72 52D2E9 4959AF	82	
+126	Activate(O:Object*)	108	base sub_44B099	45E93F 5B8B72 52D2E9 4959AF	61	GameScript::Activate
+127	CutSceneId(O:Object*)	63	sprite case 63		715	GameScript::CutSceneID
+128	AnkhegEmerge()	108	none			
+129	AnkhegHide()	108	none			
+130	RandomTurn()	64	sprite case 64			
+131	Kill(O:Object*)	108	base sub_44B099	45E41B 4A56EB 52D2E9	155	GameScript::Kill
+132	VerbalConstant(O:Object*,I:Constant*soundOff)	108	base sub_44B099	45E41B 433C60 463410 52D2E9	23	GameScript::VerbalConstant
+133	ClearActions()	108	base sub_44B099	45E93F 46B450	13	GameScript::ClearActions
+134	AttackReevaluate(O:Target*,I:ReevaluationPeriod*)	65	sprite case 65	77FE4D		
+135	LockScroll()	66	sprite case 66			
+136	UnlockScroll()	108	base sub_44B099			
+137	StartDialog(S:DialogFile*,O:Target*)	67	sprite case 67	43A252 45E41B 7A5627	8	GameScript::StartDialogue
+138	SetDialog(S:DialogFile*)	68	sprite case 68	7A5DF8	23	GameScript::SetDialogue
+139	PlayerDialog(O:Target*)	69	sprite case 69	45E41B 7A3A64		
+140	GiveItemCreate(S:ResRef*,O:Object*,I:Usage1*,I:Usage2*,I:Usage3*)	108	base sub_44B099	45E41B 46C019	483	GameScript::CreateItem
+141	GivePartyGoldGlobal(S:Name*,S:Area*)	108	base sub_44B099	46C7A9		
+142	UseDoor()	70	sprite case 70	5B8B72		
+143	OpenDoor(O:Object*)	108	base sub_44B099	45E41B 46D882	105	GameScript::OpenDoor
+144	CloseDoor(O:Object*)	108	base sub_44B099	45E41B 46DA20	43	GameScript::CloseDoor
+145	PickLock(O:Object*)	71	sprite case 71	45E41B 7AE549		
+146	Polymorph(I:AnimationType*Animate)	72	sprite case 72	4ADD0E 435320 766CD0 4A5849 435386 52D2E9	23	GameScript::Polymorph
+147	RemoveSpell(I:Spell*Spell)	73	sprite case 73	7AF6DE		
+148	BashDoor(0:Object*)	74	sprite case 74	5B8B72 45E41B 7AFE03		
+149	EquipMostDamagingMelee()	75	sprite case 75	7B1EE7	1	GameScript::EquipMostDamagingMelee
+150	StartStore(S:Store*,O:Target*)	76	sprite case 76	45E41B 7B2623	192	GameScript::StartStore
+151	DisplayString(O:Object*,I:StrRef*)	108	base sub_44B099	45E41B 46CB3E	3	GameScript::DisplayString
+152	ChangeAIType(O:Object*)	77	sprite case 77	40F27B		
+153	ChangeEnemyAlly(O:Object*,I:Value*EA)	108	base sub_44B099	45E41B 40EFAD 40F27B 542A2E 52D2E9	157	GameScript::ChangeEnemyAlly
+154	ChangeGeneral(O:Object*,I:Value*General)	108	base sub_44B099	45E41B 40EFAD 40F27B 542A2E 52D2E9		
+155	ChangeRace(O:Object*,I:Value*Race)	108	base sub_44B099	45E41B 40EFAD 40F27B 542A2E 52D2E9		
+156	ChangeClass(O:Object*,I:Value*Class)	108	base sub_44B099	45E41B 40EFAD 40F27B 542A2E 52D2E9		
+157	ChangeSpecifics(O:Object*,I:Value*Specific)	108	base sub_44B099	45E41B 40EFAD 40F27B 542A2E 52D2E9	156	GameScript::ChangeSpecifics
+158	ChangeGender(O:Object*,I:Value*Gender)	108	base sub_44B099	45E41B 40EFAD 40F27B 433C60 4620F0 462C90		
+159	ChangeAlignment(O:Object*,I:Value*Align)	108	base sub_44B099	45E41B 40EFAD 40F27B 433C60 462110 462C90	33	GameScript::ChangeAlignment
+160	ApplySpell(O:Target*,I:Spell*Spell)	108	base sub_44B099	45E41B 462130 4620B0 40EFAD 4620D0 45E6AB	26	GameScript::ApplySpell
+161	IncrementChapter(S:RESREF*)	108	base sub_44B099	46D058		
+162	ReputationSet(I:Reputation*)	108	base sub_44B099	433C60 413AA0 4624E0 5C403D		
+163	ReputationInc(I:Reputation*)	108	base sub_44B099	433C60 413AA0 5C403D		
+164	AddexperienceParty(I:XP*)	108	base sub_44B099	433C60 413AA0 5C6278 84BEC0 461E70 84C36D	579	GameScript::AddExperienceParty
+165	AddexperiencePartyGlobal(S:Name*,S:Area*)	108	base sub_44B099	46D493 462190 463C80		
+166	SetNumTimesTalkedTo(I:Num*)	78	sprite case 78	52D2E9	101	GameScript::SetNumTimesTalkedTo
+167	StartMovie(S:ResRef*)	108	base sub_44B099	46D56B	50	GameScript::StartMovie
+169	DestroyItem(S:Object*,O:Target*,I:All*Boolean)	108	base sub_44B099		20	GameScript::DestroyItem
+170		108	base sub_44B099	46D5E4		
+171	CreatePartyGold(I:Amount*)	108	base sub_44B099	46C5C3	57	GameScript::CreatePartyGold
+172		108	base sub_44B099	45E41B 46D6AF		
+173		108	base sub_44B099	433C60 413AA0 462470 4EA778		
+177		108	base sub_44B099	45E41B 46D722		
+178		108	base sub_44B099			
+181	ReallyForceSpell(O:Target*,I:Spell*Spell)	108	base sub_44B099	45E41B 46061A 89BD44 46692D	92	GameScript::ReallyForceSpell
+183		108	base sub_44B099	46DBBE		
+185		108	base sub_44B099	433CC0 413AA0 40410C 89B980 5BD862 4624B0		
+186		108	base sub_44B099	463530 7D4A29		
+187		108	base sub_44B099	46DE47		
+188		108	base sub_44B099			
+189		108	base sub_44B099	46DE97		
+190		108	base sub_44B099	46DFBC		
+193		108	base sub_44B099	46B7E4		
+200	SetAnimState(O:Object*,I:Anim*AnimStat)	84	sprite case 84	45E41B 78D6A7	802	GameScript::PlaySequence
+201	SetGlobalTint(I:Red*,I:Green*,I:Blue*)	85	sprite case 85	81FD5A		
+202	IncrementGlobalOnce(S:Name1*,S:Area1*,S:Name2*,S:Area2*,I:Val*)	108	base sub_44B099	89B980 89C187 8980DD 898061 463F03	1693	GameScript::IncrementGlobalOnce
+203	IncrementKillStat(I:StatID*Killstat)	86	sprite case 86	7B328C		
+204	FadeToBlack()	108	base sub_44B099		369	GameScript::FadeToColor
+205	FadeFromBlack()	108	base sub_44B099		364	GameScript::FadeFromColor
+206	Plunder(O:Target*)	87	sprite case 87			
+207	SavePlace()	88	sprite case 88	77ED03	15	GameScript::SaveLocation
+208	ReturnToSavedPlace()	89	sprite case 89	5B8B72	593	GameScript::ReturnToSavedLocation
+209	SetTextColor(I:TextColor*Color)	108	base sub_44B099	46E109		
+210	FloatMessage(O:Object*,I:StrRef*)	108	base sub_44B099		1643	GameScript::DisplayStringHead
+211	FloatMessageFixed(P:Location*,I:StrRef*)	108	base sub_44B099		3	GameScript::FloatMessageFixed
+212	FloatMessageRnd(O:Object*,S:Pool*)	108	base sub_44B099		43	GameScript::FloatMessageRnd
+213	FloatMessageFixedRnd(P:Location*,S:Pool*)	108	base sub_44B099			
+214	KillFloatMessage(O:Object*)	108	base sub_44B099		186	GameScript::KillFloatMessage
+215	FaceObject(O:Object*)	90	sprite case 90	790955	701	GameScript::FaceObject
+216	FullHeal(O:Object*)	108	base sub_44B099	45E41B 462C70 462C50	47	GameScript::FullHeal
+217	PermanentStatChange(O:Object*,I:StadID*Stats,I:Delta*Delta,I:Modifier*)	108	base sub_44B099	45E41B 462C70 462C50 433CA0 433C80 433C60	230	GameScript::PermanentStatChange
+218	PlaySequence(I:Anim*AnimStat)	91	sprite case 91	78D52B	1057	GameScript::PlaySequence
+219	WaitRandom(I:MinTime*,I:MaxTime*)	34	sprite case 34	44B099	1398	GameScript::WaitRandom
+220	StartRandomTimer(I:ID*,I:MinTime*,I:MinTime*)	108	base sub_44B099	82015B 465B25	268	GameScript::StartRandomTimer
+221	DestroyPartyGold(I:Amount*)	108	base sub_44B099	46C3E3	21	GameScript::DestroyPartyGold
+222	DestroyPartyItem(S:Object*,I:All*Boolean)	108	base sub_44B099	45D71A	147	GameScript::DestroyPartyItem
+223	TransformItem(S:OldObject*,O:Creature*,S:NewObject*,I:Charge1*,I:Charge2*,I:Charge3*)	108	base sub_44B099			
+224	TransformPartyItem(S:OldObject*,S:NewObject*,I:Charge1*,I:Charge2*,I:Charge3*)	108	base sub_44B099		48	GameScript::TransformPartyItem
+225	FollowCreature(O:Target*)	92	sprite case 92		1	GameScript::FollowCreature
+226	GenerateModronMaze()	108	base sub_44B099	46FB37	15	GameScript::GenerateMaze
+227	GlobalBAND(S:Name*,S:Area*,I:Value*)	108	base sub_44B099	463E49		
+228	GlobalBOR(S:Name*,S:Area*,I:Value*)	108	base sub_44B099			
+229	GlobalSHR(S:Name*,S:Area*,I:Value*,I:ShiftIn*Boolean)	108	base sub_44B099			
+230	GlobalSHL(S:Name*,S:Area*,I:Value*,I:ShiftIn*Boolean)	108	base sub_44B099	464690		
+231	GlobalMAX(S:Name*,S:Area*,I:Value*)	108	base sub_44B099	463E49		
+232	GlobalMIN(S:Name*,S:Area*,I:Value*)	108	base sub_44B099	463E49		
+233	GlobalSetGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	108	base sub_44B099	463E49	4	GameScript::GlobalSetGlobal
+234	GlobalAddGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	108	base sub_44B099	463E49		
+235	GlobalSubGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	108	base sub_44B099	463E49		
+236	GlobalANDGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	108	base sub_44B099	463E49		
+237	GlobalORGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	108	base sub_44B099	463E49		
+238	GlobalBANDGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	108	base sub_44B099	463E49		
+239	GlobalBORGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	108	base sub_44B099	463E49		
+240	GlobalSHRGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*,I:ShiftIn*Boolean)	108	base sub_44B099	463E49 464690		
+241	GlobalSHLGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*,I:ShiftIn*Boolean)	108	base sub_44B099	463E49 464690		
+242	GlobalMAXGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	108	base sub_44B099	463E49		
+243	GlobalMINGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	108	base sub_44B099	463E49		
+244	BitSet(S:Name*,S:Area*,I:Bit*Bits)	108	base sub_44B099	463E49	132	GameScript::GlobalBOr
+245	BitClear(S:Name*,S:Area*,I:Bit*Bits)	108	base sub_44B099	463E49	36	GameScript::BitClear
+246	ForceAIScript(S:ScriptFile*,O:Target*,I:Level*Scrlev)	108	base sub_44B099	45E93F 465737	89	GameScript::ForceAIScript
+247	ExploreMapChunk(P:Center*,I:Radius*,I:Mode*)	108	base sub_44B099	462540 433CA0 433C80 462150 462520 5987F2	33	GameScript::ExploreMapChunk
+248	RunToPoint(P:Point*)	93	sprite case 93	5B8B72 76D820 786E84	274	GameScript::RunToPoint
+249	RunToPointNoRecticle(P:Point*)	93	sprite case 93	5B8B72 76D820 786E84		
+250	RandomRun()	94	sprite case 94	5B8B72 793BAD		
+251	RunningAttack(O:Target*)	95	sprite case 95	5B8B72 45E41B 40F64F 77EEE0	284	GameScript::RunningAttack
+252	RunningAttackNoSound(O:Target*)	95	sprite case 95	5B8B72 45E41B 40F64F 77EEE0		
+253	RunToObject(O:Target*)	96	sprite case 96	5B8B72 45E41B 785E47	48	GameScript::RunToObject
+255	RunFollow(P:Point*)	97	sprite case 97	5B8B72 79677D		
+256	RunToSavedLocation()	98	sprite case 98	5B8B72 77ED40	6	GameScript::RunToSavedLocation
+259	Damage(O:Target*,I:Delta*Delta,I:Modifier*)	108	base sub_44B099	45E93F 433C80 4352A8 433C60 462C50 461F80	78	GameScript::Damage
+260	GlobalXOR(S:Name*,S:Area*,I:Value*)	108	base sub_44B099	463E49		
+261	GlobalXORGlobal(S:Name*,S:Area*,S:Name2*,S:Area2*)	108	base sub_44B099	463E49		
+262	ChangeColor(I:Range*ClownRge,I:Color*ClownClr)	101	sprite case 101	7A94FC	75	GameScript::ChangeColor
+263	PlaySequenceTimed(I:Anim*AnimStat,I:Seconds*)	102	sprite case 102	78D78D	70	GameScript::PlaySequenceTimed
+264	BuyStuff(S:Item*,I:Qty*,I:Price*)	103	sprite case 103	7A95C5		
+265	IncrementProficiency(O:Target*,I:SlotNum*WProf,I:Modifier*)	108	base sub_44B099	45E41B 7B2CEF 7B2D0C 77C225 7616CC	41	GameScript::IncrementProficiency
+266	FloatRebus(O:Target*)	104	sprite case 104	45E41B 7B32CC	490	GameScript::FloatRebus
+267	StartSong(I:Song*Songs,P:Where*,I:How*SongFlag)	108	base sub_44B099	850957	180	GameScript::StartSong
+268	SetFaction(O:Object*,I:Value*Faction)	108	base sub_44B099	45E93F 40F64F 40F27B	5	GameScript::SetFaction
+269	SetTeam(O:Object*,I:Value*Team)	108	base sub_44B099	45E93F 40F64F 40F27B	135	GameScript::SetTeam
+270	ForceAttack(O:Object*,O:Target*)	108	base sub_44B099	45E41B 404614 4044DC 405454 52D2E9	531	GameScript::ForceAttack
+271	ForceFacing(O:Object*,I:Dir*)	108	base sub_44B099	45E41B 4052BB 4044DC 405454 52D2E9	10	GameScript::ForceFacing
+272	ChangeDialog(O:Object*,S:ResRef*)	108	base sub_44B099	45E93F 4049AA 89BD44 4044DC 405454 52D2E9	25	GameScript::ChangeDialogue
+273	SetInternal(O:Object*,I:Index*Internal,I:Value*)	108	base sub_44B099	45E41B 76840D	470	GameScript::SetInternal
+274	IncInternal(O:Object*,I:Index*Internal,I:Value*)	108	base sub_44B099	45E41B 76843A 76840D	386	GameScript::IncInternal
+275	PlaySequenceGlobal(S:Label*,S:Scope*,I:Anim*AnimStat,I:EndAnim*AnimStat)	108	none			
+276	SetDoorLocked(O:Object*,I:Locked*Boolean)	108	base sub_44B099	45E93F	72	GameScript::SetDoorLocked
+277	IncrementExtraProficiency(O:Target*,I:Modifier*)	108	base sub_44B099	45E41B 7B2CBE 7B2CD6 84BEC0 4629E0 413AA0	43	GameScript::IncrementExtraProficiency
+278	ActivatePortalCursor(O:Object*,I:Value*)	108	base sub_44B099	45E41B 4F6210	122	GameScript::ActivatePortalCursor
+279	EnablePortalTravel(O:Object*,I:Value*)	108	base sub_44B099	45E41B 4F6255 84BEC0 81B982 81B8AE 80C7F5	127	GameScript::EnablePortalTravel
+280	SetSavedLocation(P:Where*,I:Face*)	105	sprite case 105			
+281	TeleportParty(S:Area*,P:Point*,I:Face*)	108	base sub_44B099	46E134	110	GameScript::TeleportParty
+282	StopMoving()	106	sprite case 106	52D2E9		
+283	SetMazeEasier()	108	base sub_44B099	413AA0 43D160 59389B		
+284	SetMazeHarder()	108	base sub_44B099	413AA0 43D160 59389B		
+285	FixEngineRoom()	108	base sub_44B099	5486BF 54B150	1	GameScript::FixEngineRoom
+286	SetCorpseEnabled(S:Name*,I:State*)	108	base sub_44B099	46E3F4	238	GameScript::AmbientActivate
+287	DebugOutput(S:Message*)	108	base sub_44B099		58	GameScript::Debug
+288	SetNamelessDeath(I:AreaNum*,P:Dest*,I:State*Animstat)	108	base sub_44B099	463F03		
+289	SetNamelessDeathParty(P:Dest*,I:Reserved*)	108	base sub_44B099	463F03		
+290	SetNamelessDisguise(I:DisguiseNum*Disguise)	108	base sub_44B099	5D0DA1	5	GameScript::SetNamelessDisguise
+291	SinisterPoof(S:BamResRef*,P:Location*,I:Itterations*)	108	base sub_44B099		107	GameScript::CreateVisualEffect
+292	StickySinisterPoof(S:BamResRef*,O:Object*,I:Itterations*)	108	base sub_44B099	46EAA3	72	GameScript::CreateVisualEffectObjectSticky
+293	SetNamelessClass(I:Value*Class)	108	base sub_44B099	46ED2F	39	GameScript::SetNamelessClass
+294	ForceLeaveAreaLUA(S:Area*,O:Object*,I:Xpos*,I:Ypos*,I:Facing*)	108	base sub_44B099	45E41B 4049AA 4044DC 405454 52D2E9		
+295	CreateCreatureAtFeet(S:ResRef*)	108	base sub_44B099	89B980 46F3AB	24	GameScript::CreateCreatureAtFeet
+296	RestParty(I:SuggestedDream*,I:HP*,I:Renting*)	108	base sub_44B099	5C68CC	20	GameScript::RestParty
+297	ResetFogOfWar()	108	base sub_44B099	598321	1	GameScript::UndoExplore
+298	DisableSpriteDither()	108	base sub_44B099		21	GameScript::DisableSpriteDither
+299	EnableSpriteDither()	108	base sub_44B099		21	GameScript::EnableSpriteDither
+300	DisableFogDither()	108	base sub_44B099		21	GameScript::DisableFogDither
+301	EnableFogDither()	108	base sub_44B099		21	GameScript::EnableFogDither
+302	SetNoOneOnTrigger(O:Trigger*)	108	base sub_44B099	45E93F 4F0F4C	2	GameScript::SetNoOneOnTrigger
+303	TimedMoveToPoint(P:Point*,I:Time*)	107	sprite case 107	786E84	128	GameScript::TimedMoveToPoint
+304	ForceUseContainer(O:User*)		base sub_44B099	45E93F 4052BB 4044DC 405454 52D2E9 4049AA		
+305	FullHealEx(O:Object*)		base sub_44B099	45E41B 462C50	3	GameScript::FullHeal
+306	GiveExperience(O:Object*,I:Amount*)		base sub_44B099	45E41B 4ADD0E 433C60 4A5C21 462D90 463570	246	GameScript::AddXPObject
+307	TransformItemAll(S:OldObject*,O:Creature*,S:NewObject*,I:Charge1*,I:Charge2*,I:Charge3*)		base sub_44B099	45DB52		
+308	TransformPartyItemAll(S:OldObject*,S:NewObject*,I:Charge1*,I:Charge2*,I:Charge3*)		base sub_44B099	45DCDB		
+309	QuitGame(I:Value*MovVal,I:Value*MovVal,I:Value*MovVal)		base sub_44B099	463F03 462220 433C60 433C80 433CA0	33	GameScript::QuitGame
+310	StartCutSceneEx(S:CutScene*,I:Value*)		base sub_44B099	46A64E	2	GameScript::StartCutScene
+311	GeneratePartyMember(P:Location*,I:Value*Specific)		base sub_44B099	461D30 462150 463F03 4043B0 433C60	7	GameScript::GeneratePartyMember
+312	PlaySoundNotRanged(S:Sound*)		base sub_44B099	84BEC0 81B73C 81B982 81B8AE 80C7F5 81BA08	285	GameScript::PlaySoundNotRanged
+313	EscapeAreaRunning()	57	sprite case 57		103	

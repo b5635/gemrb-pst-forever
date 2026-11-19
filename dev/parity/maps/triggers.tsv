@@ -1,0 +1,180 @@
+# Original trigger handlers: case <id> in sub_453258 (base) / sub_778529 (creature). Event triggers (< 0x4000) are raised elsewhere
+id	trigger_ids	orig_dispatcher	uses	gemrb
+0x0000		453258		
+0x0001	Acquired(S:ResRef*)	453258		
+0x0002	AttackedBy(O:Object*,I:Style*AStyles)	453258	1280	GameScript::AttackedBy
+0x0003	Help(O:Object*)	453258	1031	GameScript::Help_Trigger
+0x0004	Joins(O:Object*)	none (always false)		
+0x0005	Leaves(O:Object*)	none (always false)		
+0x0006	ReceivedOrder(O:Object*,I:OrderID*Order)	none (always false)	3	GameScript::ReceivedOrder
+0x0007	Said(O:Object*,I:DialogID*)	none (always false)		
+0x0008	TurnedBy(O:Object*)	none (always false)		
+0x0009	Unusable(S:ResRef*)	none (always false)		
+0x0020	HitBy(O:Object*,I:DameType*Damages)	none (always false)	3	GameScript::HitBy
+0x0021	HotKey(I:Key*HotKey)	none (always false)		
+0x0022	TimerExpired(I:ID*)	none (always false)	47	GameScript::TimerExpired
+0x0024	Trigger(I:TriggerNum*)	none (always false)	52	GameScript::TriggerTrigger
+0x0025	Die()	none (always false)	407	GameScript::Die
+0x0026	TargetUnreachable(O:Object*)	none (always false)		
+0x002F	Heard(O:Object*,I:ID*)	none (always false)		
+0x0033	BecameVisible()	none (always false)		
+0x0036	OnCreation()	none (always false)	337	GameScript::OnCreation
+0x004A	Died(O:Object*)	none (always false)	3	GameScript::Died
+0x004B	Killed(O:Object*)	none (always false)		
+0x004C	Entered(O:Object*)	none (always false)	70	GameScript::Entered
+0x0052	Opened(O:Object*)	none (always false)	18	GameScript::Opened
+0x0053	Closed(O:Object*)	none (always false)		
+0x0054	Detected(O:Object*)	none (always false)		
+0x0055	Reset(O:Object*)	none (always false)		
+0x0056	Disarmed(O:Object*)	none (always false)		
+0x0057	Unlocked(O:Object*)	none (always false)	1	GameScript::Unlocked
+0x005C	BreakingPoint()	none (always false)		
+0x005D	PickPocketFailed(O:Object*)	none (always false)	8	GameScript::PickpocketFailed
+0x005E	StealFailed(O:Object*)	none (always false)	9	GameScript::StealFailed
+0x005F	DisarmFailed(O:Object*)	none (always false)		
+0x0060	PickLockFailed(O:Object*)	none (always false)	4	GameScript::PickLockFailed
+0x0079	TriggerClick()	none (always false)	8	GameScript::Clicked
+0x0094	Vacant()	none (always false)	49	GameScript::Vacant
+0x009D	HarmlessOpened(O:Object*)	none (always false)	11	GameScript::HarmlessOpened
+0x009E	HarmlessClosed(O:Object*)	none (always false)	1	GameScript::HarmlessClosed
+0x009F	HarmlessEntered(O:Object*)	none (always false)	113	GameScript::HarmlessEntered
+0x00A4	NullDialog(O:Object*)	none (always false)	2	GameScript::NullDialog
+0x00A5	WasInDialog()	none (always false)	244	GameScript::WasInDialog
+0x00AB	NamelessBitTheDust()	none (always false)	2	GameScript::NamelessBitTheDust
+0x00AF	FailedToOpen(O:Object*)	none (always false)	5	GameScript::OpenFailed
+0x400A	Alignment(O:Object*,I:Alignment*Align)	453258	44	GameScript::Alignment
+0x400B	Allegiance(O:Object*,I:Allegience*EA)	453258	788	GameScript::Allegiance
+0x400C	Class(O:Object*,I:Class*Class)	453258	141	GameScript::Class
+0x400D	Exists(O:Object*)	453258	667	GameScript::Exists
+0x400E	General(O:Object*,I:General*General)	453258		
+0x400F	Global(S:Name*,S:Area*,I:Value*)	453258	17093	GameScript::Global
+0x4010	HP(O:Object*,I:HitPoints*)	453258		
+0x4011	HPGT(O:Object*,I:HitPoints*)	453258	23	GameScript::HPGT
+0x4012	HPLT(O:Object*,I:HitPoints*)	453258	94	GameScript::HPLT
+0x4013	LOS(O:Object*,I:Range*)	453258	34	GameScript::LOS
+0x4014	Morale(O:Object*,I:Morale*)	453258		
+0x4015	MoraleGT(O:Object*,I:Morale*)	453258	26	GameScript::MoraleGT
+0x4016	MoraleLT(O:Object*,I:Morale*)	453258	27	GameScript::MoraleLT
+0x4017	Race(O:Object*,I:Race*Race)	453258	12	GameScript::Race
+0x4018	Range(O:Object*,I:Range*)	453258	185	GameScript::Range
+0x4019	Reputation(O:Object*,I:Reputation*)	453258		
+0x401A	ReputationGT(O:Object*,I:Reputation*)	453258		
+0x401B	ReputationLT(O:Object*,I:Reputation*)	453258		
+0x401C	See(O:Object*)	453258,778529	1532	GameScript::See
+0x401D	Specifics(O:Object*,I:Specifics*Specific)	453258	45	GameScript::Specifics
+0x401E	Time(I:Time*Time)	453258		
+0x401F	TimeOfDay(I:TimeOfDay*TimeODay)	453258	31	GameScript::TimeOfDay
+0x4023	True()	453258,778529	2044	GameScript::True
+0x4027	Delay(I:Delay*)	453258		
+0x4028	NumCreature(O:Object*,I:Number*)	453258	2	GameScript::NumCreatures
+0x4029	NumCreatureLT(O:Object*,I:Number*)	453258	11	GameScript::NumCreaturesLT
+0x402A	NumCreatureGT(O:Object*,I:Number*)	453258	6	GameScript::NumCreaturesGT
+0x402B	ActionListEmpty()	453258		
+0x402C	HPPercent(O:Object*,I:HitPoints*)	453258	3	GameScript::HPPercent
+0x402D	HPPercentLT(O:Object*,I:HitPoints*)	453258	379	GameScript::HPPercentLT
+0x402E	HPPercentGT(O:Object*,I:HitPoints*)	453258	2	GameScript::HPPercentGT
+0x4030	False()	453258	99	GameScript::False
+0x4031	HaveSpell(I:Spell*Spell)	778529	55	GameScript::HaveSpell
+0x4032	HaveAnySpells()	778529	21	GameScript::HaveAnySpells
+0x4034	GlobalGT(S:Name*,S:Area*,I:Value*)	453258	2415	GameScript::GlobalGT
+0x4035	GlobalLT(S:Name*,S:Area*,I:Value*)	453258	795	GameScript::GlobalLT
+0x4037	StateCheck(O:Object*,I:State*State)	453258		
+0x4038	NotStateCheck(O:Object*,I:State*State)	453258	8	GameScript::NotStateCheck
+0x4039	NumTimesTalkedTo(I:Num*)	778529	479	GameScript::NumTimesTalkedTo
+0x403A	NumTimesTalkedToGT(I:Num*)	778529	342	GameScript::NumTimesTalkedToGT
+0x403B	NumTimesTalkedToLT(I:Num*)	778529	1	GameScript::NumTimesTalkedToLT
+0x403C	Reaction(O:Object*,I:Value*Reaction)	453258		
+0x403D	ReactionGT(O:Object*,I:Value*Reaction)	453258		
+0x403E	ReactionLT(O:Object*,I:Value*Reaction)	453258		
+0x403F	GlobalTimerExact(S:Name*,S:Area*)	453258		
+0x4040	GlobalTimerExpired(S:Name*,S:Area*)	453258	50	GameScript::GlobalTimerExpired
+0x4041	GlobalTimerNotExpired(S:Name*,S:Area*)	453258	5	GameScript::GlobalTimerNotExpired
+0x4042	PartyHasItem(S:Item*)	453258	747	GameScript::PartyHasItem
+0x4043	InParty(O:Object*)	453258	705	GameScript::InParty
+0x4044	CheckStat(O:Object*,I:Value*,I:StatNum*Stats)	453258		
+0x4045	CheckStatGT(O:Object*,I:Value*,I:StatNum*Stats)	453258	1502	GameScript::CheckStatGT
+0x4046	CheckStatLT(O:Object*,I:Value*,I:StatNum*Stats)	453258	1180	GameScript::CheckStatLT
+0x4047	RandomNum(I:Range*,I:Value*)	453258	198	GameScript::RandomNum
+0x4048	RandomNumGT(I:Range*,I:Value*)	453258		
+0x4049	RandomNumLT(I:Range*,I:Value*)	453258	2	GameScript::RandomNumLT
+0x404D	Gender(O:Object*,I:Sex*Gender)	453258		
+0x404E	PartyGold(I:Amount*)	453258	16	GameScript::PartyGold
+0x404F	PartyGoldGT(I:Amount*)	453258	341	GameScript::PartyGoldGT
+0x4050	PartyGoldLT(I:Amount*)	453258	71	GameScript::PartyGoldLT
+0x4051	Dead(S:Name*)	453258	588	GameScript::Dead
+0x4058	OutOfAmmo()	778529		
+0x4059	NumTimesInteracted(I:NPC*NPC,I:Num*)	778529		
+0x405A	NumTimesInteractedGT(I:NPC*NPC,I:Num*)	778529		
+0x405B	NumTimesInteractedLT(I:NPC*NPC,I:Num*)	778529		
+0x4061	HasItem(S:ResRef*,O:Object*)	453258	190	GameScript::HasItem
+0x4062	InteractingWith(O:Object*)	778529	1	GameScript::InteractingWith
+0x4063		778529		
+0x4064		453258		
+0x4065		453258		
+0x4066		453258		
+0x4067		453258		
+0x4068	TimeGT(I:Time*Time)	453258	6	GameScript::TimeGT
+0x4069	TimeLT(I:Time*Time)	453258	6	GameScript::TimeLT
+0x406A		453258		
+0x406B		453258		
+0x406C		453258		
+0x406D		778529		
+0x406E		778529		
+0x406F		778529		
+0x4071		453258		
+0x4072		453258		
+0x4073		453258		
+0x4074		453258		
+0x4075	NearLocation(O:Object*,P:Point*,I:Range*)	453258	326	GameScript::NearLocation
+0x4076	NearSavedLocation(I:Range*)	778529	334	GameScript::NearSavedLocation
+0x4077	InView(O:Object*,I:Eyesight*)	453258,778529		
+0x4078	OwnsFloaterMessage(O:Object*)	453258		
+0x407A	AssaltedBy(O:Object*,I:Style*AStyles)	none (always false)		
+0x407B	RandomStatCheck(O:Object*,I:StatNum*Stats,I:CheckType*Delta,I:CheckValue*Bones)	453258		
+0x407C	TimerActive(I:ID*)	453258	401	GameScript::TimerActive
+0x407D	PCCanSeePoint(P:Point*)	453258		
+0x407E	CreatureInArea(S:AreaName*)	453258	163	GameScript::AreaCheck
+0x407F	BitCheck(S:Name*,S:Area*,I:Bit*Bits)	453258	171	GameScript::BitCheck
+0x4080	GlobalBAND(S:Name*,S:Area*,I:Value*)	453258		
+0x4081	BitCheckExact(S:Name*,S:Area*,I:Bit*Bits)	453258		
+0x4082	GlobalEqualsGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	453258		
+0x4083	GlobalLTGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	453258		
+0x4084	GlobalGTGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	453258		
+0x4085	GlobalANDGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	453258		
+0x4086	GlobalORGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	453258	46	GameScript::GlobalOrGlobal_Trigger
+0x4087	GlobalBANDGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	453258		
+0x4088	GlobalBANDGlobalExact(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	453258		
+0x4089	PartyCountEQ(I:Count*)	453258	27	GameScript::PartyCountEQ
+0x408A	PartyCountLT(I:Count*)	453258	4	GameScript::PartyCountLT
+0x408B	PartyCountGT(I:Count*)	453258	38	GameScript::PartyCountGT
+0x408C	ObjItemCountEQ(S:Item*,O:Object*,I:Count)	453258		
+0x408D	ObjItemCountLT(S:Item*,O:Object*,I:Count)	453258		
+0x408E	ObjItemCountGT(S:Item*,O:Object*,I:Count)	453258		
+0x408F	PartyItemCountEQ(S:Item*,I:Count)	453258		
+0x4090	PartyItemCountLT(S:Item*,I:Count)	453258	2	GameScript::NumItemsPartyLT
+0x4091	PartyItemCountGT(S:Item*,I:Count)	453258	9	GameScript::NumItemsPartyGT
+0x4092	WatchMe(I:Mode*)	none (always false)		
+0x4093	NearbyDialog(S:DialogFile*)	453258	4761	GameScript::NearbyDialog
+0x4095	Xor(S:Name*,S:Area*,I:Value*)	453258		
+0x4096	IsAClown(O:Object*)	453258		
+0x4097	Proficiency(O:Object*,I:Slot*WProf,I:Value*)	453258	10	GameScript::Proficiency
+0x4098	ProficiencyLT(O:Object*,I:Slot*WProf,I:Value*)	453258	40	GameScript::ProficiencyLT
+0x4099	ProficiencyGT(O:Object*,I:Slot*WProf,I:Value*)	453258	65	GameScript::ProficiencyGT
+0x409A	Faction(O:Object*,I:Value*Faction)	453258	5	GameScript::Faction
+0x409B	Team(O:Object*,I:Value*Team)	453258	9	GameScript::Team
+0x409C	StuffGlobalRandom(S:Name*,S:Area*,I:Range*)	453258	4	GameScript::StuffGlobalRandom
+0x40A0	CalledByName(O:Object*,S:Scriptname*)	453258		
+0x40A1	Internal(O:Object*,I:Index*Internal,I:Value*)	453258	728	GameScript::Internal
+0x40A2	InternalLT(O:Object*,I:Index*Internal,I:Value*)	453258	4	GameScript::InternalLT
+0x40A3	InternalGT(O:Object*,I:Index*Internal,I:Value*)	453258	50	GameScript::InternalGT
+0x40A6	IsLocked(O:Object*)	453258	3	GameScript::IsLocked
+0x40A7	AnimState(O:Object*,I:Sequence*Animstat)	453258		
+0x40A8	ExtraProficiency(O:Object*,I:Value*)	453258	20	GameScript::ExtraProficiency
+0x40A9	ExtraProficiencyLT(O:Object*,I:Value*)	453258		
+0x40AA	ExtraProficiencyGT(O:Object*,I:Value*)	453258	33	GameScript::ExtraProficiencyGT
+0x40AC	ClassLevel(O:Object*,I:Value*Class,I:Value*)	453258		
+0x40AD	ClassLevelGT(O:Object*,I:Value*Class,I:Value*)	453258	18	GameScript::ClassLevelGT
+0x40AE	ClassLevelLT(O:Object*,I:Value*Class,I:Value*)	453258	13	GameScript::ClassLevelLT
+0x40B0		453258		
+0x40B1	LastPersonTalkedTo(O:Object*)	453258	100	GameScript::LastPersonTalkedTo
+0x40B2	IsInGuardianMantle(O:Object*)	453258	1	GameScript::IsInGuardianMantle

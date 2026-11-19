@@ -1,0 +1,2151 @@
+# PST:EE Torment64 symbols for PST-only, effect and projectile classes. Decompiled: .re/ee/dump/dec/<Class_Method>.c
+addr	size	name	decompiled
+679F20	12136	CGameArea::HandleNamelessDeath(CGameSprite *)	y
+6AF9A0	654	CGameEffectAC::ApplyEffect(CGameSprite *)	y
+6AFC30	15	CGameEffectCharm::OnAddSpecific(CGameSprite *)	n
+6AFC40	13	CGameEffectCHR::UsesDice(void)	y
+6AFC50	11	CGameEffectColorGlowSolid::OnRemove(CGameSprite *)	y
+6AFC60	104	CGameEffectDefrost::ApplyEffect(CGameSprite *)	n
+6AFCD0	2	CGameEffectHitPoints::OnAddSpecific(CGameSprite *)	y
+6AFCE0	208	CGameEffectMorale::ApplyEffect(CGameSprite *)	n
+6AFDB0	323	CGameEffectResistAcid::ApplyEffect(CGameSprite *)	y
+6AFF00	323	CGameEffectResistCold::ApplyEffect(CGameSprite *)	y
+6B0050	323	CGameEffectResistElectricity::ApplyEffect(CGameSprite *)	y
+6B01A0	323	CGameEffectResistFire::ApplyEffect(CGameSprite *)	y
+6B02F0	42	CGameEffectSilence::ApplyEffect(CGameSprite *)	y
+6B0320	390	CGameEffectThac0::ApplyEffect(CGameSprite *)	y
+6B04B0	11	CGameEffectAnimationChange::OnRemove(CGameSprite *)	n
+6B04C0	323	CGameEffectResistMagicFire::ApplyEffect(CGameSprite *)	y
+6B0610	323	CGameEffectResistMagicCold::ApplyEffect(CGameSprite *)	y
+6B0760	375	CGameEffectResistSlashing::ApplyEffect(CGameSprite *)	y
+6B08E0	375	CGameEffectResistCrushing::ApplyEffect(CGameSprite *)	y
+6B0A60	375	CGameEffectResistPiercing::ApplyEffect(CGameSprite *)	y
+6B0BE0	375	CGameEffectResistMissile::ApplyEffect(CGameSprite *)	y
+6B0D60	298	CGameEffectSkillTracking::ApplyEffect(CGameSprite *)	n
+6B0E90	64	CGameEffectDurationCasting::ApplyEffect(CGameSprite *)	n
+6B0ED0	27	CGameEffectImmunityToSpellLevel::ApplyEffect(CGameSprite *)	y
+6B0EF0	25	CGameEffectName::ApplyEffect(CGameSprite *)	n
+6B0F10	6	CGameEffectEquipWeapon::ApplyEffect(CGameSprite *)	n
+6B0F20	16	CGameEffectDither::ApplyEffect(CGameSprite *)	n
+6B0F30	6	CGameEffectShowCreatures::ApplyEffect(CGameSprite *)	n
+6B0F40	6	CGameEffectVisualAnimationEffect::ApplyEffect(CGameSprite *)	n
+6B0F50	16	CGameEffectKnock::ApplyEffect(CGameSprite *)	y
+6B0F60	272	CGameEffectMovementRate::ApplyEffect(CGameSprite *)	n
+6B1070	11	CGameEffectPolymorph::OnRemove(CGameSprite *)	n
+6B1080	16	CGameEffectPortraitIcon::ApplyEffect(CGameSprite *)	n
+6B1090	25	CGameEffectDisableButton::ApplyEffect(CGameSprite *)	n
+6B10B0	16	CGameEffectIdentify::ApplyEffect(CGameSprite *)	n
+6B10C0	16	CGameEffectDetectTraps::ApplyEffect(CGameSprite *)	n
+6B10D0	16	CGameEffectPauseCaster::ApplyEffect(CGameSprite *)	n
+6B10E0	54	CGameEffectResistanceToMagic::ApplyEffect(CGameSprite *)	y
+6B1120	35	CGameEffectResistanceToPoison::ApplyEffect(CGameSprite *)	y
+6B1150	15	CGameEffectSetDoNotJump::ApplyEffect(CGameSprite *)	n
+6B1160	15	CGameEffectAuraCleansing::ApplyEffect(CGameSprite *)	n
+6B1170	18	CGameEffectPhysicalSpeed::ApplyEffect(CGameSprite *)	n
+6B1190	55	CGameEffectCastingLevelBonus::ApplyEffect(CGameSprite *)	n
+6B11D0	15	CGameEffectSeeInvisible::ApplyEffect(CGameSprite *)	n
+6B11E0	15	CGameEffectIgnoreDialogPause::ApplyEffect(CGameSprite *)	n
+6B11F0	15	CGameEffectMinHitPoints::ApplyEffect(CGameSprite *)	n
+6B1200	1224	CGameEffectProficiency::ApplyEffect(CGameSprite *)	n
+6B16D0	15	CGameEffectCheckForBerserk::ApplyEffect(CGameSprite *)	n
+6B16E0	15	CGameEffectDamageLuck::ApplyEffect(CGameSprite *)	n
+6B16F0	16	CGameEffectExplore::ApplyEffect(CGameSprite *)	n
+6B1700	42	CGameEffectSummonDisable::ApplyEffect(CGameSprite *)	n
+6B1730	16	CGameEffectDisableCircle::ApplyEffect(CGameSprite *)	n
+6B1740	52	CGameEffectClassStringOverride::ApplyEffect(CGameSprite *)	n
+6B1780	15	CGameEffectPreventSpellProtectionEffects::ApplyEffect(CGameSprite *)	n
+6B1790	15	CGameEffectPreventAISlowDown::ApplyEffect(CGameSprite *)	n
+6B17A0	15	CGameEffectExistanceDelayOverride::ApplyEffect(CGameSprite *)	n
+6B17B0	15	CGameEffectNoPermanentDeath::ApplyEffect(CGameSprite *)	n
+6B17C0	15	CGameEffectImmunityToTurnUndead::ApplyEffect(CGameSprite *)	n
+6B17D0	15	CGameEffectNPCBump::ApplyEffect(CGameSprite *)	n
+6B17E0	15	CGameEffectUseAnyItem::ApplyEffect(CGameSprite *)	n
+6B17F0	15	CGameEffectAssassination::ApplyEffect(CGameSprite *)	n
+6B1990	130	CGameEffectHitMod::ApplyEffect(CGameSprite *)	y
+6B1A20	25	CGameEffectForceSurge::ApplyEffect(CGameSprite *)	n
+6B1A40	130	CGameEffectSurgeMod::ApplyEffect(CGameSprite *)	n
+6B1AD0	34	CGameEffectScriptingState::ApplyEffect(CGameSprite *)	n
+6B1B00	15	CGameEffectImmuneToTracking::ApplyEffect(CGameSprite *)	n
+6B1B10	15	CGameEffectImmunityToTimeStop::ApplyEffect(CGameSprite *)	n
+6B1B20	15	CGameEffectImmunityToSequester::ApplyEffect(CGameSprite *)	n
+6B1B30	6	CGameEffectHighLevelAbility::ApplyEffect(CGameSprite *)	n
+6B1B40	15	CGameEffectDoNotDraw::ApplyEffect(CGameSprite *)	n
+6B1B50	2	CGameEffectDoNotDraw::OnRemove(CGameSprite *)	n
+6B1B60	16	CGameEffectUsability::ApplyEffect(CGameSprite *)	n
+6B1B70	3	CGameEffectEvadeAreaOfEffect::ApplyEffect(CGameSprite *)	n
+6B1B80	75	CGameEffectFlashScreen::ApplyEffect(CGameSprite *)	y
+6B1BD0	6	CGameEffectIgnoreReputationBreak::ApplyEffect(CGameSprite *)	n
+6B1BE0	21	CGameEffectMakeUnselectable::OnRemove(CGameSprite *)	n
+6B1C00	100	CGameEffectMakeUnselectable::ApplyEffect(CGameSprite *)	n
+6B1C70	15	CGameEffectIgnoreDrainDeath::ApplyEffect(CGameSprite *)	n
+6B1C80	25	CGameEffectFistOfIron::ApplyEffect(CGameSprite *)	y
+6B1CE0	284	CGameEffectTeleport::ApplyEffect(CGameSprite *)	n
+6B1E00	33	CGameEffectBackStabSpell::ApplyEffect(CGameSprite *)	n
+6B1E30	33	CGameEffectBardSong::ApplyEffect(CGameSprite *)	n
+6B1E60	32	CGameEffectImmunitySecondaryType::ApplyEffect(CGameSprite *)	n
+6B1E80	32	CGameEffectImmunitySchool::ApplyEffect(CGameSprite *)	n
+6B1EA0	32	CGameEffectBounceProjectile::ApplyEffect(CGameSprite *)	n
+6B1EC0	32	CGameEffectImmunityToProjectile::ApplyEffect(CGameSprite *)	y
+6B1EE0	387	CGameEffectImmuneToWeapon::ApplyEffect(CGameSprite *)	y
+6B2070	113	CGameEffectRestrictEquipItemType::ApplyEffect(CGameSprite *)	n
+6B20F0	142	CGameEffectTimeStop::ApplyEffect(CGameSprite *)	n
+6B2180	321	CGameEffectInvisible::ApplyEffect(CGameSprite *)	y
+6B22D0	383	CGameEffectScreenShake::ApplyEffect(CGameSprite *)	y
+6B2450	40	CGameEffectImmunityToBackstab::ApplyEffect(CGameSprite *)	n
+6B2480	496	CGameEffectLuck::ApplyEffect(CGameSprite *)	y
+6B2670	223	CGameEffectCleanAir::ApplyEffect(CGameSprite *)	n
+6B2750	131	CGameEffectBounceSpell::ApplyEffect(CGameSprite *)	n
+6B27E0	140	CGameEffectImmunitySpell::ApplyEffect(CGameSprite *)	n
+6B2870	165	CGameEffectRestrictEquipItem::ApplyEffect(CGameSprite *)	n
+6B2920	208	CGameEffectCriticalMissModifier::ApplyEffect(CGameSprite *)	n
+6B29F0	208	CGameEffectCriticalMissSpell::ApplyEffect(CGameSprite *)	n
+6B2AC0	207	CGameEffectCriticalHitSpell::ApplyEffect(CGameSprite *)	n
+6B2B90	207	CGameEffectCriticalHitBonus::ApplyEffect(CGameSprite *)	n
+6B2C60	225	CGameEffectRegeneration::OnAddSpecific(CGameSprite *)	y
+6B2D50	310	CGameEffectDisease::OnAddSpecific(CGameSprite *)	n
+6B2E90	225	CGameEffectPoison::OnAddSpecific(CGameSprite *)	y
+6B2F80	1138	CGameEffectTintScreen::ApplyEffect(CGameSprite *)	y
+6B3400	47	CGameEffectChangeBackground::OnRemove(CGameSprite *)	n
+6B3430	344	CGameEffectPainMirror::ApplyEffect(CGameSprite *)	n
+6B3590	391	CGameEffectCloakOfWarding::ApplyEffect(CGameSprite *)	n
+6B3720	269	CGameEffectGreasePool::ApplyEffect(CGameSprite *)	n
+6B3830	269	CGameEffectEntangle::ApplyEffect(CGameSprite *)	n
+6B3940	2317	CGameEffectSanctuary::ApplyEffect(CGameSprite *)	n
+6B4250	196	CGameEffectShowArea::ApplyEffect(CGameSprite *)	n
+6B4320	615	CGameEffectSTRExtra::ApplyEffect(CGameSprite *)	y
+6B4590	615	CGameEffectIntoxication::ApplyEffect(CGameSprite *)	y
+6B4800	615	CGameEffectFatigue::ApplyEffect(CGameSprite *)	y
+6B4A70	631	CGameEffectSkillPickPocket::ApplyEffect(CGameSprite *)	y
+6B4CF0	606	CGameEffectSkillTraps::ApplyEffect(CGameSprite *)	y
+6B4F50	631	CGameEffectSkillLockPicking::ApplyEffect(CGameSprite *)	y
+6B51D0	543	CGameEffectSkillStealth::ApplyEffect(CGameSprite *)	y
+6B53F0	2506	CGameEffectSavingThrowChange::ApplyEffect(CGameSprite *)	n
+6B5DC0	628	CGameEffectSaveVsSpell::ApplyEffect(CGameSprite *)	y
+6B6040	628	CGameEffectSaveVsBreath::ApplyEffect(CGameSprite *)	y
+6B62C0	628	CGameEffectSaveVsPoly::ApplyEffect(CGameSprite *)	y
+6B6540	628	CGameEffectSaveVsWands::ApplyEffect(CGameSprite *)	y
+6B67C0	628	CGameEffectSaveVsDeath::ApplyEffect(CGameSprite *)	y
+6B6A40	615	CGameEffectLore::ApplyEffect(CGameSprite *)	y
+6B6CB0	530	CGameEffectFreezeGame::ApplyEffect(CGameSprite *)	y
+6B6ED0	271	CGameEffectSevenEyesRun::ApplyEffect(CGameSprite *)	n
+6B6FE0	33	CGameEffectRemoveInnateAbility::ApplyEffect(CGameSprite *)	y
+6B7010	390	CGameEffectVisualSpellHitIWD::ApplyEffect(CGameSprite *)	n
+6B71A0	605	CGameEffectCastingGlow::ApplyEffect(CGameSprite *)	n
+6B7400	202	CGameEffectTurnUndeadModifier::ApplyEffect(CGameSprite *)	n
+6B74D0	36	CGameEffectRest::ApplyEffect(CGameSprite *)	n
+6B7500	79	CGameEffectChaosShield::ApplyEffect(CGameSprite *)	n
+6B7550	114	CGameEffectBerserkStage1::ApplyEffect(CGameSprite *)	n
+6B75D0	39	CGameEffectBounceSecondaryType::ApplyEffect(CGameSprite *)	n
+6B7600	39	CGameEffectBounceSchool::ApplyEffect(CGameSprite *)	n
+6B7630	390	CGameEffectPushPull::ApplyEffect(CGameSprite *)	n
+6B77C0	364	CGameEffectDamage::DisplayString(CGameSprite *)	y
+6B7930	364	CGameEffect::DisplayString(CGameSprite *)	n
+6B7AA0	21	CGameEffectUnsummon::DisplayString(CGameSprite *)	n
+6B7AC0	26	CGameEffectDeath::DisplayString(CGameSprite *)	y
+6B7AE0	309	CGameEffectDamageVisualEffect::ApplyEffect(CGameSprite *)	n
+6B7C20	285	CGameEffectPortrait::OnRemove(CGameSprite *)	n
+6B7D40	1223	CGameEffectColorChange::ApplyEffect(CGameSprite *)	n
+6B8210	1290	CGameEffectColorLightSolid::ApplyEffect(CGameSprite *)	n
+6B8720	1287	CGameEffectColorTintSolid::ApplyEffect(CGameSprite *)	n
+6B8C30	1568	CGameEffectColorGlowPulse::ApplyEffect(CGameSprite *)	y
+6B9250	1294	CGameEffectColorGlowSolid::ApplyEffect(CGameSprite *)	y
+6B9760	328	CGameEffectRandomDrop::ApplyEffect(CGameSprite *)	n
+6B98B0	44	CGameEffectSequencerFirePoint::ApplyEffect(CGameSprite *)	n
+6B98E0	94	CGameEffectSequencerFire::ApplyEffect(CGameSprite *)	n
+6B9940	436	CGameEffectSequencerStart::ApplyEffect(CGameSprite *)	n
+6B9B00	459	CGameEffectContingencyStart::ApplyEffect(CGameSprite *)	n
+6B9D50	1133	CGameEffectSetSnare::ApplyEffect(CGameSprite *)	n
+6BA1C0	38	CGameEffectBerserkStage2::ApplyEffect(CGameSprite *)	n
+6BA1F0	230	CGameEffectRemoveRandomSpell::ApplyEffect(CGameSprite *)	n
+6BA2E0	62	CGameEffectClairvoyance::ApplyEffect(CGameSprite *)	n
+6BA320	436	CGameEffectPortrait::ApplyEffect(CGameSprite *)	n
+6BA4E0	247	CGameEffectJumpToArea::ApplyEffect(CGameSprite *)	n
+6BA5E0	602	CGameEffectDisableSpellType::ApplyEffect(CGameSprite *)	n
+6BA840	935	CGameEffectReputation::ApplyEffect(CGameSprite *)	n
+6BABF0	592	CGameEffectGold::ApplyEffect(CGameSprite *)	y
+6BAE40	13	CGameEffectBlindness::OnRemove(CGameSprite *)	y
+6BAE50	67	CGameEffectInvisible::OnAddSpecific(CGameSprite *)	y
+6BAEA0	59	CGameEffectChangeBackground::ApplyEffect(CGameSprite *)	n
+6BAEE0	142	CGameEffectSwapHitpoints::ApplyEffect(CGameSprite *)	n
+6BAF70	75	CGameEffectAnimationChange::OnAddSpecific(CGameSprite *)	n
+6BAFC0	149	CGameEffectChangeGeneralState::ApplyEffect(CGameSprite *)	y
+6BB060	142	CGameEffectNon_CumulativeCurse::ApplyEffect(CGameSprite *)	y
+6BB0F0	124	CGameEffectSevenEyes::ApplyEffect(CGameSprite *)	n
+6BB170	88	CGameEffectSetSpellState::ApplyEffect(CGameSprite *)	n
+6BB230	100	CGameEffectSpellTrapLevelDecrement::ApplyEffect(CGameSprite *)	n
+6BB2A0	100	CGameEffectImmunityLevelDecrement::ApplyEffect(CGameSprite *)	n
+6BB310	100	CGameEffectBounceLevelDecrement::ApplyEffect(CGameSprite *)	n
+6BB380	52	CGameEffectBounceLevel::ApplyEffect(CGameSprite *)	n
+6BB3C0	115	CGameEffectMentalSpeed::ApplyEffect(CGameSprite *)	n
+6BB440	42	CGameEffectNon_CumulativeLuck::ApplyEffect(CGameSprite *)	n
+6BB470	55	CGameEffectNon_CumulativeDrawUponHolyMight::ApplyEffect(CGameSprite *)	n
+6BB4B0	42	CGameEffectNon_CumulativeChantBad::ApplyEffect(CGameSprite *)	n
+6BB4E0	42	CGameEffectNon_CumulativeChant::ApplyEffect(CGameSprite *)	n
+6BB510	185	CGameEffectNon_CumulativeAid::ApplyEffect(CGameSprite *)	y
+6BB5D0	84	CGameEffectFeebleMindedness::ApplyEffect(CGameSprite *)	n
+6BB630	268	CGameEffectBlindness::ApplyEffect(CGameSprite *)	y
+6BB740	68	CGameEffectNonDetection::ApplyEffect(CGameSprite *)	n
+6BB790	68	CGameEffectInfravision::ApplyEffect(CGameSprite *)	n
+6BB7E0	393	CGameEffectSpellMemorizationCleric::ApplyEffect(CGameSprite *)	y
+6BB970	159	CGameEffectCastingFailure::ApplyEffect(CGameSprite *)	y
+6BBA10	481	CGameEffectSpellMemorizationMage::ApplyEffect(CGameSprite *)	y
+6BBC00	91	CGameEffectHitPoints::OnRemove(CGameSprite *)	y
+6BBC60	95	CGameEffectFistDamageBonus::ApplyEffect(CGameSprite *)	n
+6BBCC0	95	CGameEffectFistTHAC0Bonus::ApplyEffect(CGameSprite *)	n
+6BBD20	95	CGameEffectMissileDamageBonus::ApplyEffect(CGameSprite *)	n
+6BBD80	95	CGameEffectMeleeDamageBonus::ApplyEffect(CGameSprite *)	n
+6BBDE0	95	CGameEffectMeleeTHAC0Bonus::ApplyEffect(CGameSprite *)	n
+6BBE40	96	CGameEffectMissileTHAC0Bonus::ApplyEffect(CGameSprite *)	n
+6BBEA0	42	CGameEffectSetSequence::ApplyEffect(CGameSprite *)	y
+6BBED0	105	CGameEffectStun::ApplyEffect(CGameSprite *)	y
+6BBF40	1317	CGameEffectHitPoints::ApplyEffect(CGameSprite *)	y
+6BC470	73	CGameEffectSaveVsSchoolMod::ApplyEffect(CGameSprite *)	n
+6BC4C0	25	CGameEffectSpecificDamageMod::ApplyEffect(CGameSprite *)	n
+6BC4E0	121	CGameEffectThac0Right::ApplyEffect(CGameSprite *)	n
+6BC560	121	CGameEffectThac0Left::ApplyEffect(CGameSprite *)	n
+6BC5E0	123	CGameEffectSetTrap::ApplyEffect(CGameSprite *)	n
+6BC660	123	CGameEffectDetectIllusion::ApplyEffect(CGameSprite *)	n
+6BC6E0	123	CGameEffectHideInShadows::ApplyEffect(CGameSprite *)	n
+6BC760	135	CGameEffectBackStabMod::ApplyEffect(CGameSprite *)	n
+6BC7F0	52	CGameEffectVisualRange::ApplyEffect(CGameSprite *)	n
+6BC830	192	CGameEffectDamageMod::ApplyEffect(CGameSprite *)	y
+6BC8F0	229	CGameEffectResistMagic::ApplyEffect(CGameSprite *)	n
+6BC9E0	628	CGameEffectMoraleBreak::ApplyEffect(CGameSprite *)	n
+6BCC60	97	CGameEffectPanic::ApplyEffect(CGameSprite *)	y
+6BCFE0	179	CGameEffectBlindness::OnAddSpecific(CGameSprite *)	y
+6BD0A0	208	CGameEffectBerserk::ApplyEffect(CGameSprite *)	y
+6BD170	821	CGameEffect::ResolveEffect(CGameSprite *)	n
+6BD4B0	79	CGameEffectChangeWeather::ApplyEffect(CGameSprite *)	n
+6BD500	336	CGameEffectGuardianMantle::ApplyEffect(CGameSprite *)	n
+6BD650	205	CGameEffectWebHold::ApplyEffect(CGameSprite *)	n
+6BD720	221	CGameEffectShieldGlobe::ApplyEffect(CGameSprite *)	n
+6BD800	173	CGameEffectMinorGlobe::ApplyEffect(CGameSprite *)	n
+6BD8B0	277	CGameEffectDisplayString::ApplyEffect(CGameSprite *)	n
+6BD9D0	172	CGameEffectMirrorImageRun::ApplyEffect(CGameSprite *)	y
+6BDA80	192	CGameEffectBlur::ApplyEffect(CGameSprite *)	y
+6BDB40	523	CGameEffectStoneSkinsGolem::ApplyEffect(CGameSprite *)	n
+6BDD50	108	CGameEffectBounceSecondaryTypeDecrement::ApplyEffect(CGameSprite *)	n
+6BDDC0	108	CGameEffectBounceSchoolDecrement::ApplyEffect(CGameSprite *)	n
+6BDE30	108	CGameEffectImmunitySecondaryTypeDecrement::ApplyEffect(CGameSprite *)	n
+6BDEA0	108	CGameEffectImmunitySchoolDecrement::ApplyEffect(CGameSprite *)	n
+6BDF10	675	CGameEffectAttackNo::ApplyEffect(CGameSprite *)	y
+6BE320	642	CGameEffectXP::ApplyEffect(CGameSprite *)	y
+6BE750	213	CGameEffectTranslucent::ApplyEffect(CGameSprite *)	y
+6BE830	259	CGameEffectColorGlowDissipate::ApplyEffect(CGameSprite *)	n
+6BE940	260	CGameEffectSingleColorPulseAll::ApplyEffect(CGameSprite *)	n
+6BEA50	205	CGameEffectPrayer::ApplyEffect(CGameSprite *)	y
+6BEB20	165	CGameEffectJumbleCurse::ApplyEffect(CGameSprite *)	y
+6BEBD0	101	CGameEffectAddInnateAbility::ApplyEffect(CGameSprite *)	y
+6BEC40	310	CGameEffectPlayMovie::ApplyEffect(CGameSprite *)	n
+6BED80	748	CGameEffectChangeStatic::ApplyEffect(CGameSprite *)	n
+6BF7C0	828	CGameEffectRememorizeSpell::ApplyEffect(CGameSprite *)	n
+6BFB00	433	CGameEffectDestroyItem::ApplyEffect(CGameSprite *)	n
+6BFCC0	642	CGameEffectDrainChargeFromAllItems::ApplyEffect(CGameSprite *)	n
+6C08C0	5239	CGameEffectLevelDrain::OnAddSpecific(CGameSprite *)	n
+6C1D40	326	CGameEffectPuppetMaster::ApplyEffect(CGameSprite *)	n
+6C1E90	783	CGameEffectWish::ApplyEffect(CGameSprite *)	n
+6C21A0	674	CGameEffectStoneSkins::ApplyEffect(CGameSprite *)	n
+6C2450	1124	CGameEffectDispelEffects::ApplyEffect(CGameSprite *)	n
+6C28C0	1461	CGameEffectSparkle::ApplyEffect(CGameSprite *)	y
+6C2E80	692	CGameEffectFloatText::ApplyEffect(CGameSprite *)	n
+6C3140	389	CGameEffectUnimplemented::ApplyEffect(CGameSprite *)	n
+6C32D0	293	CGameEffectOverrideAnimation::OnRemove(CGameSprite *)	n
+6C3400	1040	CGameEffectRandomTeleport::ApplyEffect(CGameSprite *)	n
+6C3810	437	CGameEffectOverrideAnimation::ApplyEffect(CGameSprite *)	n
+6C39D0	1655	CGameEffectResurrect::ApplyEffect(CGameSprite *)	y
+6C46F0	1257	CGameEffectLuminocityAnimationEffect::ApplyEffect(CGameSprite *)	y
+6C4BE0	663	CGameEffectUnsummon::ApplyEffect(CGameSprite *)	n
+6C4E80	157	CGameEffectPowerWordStun::OnRemove(CGameSprite *)	n
+6C4F20	196	CGameEffectStoneSkinsGolem::OnRemove(CGameSprite *)	n
+6C4FF0	196	CGameEffectStoneSkins::OnRemove(CGameSprite *)	n
+6C50C0	157	CGameEffectPowerWordSleep::OnRemove(CGameSprite *)	n
+6C5160	157	CGameEffectMaze::OnRemove(CGameSprite *)	n
+6C5200	157	CGameEffectImmunityLevelDecrement::OnRemove(CGameSprite *)	n
+6C52A0	157	CGameEffectBounceLevelDecrement::OnRemove(CGameSprite *)	n
+6C5910	756	CGameEffectRepeatingApplyEffect::ApplyEffect(CGameSprite *)	n
+6C5C10	729	CGameEffectRegeneration::ApplyEffect(CGameSprite *)	y
+6C5EF0	745	CGameEffectPoison::ApplyEffect(CGameSprite *)	y
+6C61E0	424	CGameEffectMaze::OnAddSpecific(CGameSprite *)	n
+6C6390	535	CGameEffectDestroySelf::ApplyEffect(CGameSprite *)	n
+6C65B0	239	CGameEffectSetAIScript::ApplyEffect(CGameSprite *)	n
+6C66A0	514	CGameEffectSlowPoison::ApplyEffect(CGameSprite *)	n
+6C68B0	1906	CGameEffectGenericAnimationEffect::ApplyEffect(CGameSprite *)	y
+6C7030	641	CGameEffectPSTSpriteAttachedObjectVFX::ApplyEffect(CGameSprite *)	n
+6C72C0	595	CGameEffectMoveViewport::ApplyEffect(CGameSprite *)	y
+6C7520	1621	CGameEffectTracking::ApplyEffect(CGameSprite *)	n
+6C7B80	2526	CGameEffectDamage::DisplayDamageAmount(CGameSprite *,int)	y
+6C8760	3271	CGameEffectVisualSpellHit::ApplyEffect(CGameSprite *)	n
+6C9430	125	CGameEffectSevenEyes::OnRemove(CGameSprite *)	n
+6C94B0	1061	CGameEffectSetLocalVariable::ApplyEffect(CGameSprite *)	n
+6C98E0	937	CGameEffectSetGlobal::ApplyEffect(CGameSprite *)	n
+6C9C90	921	CGameEffectSetLocalExternal::ApplyEffect(CGameSprite *)	n
+6CA030	1398	CGameEffectDEX::ApplyEffect(CGameSprite *)	y
+6CA5B0	1582	CGameEffectSTR::ApplyEffect(CGameSprite *)	y
+6CABE0	1878	CGameEffectDisease::ApplyEffect(CGameSprite *)	n
+6CB340	1226	CGameEffectINT::ApplyEffect(CGameSprite *)	y
+6CB810	1226	CGameEffectCON::ApplyEffect(CGameSprite *)	y
+6CBCE0	1249	CGameEffectWIS::ApplyEffect(CGameSprite *)	y
+6CC1D0	1313	CGameEffectCHR::ApplyEffect(CGameSprite *)	y
+6CC700	618	CGameEffectAIChange::ApplyEffect(CGameSprite *)	n
+6CC970	1936	CGameEffectCharm::ApplyEffect(CGameSprite *)	n
+6CD100	994	CGameEffectSexChange::ApplyEffect(CGameSprite *)	n
+6CD4F0	475	CGameEffectSexChange::OnRemove(CGameSprite *)	n
+6CD6D0	591	CGameEffectCharm::DisplayString(CGameSprite *)	n
+6CD920	371	CGameEffectProtectionCircle::ApplyEffect(CGameSprite *)	n
+6CDAA0	406	CGameEffectSelectiveDamageBonus::ApplyEffect(CGameSprite *)	n
+6CDC40	406	CGameEffectSelectiveToHitBonus::ApplyEffect(CGameSprite *)	n
+6CDDE0	820	CGameEffectOverrideWeaponType::ApplyEffect(CGameSprite *)	n
+6CE120	515	CGameEffectSelectiveEnchantmentBonus::ApplyEffect(CGameSprite *)	n
+6CE330	1149	CGameEffectAlignmentReversal::ApplyEffect(CGameSprite *)	n
+6CE7B0	1858	CGameEffectFamiliarBlock::ApplyEffect(CGameSprite *)	n
+6CEF00	1622	CGameEffectVisualEffect::ApplyEffect(CGameSprite *)	n
+6CF560	227	CGameEffectSpeakWithDead::~CGameEffectSpeakWithDead()	n
+6CF650	18	CGameEffectSpeakWithDead::~CGameEffectSpeakWithDead()	n
+6CF670	919	CGameEffectAlignmentChange::ApplyEffect(CGameSprite *)	n
+6CFA10	724	CGameEffectArmor::ApplyEffect(CGameSprite *)	n
+6CFCF0	2892	CGameEffect::CheckSave(CGameSprite *,uchar &,uchar &,uchar &,uchar &,uchar &,uchar &)	n
+6D0840	405	CGameEffectPushPull::CheckSave(CGameSprite *,uchar &,uchar &,uchar &,uchar &,uchar &,uchar &)	n
+6D09E0	825	CGameEffectDamage::CheckSave(CGameSprite *,uchar &,uchar &,uchar &,uchar &,uchar &,uchar &)	y
+6D0D20	658	CGameEffectRemoveEffectOfResource::ApplyEffect(CGameSprite *)	n
+6D0FC0	508	CGameEffectMovementRateModal::ApplyEffect(CGameSprite *)	n
+6D79E0	1815	CGameEffectHeal::ApplyEffect(CGameSprite *)	y
+6D8100	846	CGameEffectRandomPhase::ApplyEffect(CGameSprite *)	n
+6D8450	531	CGameEffectRevealMagic::ApplyEffect(CGameSprite *)	n
+6D8670	3087	CGameEffectFindFamiliar::ApplyEffect(CGameSprite *)	n
+6D9540	252	CGameEffectImmunityToEffect::ApplyEffect(CGameSprite *)	y
+6D9640	218	CGameEffectImmunityToPortraitIcon::ApplyEffect(CGameSprite *)	n
+6D9720	233	CGameEffectBounceEffect::ApplyEffect(CGameSprite *)	n
+6D9810	218	CGameEffectImmunityToDisplayString::ApplyEffect(CGameSprite *)	n
+6D98F0	277	CGameEffectImmunityToVisualEffect::ApplyEffect(CGameSprite *)	n
+6D9A10	7462	CGameEffectCopySelf::ApplyEffect(CGameSprite *)	n
+6DB740	6537	CGameEffectLevel::ApplyEffect(CGameSprite *)	n
+6DD0D0	722	CGameEffectCreateWeapon::ApplyEffect(CGameSprite *)	n
+6DD3B0	1839	CGameEffectDetectAlignment::ApplyEffect(CGameSprite *)	n
+6DDAE0	1776	CGameEffectCreateItem::ApplyEffect(CGameSprite *)	n
+6DE1D0	444	CGameEffectReplaceItem::ApplyEffect(CGameSprite *)	n
+6DE390	464	CGameEffectNon_CumulativeBless::ApplyEffect(CGameSprite *)	y
+6DE560	858	CGameEffectPowerWordStun::ApplyEffect(CGameSprite *)	n
+6DE8C0	347	CGameEffectPowerWordSleep::ApplyEffect(CGameSprite *)	n
+6DEA20	386	CGameEffectResurrectParty::ApplyEffect(CGameSprite *)	n
+6DEBB0	607	CGameEffectConfusion::ApplyEffect(CGameSprite *)	y
+6DEE10	384	CGameEffectDetectEvil::ApplyEffect(CGameSprite *)	y
+6DF3F0	948	CGameEffectSleep::ApplyEffect(CGameSprite *)	y
+6DF7B0	1253	CGameEffectProtectionFromCreature::ApplyEffect(CGameSprite *)	n
+6DFCA0	2329	CGameEffectSlay::ApplyEffect(CGameSprite *)	n
+6E32C0	1210	CGameEffectPowerWordKill::ApplyEffect(CGameSprite *)	n
+6E3780	1354	CGameEffectMaze::ApplyEffect(CGameSprite *)	n
+6E3CD0	1745	CGameEffectHitPointsOnDeath::ApplyEffect(CGameSprite *)	n
+6E43B0	7685	CGameEffectLevelDrain::ApplyEffect(CGameSprite *)	n
+6E61C0	2176	CGameEffectDisintegrate::ApplyEffect(CGameSprite *)	n
+6E6A40	1196	CGameEffectHoldCreatureSpell::ApplyEffect(CGameSprite *)	n
+6E6EF0	1599	CGameEffectHoldCreatureSpell::DisplayString(CGameSprite *)	n
+6E7530	1148	CGameEffectHoldCreature::ApplyEffect(CGameSprite *)	y
+6E7FD0	1429	CGameEffectInciteRunningAttack::ApplyEffect(CGameSprite *)	y
+6E8730	1107	CGameEffectJumpToPocketPlane::ApplyEffect(CGameSprite *)	n
+6E8B90	6763	CGameEffectRetreatFrom::ApplyEffect(CGameSprite *)	y
+6EA600	6933	CGameEffectReplaceSelf::ApplyEffect(CGameSprite *)	n
+6EC120	901	CGameEffectDamage::OnAddSpecific(CGameSprite *)	y
+6EC4B0	1204	CGameEffect::OnAdd(CGameSprite *)	n
+6EC970	1116	CGameEffect::CGameEffect(Item_effect_st *,CPoint const&,int,CPoint,int,int)	n
+6ECDD0	1125	CGameEffect::CGameEffect(ushort,int,uint,ushort,uint,CPoint const&,int,uchar,ushort,ushort,uchar,CResRef const&,uint,uint,uint,int,uint)	n
+6ED240	132	CGameEffect::operator==(CGameEffect const&)	n
+6ED2D0	309	CGameEffectImmunityToEffect::OnRemove(CGameSprite *)	y
+6ED410	434	CGameEffect::CopyFromBase(CGameEffectBase *)	n
+6ED5D0	248	CGameEffect::operator=(CGameEffect const&)	n
+6ED6D0	1804	CGameEffectSequencerInstance::ApplyEffect(CGameSprite *)	n
+6EDDE0	3085	CGameEffectContingencyInstance::ApplyEffect(CGameSprite *)	n
+6EE9F0	175	CGameEffectFile::GetEffect(void)	n
+6EEE00	340	CGameEffectCurePoison::ApplyEffect(CGameSprite *)	y
+6EEF60	4803	CGameEffectDeath::ApplyEffect(CGameSprite *)	y
+6F0230	340	CGameEffectCureDisease::ApplyEffect(CGameSprite *)	y
+6F0390	1662	CGameEffectRemoveCurse::ApplyEffect(CGameSprite *)	y
+6F0A10	322	CGameEffectAwaken::ApplyEffect(CGameSprite *)	n
+6F0B60	151	CGameEffectCalm::ApplyEffect(CGameSprite *)	n
+6F0C00	420	CGameEffectHaste::ApplyEffect(CGameSprite *)	y
+6F0DB0	420	CGameEffectHaste2::ApplyEffect(CGameSprite *)	n
+6F0F60	288	CGameEffectSlow::ApplyEffect(CGameSprite *)	n
+6F1080	302	CGameEffectUnstun::ApplyEffect(CGameSprite *)	n
+6F11B0	288	CGameEffectVisible::ApplyEffect(CGameSprite *)	n
+6F12D0	145	CGameEffectForceVisible::ApplyEffect(CGameSprite *)	n
+6F1370	157	CGameEffectVocalize::ApplyEffect(CGameSprite *)	n
+6F1410	1160	CGameEffectAnimationChange::ApplyEffect(CGameSprite *)	n
+6F18A0	160	CGameEffectInfravisionOff::ApplyEffect(CGameSprite *)	n
+6F1940	157	CGameEffectEndNonDetection::ApplyEffect(CGameSprite *)	n
+6F19E0	157	CGameEffectCureBlindness::ApplyEffect(CGameSprite *)	y
+6F1A80	157	CGameEffectCureFeebleMindedness::ApplyEffect(CGameSprite *)	n
+6F1B20	170	CGameEffectDeafness::ApplyEffect(CGameSprite *)	n
+6F1BD0	137	CGameEffectCureDeafness::ApplyEffect(CGameSprite *)	n
+6F1C60	300	CGameEffectDispelInvisible::ApplyEffect(CGameSprite *)	n
+6F1D90	2801	CGameEffectPolymorph::ApplyEffect(CGameSprite *)	n
+6F2890	137	CGameEffectEnableButton::ApplyEffect(CGameSprite *)	n
+6F2920	147	CGameEffectDispelSanctuary::ApplyEffect(CGameSprite *)	n
+6F29C0	292	CGameEffectRemovePanic::ApplyEffect(CGameSprite *)	n
+6F2AF0	358	CGameEffectRemoveHold::ApplyEffect(CGameSprite *)	n
+6F2C60	219	CGameEffectRestoreMovementRate::ApplyEffect(CGameSprite *)	n
+6F2D40	153	CGameEffectRemoveIntoxication::ApplyEffect(CGameSprite *)	n
+6F2DE0	147	CGameEffectLevelRestoration::ApplyEffect(CGameSprite *)	n
+6F2E80	133	CGameEffectRemovePortraitIcon::ApplyEffect(CGameSprite *)	n
+6F2F10	137	CGameEffectRemoveConfusion::ApplyEffect(CGameSprite *)	n
+6F2FA0	105	CGameEffectRemoveSpellImmunity::ApplyEffect(CGameSprite *)	n
+6F3010	147	CGameEffectUnpauseCaster::ApplyEffect(CGameSprite *)	n
+6F30B0	131	CGameEffectRemoveAllOfType::ApplyEffect(CGameSprite *)	n
+6F3140	182	CGameEffectApplyEffect::OnRemove(CGameSprite *)	n
+6F3200	415	CGameEffectApplyEffectEquipItem::ApplyEffect(CGameSprite *)	n
+6F33A0	354	CGameEffectApplyEffectEquipItemType::ApplyEffect(CGameSprite *)	n
+6F3510	217	CGameEffectMeleeEffect::ApplyEffect(CGameSprite *)	n
+6F35F0	178	CGameEffectRangeEffect::ApplyEffect(CGameSprite *)	n
+6F3A30	182	CGameEffectCurseApplyEffect::OnRemove(CGameSprite *)	n
+6F3AF0	1723	CGameEffectCurseApplyEffect::ApplyEffect(CGameSprite *)	n
+6F41B0	108	CGameEffect::DecodeEffectFromBase(CGameEffectBase *)	n
+6F4220	23761	CGameEffect::DecodeEffect(Item_effect_st *,CPoint const&,int,CPoint const&,int)	y
+6F9F00	90	CGameEffect::ClearItemEffect(Item_effect_st *,ushort)	n
+6F9F60	346	CGameEffect::PlaySound(CResRef const&,CGameSprite *)	n
+6FA0C0	161	CGameEffectTurnUndead::ApplyEffect(CGameSprite *)	n
+6FA170	33	CGameEffectPlaySound::ApplyEffect(CGameSprite *)	y
+6FA1A0	1173	CGameEffectDestroyWeapon::ApplyEffect(CGameSprite *)	n
+6FA640	214	CGameEffect::CheckExpiration(void)	n
+6FA720	2554	CGameEffect::CheckAdd(CGameSprite *,uchar &,uchar &,uchar &,uchar &,uchar &,uchar &,uchar &,int)	n
+6FB120	1883	CGameEffectApplyEffect::ApplyEffect(CGameSprite *)	n
+6FB880	262	CGameEffect::GetItemEffect(void)	n
+6FB990	285	CGameEffectMirrorImage::ApplyEffect(CGameSprite *)	n
+6FBAB0	337	CGameEffect::Compare(CGameEffect const&,int)	n
+6FBC10	420	CGameEffectDamage::CheckForIncreasedSpellLevel(void)	y
+6FBDC0	5218	CGameEffectHealTransfer::ApplyEffect(CGameSprite *)	y
+6FD230	472	CGameEffectDamage::DisplayCriticalBam(CGameSprite *,short,int)	y
+6FD410	14260	CGameEffectDamage::ApplyEffect(CGameSprite *)	y
+700BD0	589	CGameEffectDeath::ModifyVariable(CGameSprite *,CString const&,int,int)	y
+700E20	8034	CGameEffectDeath::DeathNotice(CGameSprite *,int,int)	y
+702D90	2162	CGameEffectImprisonment::ApplyEffect(CGameSprite *)	n
+703610	3861	CGameEffectPetrification::ApplyEffect(CGameSprite *)	y
+704530	1770	CGameEffectStoneToFlesh::ApplyEffect(CGameSprite *)	n
+704C20	19	CGameEffectDeath::OnAddSpecific(CGameSprite *)	y
+704C40	2377	CGameEffectFreedom::ApplyEffect(CGameSprite *)	n
+705590	87	CGameEffectHeal::CalculateHPHealed(int)	y
+7055F0	290	CGameEffect::EqualClass(CAIObjectType &)	n
+705720	166	CGameEffectAlignmentReversal::Reverse(uchar)	n
+7057D0	1783	CGameEffectSummon::ApplyVisualEffect(CResRef const&,CPoint const&,CGameSprite *,CGameArea *)	n
+705ED0	469	CGameEffectSummon::ApplyVisualEffectArea(CResRef const&,CPoint const&,CGameSprite *,CGameArea *)	n
+7060B0	5125	CGameEffectRandomSummon::ApplyEffect(CGameSprite *)	n
+7074C0	2754	CGameEffectSummon::ApplyEffect(CGameSprite *)	n
+707F90	83	CGameEffectList::IsTypeOnList(ushort,uint)	n
+707FF0	75	CGameEffectList::GetTypeOnList(ushort,uint)	n
+708040	180	CGameEffectList::Remove(CGameEffect *,CGameSprite *,int)	n
+708100	546	CGameEffectList::ModifyAllOfType(ushort,int,int,uint,int,int)	n
+708330	112	CGameEffectList::ModifyAllOfType(CGameSprite *,ushort,__POSITION *,int)	n
+7083A0	721	CGameEffectList::RemoveAllOfType(CGameSprite *,ushort,__POSITION *,int,CResRef,int)	n
+708680	274	CGameEffectList::RemoveAllOfSchool(CGameSprite *,uint,__POSITION *,int,int &)	n
+7087A0	511	CGameEffectDispelSchool::ApplyEffect(CGameSprite *)	n
+7089A0	274	CGameEffectList::RemoveAllOfSecondaryType(CGameSprite *,uint,__POSITION *,int,int &)	n
+708AC0	527	CGameEffectDispelSecondaryType::ApplyEffect(CGameSprite *)	n
+708CD0	623	CGameEffectList::RemoveOneOfSchool(CGameSprite *,uint,__POSITION *,int,int &)	n
+708F40	511	CGameEffectDispelSchoolOne::ApplyEffect(CGameSprite *)	n
+709140	623	CGameEffectList::RemoveOneOfSecondaryType(CGameSprite *,uint,__POSITION *,int,int &)	n
+7093B0	511	CGameEffectDispelSecondaryTypeOne::ApplyEffect(CGameSprite *)	n
+7095B0	684	CGameEffectList::RemoveOneOfType(CGameSprite *,ushort,__POSITION *,int,CResRef)	n
+709860	540	CGameEffectList::RemoveAllEffects(CGameSprite *,__POSITION *,int,int,uchar,uchar)	n
+709A80	150	CGameEffectList::RemoveAllEffectsFromSourceRes(CGameSprite *,__POSITION *,CResRef const&)	n
+709B20	421	CGameEffectList::RemoveAllEffectsIgnoreMoreThenPermanent(CGameSprite *,__POSITION *,int,int,uchar,uchar)	n
+709CD0	2294	CGameEffectList::Marshal(uchar **,uchar,int,int)	n
+70A5D0	494	CGameEffectList::Unmarshal(uchar *,uint,CGameSprite *,uchar)	n
+70A7C0	294	CGameEffectList::HandleList(CGameSprite *)	n
+70A8F0	173	CGameEffectList::FakeExpireCheck(CGameSprite *,int)	n
+70A9A0	47	CGameEffectList::CheckEffects(void)	n
+70AD40	724	CGameEffectUsability::CheckUsability(CGameSprite *)	n
+70C740	967	CGameEffectSoulExodus::ApplyEffect(CGameSprite *)	y
+70CB10	3719	CGameEffectRandomSummon::ApplyEffectNoSprite(CGameAIBase *)	n
+70D9A0	3325	CGameEffectSecondaryCastList::ApplyEffect(CGameSprite *)	n
+70E6A0	317	CGameEffectLearnSpell::ApplyEffect(CGameSprite *)	y
+70E7E0	2255	CGameEffect::FireSpell(CResRef const&,CGameSprite *,uint,uint,int)	n
+70F0B0	72	CGameEffectApplySpellOnMove::ApplyEffect(CGameSprite *)	n
+70F100	532	CGameEffectStaticCharge::ApplyEffect(CGameSprite *)	n
+70F320	194	CGameEffectApplySpell::ApplyEffect(CGameSprite *)	n
+70F3F0	1815	CGameEffectCastSpellPoint::ApplyEffect(CGameSprite *)	y
+70FB10	1730	CGameEffectSpecial::ApplyEffect(CGameSprite *)	y
+7101E0	2149	CGameEffectCastSpell::ApplyEffect(CGameSprite *)	y
+710A50	1860	CGameEffectNon_CumulativeEmbalming::ApplyEffect(CGameSprite *)	y
+7111A0	1296	CGameEffectImmunitySpellIWD::ApplyEffect(CGameSprite *)	n
+7116B0	8965	CGameEffectAddAttachedObject::ApplyEffect(CGameSprite *)	y
+7139C0	148	CGameEffectFile::CGameEffectFile(CResRef)	n
+713A60	3	CGameEffect::Copy(void)	n
+713A70	6	CGameEffect::ApplyEffect(CGameSprite *)	n
+713A80	2	CGameEffect::OnAddSpecific(CGameSprite *)	n
+713A90	2	CGameEffect::OnLoad(CGameSprite *)	n
+713AA0	3	CGameEffect::UsesDice(void)	n
+713AB0	2	CGameEffect::OnRemove(CGameSprite *)	n
+713AC0	6	CGameEffectDamage::UsesDice(void)	y
+713AD0	6	CGameEffectHeal::UsesDice(void)	y
+713AE0	6	CGameEffectHitPoints::UsesDice(void)	y
+713AF0	6	CGameEffectLuck::UsesDice(void)	y
+713B00	4	CGameEffectRandomSummon::UsesDice(void)	n
+713B10	9	CGameEffectFamiliarBlock::OnLoad(CGameSprite *)	n
+713B20	4	CGameEffectStoneSkins::UsesDice(void)	n
+713B30	6	CGameEffectScreenShake::UsesDice(void)	y
+713B40	6	CGameEffectStaticCharge::UsesDice(void)	n
+713B50	6	CGameEffectCannotSaveOrRest::ApplyEffect(CGameSprite *)	n
+713B60	6	CGameEffectCloakOfWarding::UsesDice(void)	n
+713B70	6	CGameEffectPainMirror::UsesDice(void)	n
+713B80	6	CGameEffectGuardianMantle::UsesDice(void)	n
+713B90	6	CGameEffectArmor::UsesDice(void)	n
+713BA0	6	CGameEffectTintScreen::UsesDice(void)	y
+713BB0	6	CGameEffectFlashScreen::UsesDice(void)	y
+713BC0	3	CGameEffectOverrideProjectile::ApplyEffect(CGameSprite *)	n
+713BD0	16	CGameEffectSpeakWithDead::ApplyEffect(CGameSprite *)	n
+713BE0	6	CGameEffectHealTransfer::UsesDice(void)	y
+713C50	6	CGameEffectLuminocityAnimationEffect::UsesDice(void)	y
+713C60	6	CGameEffectGenericAnimationEffect::UsesDice(void)	y
+713C70	6	CGameEffectSpecial::UsesDice(void)	y
+713C80	6	CGameEffectAddAttachedObject::UsesDice(void)	y
+713C90	6	CGameEffectChangeGeneralState::UsesDice(void)	y
+713F10	19	CGameEffect::~CGameEffect()	n
+714720	32	CGameEffectNoPermanentDeath::~CGameEffectNoPermanentDeath()	n
+714740	19	CGameEffectAC::~CGameEffectAC()	y
+714760	19	CGameEffectAttackNo::~CGameEffectAttackNo()	y
+714780	19	CGameEffectAwaken::~CGameEffectAwaken()	n
+7147A0	19	CGameEffectBerserk::~CGameEffectBerserk()	y
+7147C0	19	CGameEffectBlur::~CGameEffectBlur()	y
+7147E0	19	CGameEffectCalm::~CGameEffectCalm()	n
+714800	19	CGameEffectCharm::~CGameEffectCharm()	n
+714820	19	CGameEffectCHR::~CGameEffectCHR()	y
+714840	19	CGameEffectColorChange::~CGameEffectColorChange()	n
+714860	19	CGameEffectColorGlowSolid::~CGameEffectColorGlowSolid()	y
+714880	19	CGameEffectColorGlowPulse::~CGameEffectColorGlowPulse()	y
+7148A0	19	CGameEffectColorTintSolid::~CGameEffectColorTintSolid()	n
+7148C0	19	CGameEffectColorLightSolid::~CGameEffectColorLightSolid()	n
+7148E0	19	CGameEffectSingleColorPulseAll::~CGameEffectSingleColorPulseAll()	n
+714900	19	CGameEffectColorGlowDissipate::~CGameEffectColorGlowDissipate()	n
+714920	19	CGameEffectCON::~CGameEffectCON()	y
+714940	19	CGameEffectCurePoison::~CGameEffectCurePoison()	y
+714960	19	CGameEffectDamage::~CGameEffectDamage()	y
+714980	19	CGameEffectDeath::~CGameEffectDeath()	y
+7149A0	19	CGameEffectDefrost::~CGameEffectDefrost()	n
+7149C0	19	CGameEffectDEX::~CGameEffectDEX()	y
+7149E0	19	CGameEffectHaste::~CGameEffectHaste()	y
+714A00	19	CGameEffectHaste2::~CGameEffectHaste2()	n
+714A20	19	CGameEffectHeal::~CGameEffectHeal()	y
+714A40	19	CGameEffectHitPoints::~CGameEffectHitPoints()	y
+714A60	19	CGameEffectINT::~CGameEffectINT()	y
+714A80	19	CGameEffectInvisible::~CGameEffectInvisible()	y
+714AA0	19	CGameEffectLore::~CGameEffectLore()	y
+714AC0	19	CGameEffectLuck::~CGameEffectLuck()	y
+714AE0	19	CGameEffectMorale::~CGameEffectMorale()	n
+714B00	19	CGameEffectPanic::~CGameEffectPanic()	y
+714B20	19	CGameEffectPoison::~CGameEffectPoison()	y
+714B40	19	CGameEffectResistAcid::~CGameEffectResistAcid()	y
+714B60	19	CGameEffectResistCold::~CGameEffectResistCold()	y
+714B80	19	CGameEffectResistElectricity::~CGameEffectResistElectricity()	y
+714BA0	19	CGameEffectResistFire::~CGameEffectResistFire()	y
+714BC0	19	CGameEffectResistMagic::~CGameEffectResistMagic()	n
+714BE0	19	CGameEffectResurrect::~CGameEffectResurrect()	y
+714C00	19	CGameEffectSaveVsDeath::~CGameEffectSaveVsDeath()	y
+714C20	19	CGameEffectSaveVsWands::~CGameEffectSaveVsWands()	y
+714C40	19	CGameEffectSaveVsPoly::~CGameEffectSaveVsPoly()	y
+714C60	19	CGameEffectSaveVsBreath::~CGameEffectSaveVsBreath()	y
+714C80	19	CGameEffectSaveVsSpell::~CGameEffectSaveVsSpell()	y
+714CA0	19	CGameEffectSavingThrowChange::~CGameEffectSavingThrowChange()	n
+714CC0	19	CGameEffectSilence::~CGameEffectSilence()	y
+714CE0	19	CGameEffectSleep::~CGameEffectSleep()	y
+714D00	19	CGameEffectSlow::~CGameEffectSlow()	n
+714D20	19	CGameEffectSparkle::~CGameEffectSparkle()	y
+714D40	19	CGameEffectSpellMemorizationMage::~CGameEffectSpellMemorizationMage()	y
+714D60	19	CGameEffectStoneToFlesh::~CGameEffectStoneToFlesh()	n
+714D80	19	CGameEffectSTR::~CGameEffectSTR()	y
+714DA0	19	CGameEffectStun::~CGameEffectStun()	y
+714DC0	19	CGameEffectUnstun::~CGameEffectUnstun()	n
+714DE0	19	CGameEffectVisible::~CGameEffectVisible()	n
+714E00	19	CGameEffectForceVisible::~CGameEffectForceVisible()	n
+714E20	19	CGameEffectVocalize::~CGameEffectVocalize()	n
+714E40	19	CGameEffectWIS::~CGameEffectWIS()	y
+714E60	19	CGameEffectThac0::~CGameEffectThac0()	y
+714E80	19	CGameEffectSlay::~CGameEffectSlay()	n
+714EA0	19	CGameEffectAnimationChange::~CGameEffectAnimationChange()	n
+714EC0	19	CGameEffectAlignmentReversal::~CGameEffectAlignmentReversal()	n
+714EE0	19	CGameEffectAlignmentChange::~CGameEffectAlignmentChange()	n
+714F00	19	CGameEffectDispelEffects::~CGameEffectDispelEffects()	n
+714F20	19	CGameEffectSkillStealth::~CGameEffectSkillStealth()	y
+714F40	19	CGameEffectCastingFailure::~CGameEffectCastingFailure()	y
+714F60	19	CGameEffectSpellMemorizationCleric::~CGameEffectSpellMemorizationCleric()	y
+714F80	19	CGameEffectInfravision::~CGameEffectInfravision()	n
+714FA0	19	CGameEffectInfravisionOff::~CGameEffectInfravisionOff()	n
+714FC0	19	CGameEffectSummon::~CGameEffectSummon()	n
+714FE0	19	CGameEffectUnsummon::~CGameEffectUnsummon()	n
+715000	19	CGameEffectNonDetection::~CGameEffectNonDetection()	n
+715020	19	CGameEffectEndNonDetection::~CGameEffectEndNonDetection()	n
+715040	19	CGameEffectSexChange::~CGameEffectSexChange()	n
+715060	19	CGameEffectAIChange::~CGameEffectAIChange()	n
+715080	19	CGameEffectDamageMod::~CGameEffectDamageMod()	y
+7150A0	19	CGameEffectBlindness::~CGameEffectBlindness()	y
+7150C0	19	CGameEffectCureBlindness::~CGameEffectCureBlindness()	y
+7150E0	19	CGameEffectFeebleMindedness::~CGameEffectFeebleMindedness()	n
+715100	19	CGameEffectCureFeebleMindedness::~CGameEffectCureFeebleMindedness()	n
+715120	19	CGameEffectDisease::~CGameEffectDisease()	n
+715140	19	CGameEffectCureDisease::~CGameEffectCureDisease()	y
+715160	19	CGameEffectDeafness::~CGameEffectDeafness()	n
+715180	19	CGameEffectCureDeafness::~CGameEffectCureDeafness()	n
+7151A0	19	CGameEffectSetAIScript::~CGameEffectSetAIScript()	n
+7151C0	19	CGameEffectImmunityToProjectile::~CGameEffectImmunityToProjectile()	y
+7151E0	19	CGameEffectResistMagicFire::~CGameEffectResistMagicFire()	y
+715200	19	CGameEffectResistMagicCold::~CGameEffectResistMagicCold()	y
+715220	19	CGameEffectResistSlashing::~CGameEffectResistSlashing()	y
+715240	19	CGameEffectRegeneration::~CGameEffectRegeneration()	y
+715260	19	CGameEffectResistCrushing::~CGameEffectResistCrushing()	y
+715280	19	CGameEffectResistPiercing::~CGameEffectResistPiercing()	y
+7152A0	19	CGameEffectResistMissile::~CGameEffectResistMissile()	y
+7152C0	19	CGameEffectSkillLockPicking::~CGameEffectSkillLockPicking()	y
+7152E0	19	CGameEffectSkillTraps::~CGameEffectSkillTraps()	y
+715300	19	CGameEffectSkillPickPocket::~CGameEffectSkillPickPocket()	y
+715320	19	CGameEffectFatigue::~CGameEffectFatigue()	y
+715340	19	CGameEffectIntoxication::~CGameEffectIntoxication()	y
+715360	19	CGameEffectSkillTracking::~CGameEffectSkillTracking()	n
+715380	19	CGameEffectSTRExtra::~CGameEffectSTRExtra()	y
+7153A0	19	CGameEffectLevel::~CGameEffectLevel()	n
+7153C0	19	CGameEffectDurationCasting::~CGameEffectDurationCasting()	n
+7153E0	19	CGameEffectProtectionFromCreature::~CGameEffectProtectionFromCreature()	n
+715400	19	CGameEffectImmunityToEffect::~CGameEffectImmunityToEffect()	y
+715420	19	CGameEffectImmunityToPortraitIcon::~CGameEffectImmunityToPortraitIcon()	n
+715440	19	CGameEffectImmunityToSpellLevel::~CGameEffectImmunityToSpellLevel()	y
+715460	19	CGameEffectName::~CGameEffectName()	n
+715480	19	CGameEffectXP::~CGameEffectXP()	y
+7154A0	19	CGameEffectGold::~CGameEffectGold()	y
+7154C0	19	CGameEffectMoraleBreak::~CGameEffectMoraleBreak()	n
+7154E0	19	CGameEffectPortrait::~CGameEffectPortrait()	n
+715500	19	CGameEffectReputation::~CGameEffectReputation()	n
+715520	19	CGameEffectHoldCreature::~CGameEffectHoldCreature()	y
+715540	19	CGameEffectRetreatFrom::~CGameEffectRetreatFrom()	y
+715560	19	CGameEffectCreateWeapon::~CGameEffectCreateWeapon()	n
+715580	19	CGameEffectDestroyWeapon::~CGameEffectDestroyWeapon()	n
+7155A0	19	CGameEffectEquipWeapon::~CGameEffectEquipWeapon()	n
+7155C0	19	CGameEffectDither::~CGameEffectDither()	n
+7155E0	19	CGameEffectDetectAlignment::~CGameEffectDetectAlignment()	n
+715600	19	CGameEffectDispelInvisible::~CGameEffectDispelInvisible()	n
+715620	19	CGameEffectShowArea::~CGameEffectShowArea()	n
+715640	19	CGameEffectShowCreatures::~CGameEffectShowCreatures()	n
+715660	19	CGameEffectMirrorImage::~CGameEffectMirrorImage()	n
+715680	19	CGameEffectMirrorImageRun::~CGameEffectMirrorImageRun()	y
+7156A0	19	CGameEffectImmuneToWeapon::~CGameEffectImmuneToWeapon()	y
+7156C0	19	CGameEffectVisualAnimationEffect::~CGameEffectVisualAnimationEffect()	n
+7156E0	19	CGameEffectCreateItem::~CGameEffectCreateItem()	n
+715700	19	CGameEffectReplaceItem::~CGameEffectReplaceItem()	n
+715720	19	CGameEffectDestroyItem::~CGameEffectDestroyItem()	n
+715740	19	CGameEffectTeleport::~CGameEffectTeleport()	n
+715760	19	CGameEffectKnock::~CGameEffectKnock()	y
+715780	19	CGameEffectMovementRate::~CGameEffectMovementRate()	n
+7157A0	19	CGameEffectMovementRateModal::~CGameEffectMovementRateModal()	n
+7157C0	19	CGameEffectRandomSummon::~CGameEffectRandomSummon()	n
+7157E0	19	CGameEffectFamiliarBlock::~CGameEffectFamiliarBlock()	n
+715800	19	CGameEffectFindFamiliar::~CGameEffectFindFamiliar()	n
+715820	19	CGameEffectHitPointsOnDeath::~CGameEffectHitPointsOnDeath()	n
+715840	19	CGameEffectConfusion::~CGameEffectConfusion()	y
+715860	19	CGameEffectNon_CumulativeAid::~CGameEffectNon_CumulativeAid()	y
+715880	19	CGameEffectNon_CumulativeBless::~CGameEffectNon_CumulativeBless()	y
+7158A0	19	CGameEffectNon_CumulativeChant::~CGameEffectNon_CumulativeChant()	n
+7158C0	19	CGameEffectNon_CumulativeChantBad::~CGameEffectNon_CumulativeChantBad()	n
+7158E0	19	CGameEffectNon_CumulativeDrawUponHolyMight::~CGameEffectNon_CumulativeDrawUponHolyMight()	n
+715900	19	CGameEffectNon_CumulativeLuck::~CGameEffectNon_CumulativeLuck()	n
+715920	19	CGameEffectPetrification::~CGameEffectPetrification()	y
+715940	19	CGameEffectPolymorph::~CGameEffectPolymorph()	n
+715960	19	CGameEffectRemoveCurse::~CGameEffectRemoveCurse()	y
+715980	19	CGameEffectTranslucent::~CGameEffectTranslucent()	y
+7159A0	19	CGameEffectSetSequence::~CGameEffectSetSequence()	y
+7159C0	19	CGameEffectDisplayString::~CGameEffectDisplayString()	n
+7159E0	19	CGameEffectCastingGlow::~CGameEffectCastingGlow()	n
+715A00	19	CGameEffectVisualSpellHit::~CGameEffectVisualSpellHit()	n
+715A20	19	CGameEffectPortraitIcon::~CGameEffectPortraitIcon()	n
+715A40	19	CGameEffectDisableButton::~CGameEffectDisableButton()	n
+715A60	19	CGameEffectEnableButton::~CGameEffectEnableButton()	n
+715A80	19	CGameEffectDisableSpellType::~CGameEffectDisableSpellType()	n
+715AA0	19	CGameEffectCastSpell::~CGameEffectCastSpell()	y
+715AC0	19	CGameEffectLearnSpell::~CGameEffectLearnSpell()	y
+715AE0	19	CGameEffectCastSpellPoint::~CGameEffectCastSpellPoint()	y
+715B00	19	CGameEffectIdentify::~CGameEffectIdentify()	n
+715B20	19	CGameEffectDetectTraps::~CGameEffectDetectTraps()	n
+715B40	19	CGameEffectReplaceSelf::~CGameEffectReplaceSelf()	n
+715B60	19	CGameEffectPlayMovie::~CGameEffectPlayMovie()	n
+715B80	19	CGameEffectSanctuary::~CGameEffectSanctuary()	n
+715BA0	19	CGameEffectEntangle::~CGameEffectEntangle()	n
+715BC0	19	CGameEffectMinorGlobe::~CGameEffectMinorGlobe()	n
+715BE0	19	CGameEffectShieldGlobe::~CGameEffectShieldGlobe()	n
+715C00	19	CGameEffectWebHold::~CGameEffectWebHold()	n
+715C20	19	CGameEffectGreasePool::~CGameEffectGreasePool()	n
+715C40	19	CGameEffectDispelSanctuary::~CGameEffectDispelSanctuary()	n
+715C60	19	CGameEffectRemovePanic::~CGameEffectRemovePanic()	n
+715C80	19	CGameEffectRemoveHold::~CGameEffectRemoveHold()	n
+715CA0	19	CGameEffectRestoreMovementRate::~CGameEffectRestoreMovementRate()	n
+715CC0	19	CGameEffectRemoveIntoxication::~CGameEffectRemoveIntoxication()	n
+715CE0	19	CGameEffectPauseCaster::~CGameEffectPauseCaster()	n
+715D00	19	CGameEffectResistanceToMagic::~CGameEffectResistanceToMagic()	y
+715D20	19	CGameEffectDestroySelf::~CGameEffectDestroySelf()	n
+715D40	19	CGameEffectMissileTHAC0Bonus::~CGameEffectMissileTHAC0Bonus()	n
+715D60	19	CGameEffectDamageVisualEffect::~CGameEffectDamageVisualEffect()	n
+715D80	19	CGameEffectAddInnateAbility::~CGameEffectAddInnateAbility()	y
+715DA0	19	CGameEffectRemoveInnateAbility::~CGameEffectRemoveInnateAbility()	y
+715DC0	19	CGameEffectResistanceToPoison::~CGameEffectResistanceToPoison()	y
+715DE0	19	CGameEffectPlaySound::~CGameEffectPlaySound()	y
+715E00	19	CGameEffectHoldCreatureSpell::~CGameEffectHoldCreatureSpell()	n
+715E20	19	CGameEffectApplyEffect::~CGameEffectApplyEffect()	n
+715E40	19	CGameEffectSelectiveToHitBonus::~CGameEffectSelectiveToHitBonus()	n
+715E60	19	CGameEffectSelectiveDamageBonus::~CGameEffectSelectiveDamageBonus()	n
+715E80	19	CGameEffectRestrictEquipItem::~CGameEffectRestrictEquipItem()	n
+715EA0	19	CGameEffectRestrictEquipItemType::~CGameEffectRestrictEquipItemType()	n
+715EC0	19	CGameEffectApplyEffectEquipItem::~CGameEffectApplyEffectEquipItem()	n
+715EE0	19	CGameEffectApplyEffectEquipItemType::~CGameEffectApplyEffectEquipItemType()	n
+715F00	19	CGameEffectSetDoNotJump::~CGameEffectSetDoNotJump()	n
+715F20	19	CGameEffectJumpToArea::~CGameEffectJumpToArea()	n
+715F40	19	CGameEffectSetLocalVariable::~CGameEffectSetLocalVariable()	n
+715F60	19	CGameEffectAuraCleansing::~CGameEffectAuraCleansing()	n
+715F80	19	CGameEffectMentalSpeed::~CGameEffectMentalSpeed()	n
+715FA0	19	CGameEffectPhysicalSpeed::~CGameEffectPhysicalSpeed()	n
+715FC0	19	CGameEffectCastingLevelBonus::~CGameEffectCastingLevelBonus()	n
+715FE0	19	CGameEffectSeeInvisible::~CGameEffectSeeInvisible()	n
+716000	19	CGameEffectIgnoreDialogPause::~CGameEffectIgnoreDialogPause()	n
+716020	19	CGameEffectBounceProjectile::~CGameEffectBounceProjectile()	n
+716040	19	CGameEffectBounceEffect::~CGameEffectBounceEffect()	n
+716060	19	CGameEffectBounceLevel::~CGameEffectBounceLevel()	n
+716080	19	CGameEffectBounceLevelDecrement::~CGameEffectBounceLevelDecrement()	n
+7160A0	19	CGameEffectImmunityLevelDecrement::~CGameEffectImmunityLevelDecrement()	n
+7160C0	19	CGameEffectBounceSchool::~CGameEffectBounceSchool()	n
+7160E0	19	CGameEffectBounceSecondaryType::~CGameEffectBounceSecondaryType()	n
+716100	19	CGameEffectImmunitySchool::~CGameEffectImmunitySchool()	n
+716120	19	CGameEffectImmunitySecondaryType::~CGameEffectImmunitySecondaryType()	n
+716140	19	CGameEffectImmunitySpell::~CGameEffectImmunitySpell()	n
+716160	19	CGameEffectImmunitySpellIWD::~CGameEffectImmunitySpellIWD()	n
+716180	19	CGameEffectBounceSpell::~CGameEffectBounceSpell()	n
+7161A0	19	CGameEffectMinHitPoints::~CGameEffectMinHitPoints()	n
+7161C0	19	CGameEffectPowerWordKill::~CGameEffectPowerWordKill()	n
+7161E0	19	CGameEffectPowerWordStun::~CGameEffectPowerWordStun()	n
+716200	19	CGameEffectImprisonment::~CGameEffectImprisonment()	n
+716220	19	CGameEffectFreedom::~CGameEffectFreedom()	n
+716240	19	CGameEffectMaze::~CGameEffectMaze()	n
+716260	19	CGameEffectSecondaryCastList::~CGameEffectSecondaryCastList()	n
+716280	19	CGameEffectVisualEffect::~CGameEffectVisualEffect()	n
+7162A0	19	CGameEffectLevelDrain::~CGameEffectLevelDrain()	n
+7162C0	19	CGameEffectPowerWordSleep::~CGameEffectPowerWordSleep()	n
+7162E0	19	CGameEffectStoneSkins::~CGameEffectStoneSkins()	n
+716300	19	CGameEffectProtectionCircle::~CGameEffectProtectionCircle()	n
+716320	19	CGameEffectDispelSchool::~CGameEffectDispelSchool()	n
+716340	19	CGameEffectDispelSecondaryType::~CGameEffectDispelSecondaryType()	n
+716360	19	CGameEffectRandomTeleport::~CGameEffectRandomTeleport()	n
+716380	19	CGameEffectImmunitySchoolDecrement::~CGameEffectImmunitySchoolDecrement()	n
+7163A0	19	CGameEffectLevelRestoration::~CGameEffectLevelRestoration()	n
+7163C0	19	CGameEffectRevealMagic::~CGameEffectRevealMagic()	n
+7163E0	19	CGameEffectImmunitySecondaryTypeDecrement::~CGameEffectImmunitySecondaryTypeDecrement()	n
+716400	19	CGameEffectBounceSchoolDecrement::~CGameEffectBounceSchoolDecrement()	n
+716420	19	CGameEffectBounceSecondaryTypeDecrement::~CGameEffectBounceSecondaryTypeDecrement()	n
+716440	19	CGameEffectDispelSchoolOne::~CGameEffectDispelSchoolOne()	n
+716460	19	CGameEffectDispelSecondaryTypeOne::~CGameEffectDispelSecondaryTypeOne()	n
+716480	19	CGameEffectTimeStop::~CGameEffectTimeStop()	n
+7164A0	19	CGameEffectContingencyInstance::~CGameEffectContingencyInstance()	n
+7164C0	19	CGameEffectProficiency::~CGameEffectProficiency()	n
+7164E0	19	CGameEffectContingencyStart::~CGameEffectContingencyStart()	n
+716500	19	CGameEffectPushPull::~CGameEffectPushPull()	n
+716520	19	CGameEffectCopySelf::~CGameEffectCopySelf()	n
+716540	19	CGameEffectPuppetMaster::~CGameEffectPuppetMaster()	n
+716560	19	CGameEffectDisintegrate::~CGameEffectDisintegrate()	n
+716580	19	CGameEffectClairvoyance::~CGameEffectClairvoyance()	n
+7165A0	19	CGameEffectCleanAir::~CGameEffectCleanAir()	n
+7165C0	19	CGameEffectRemovePortraitIcon::~CGameEffectRemovePortraitIcon()	n
+7165E0	19	CGameEffectRemoveConfusion::~CGameEffectRemoveConfusion()	n
+716600	19	CGameEffectDrainChargeFromAllItems::~CGameEffectDrainChargeFromAllItems()	n
+716620	19	CGameEffectRemoveRandomSpell::~CGameEffectRemoveRandomSpell()	n
+716640	19	CGameEffectCheckForBerserk::~CGameEffectCheckForBerserk()	n
+716660	19	CGameEffectBerserkStage1::~CGameEffectBerserkStage1()	n
+716680	19	CGameEffectBerserkStage2::~CGameEffectBerserkStage2()	n
+7166A0	19	CGameEffectMeleeEffect::~CGameEffectMeleeEffect()	n
+7166C0	19	CGameEffectRangeEffect::~CGameEffectRangeEffect()	n
+7166E0	19	CGameEffectDamageLuck::~CGameEffectDamageLuck()	n
+716700	19	CGameEffectBardSong::~CGameEffectBardSong()	n
+716720	19	CGameEffectSetSnare::~CGameEffectSetSnare()	n
+716780	19	CGameEffectSequencerInstance::~CGameEffectSequencerInstance()	n
+7167A0	19	CGameEffectSequencerStart::~CGameEffectSequencerStart()	n
+7167C0	19	CGameEffectSequencerFire::~CGameEffectSequencerFire()	n
+7167E0	19	CGameEffectSpellTrapLevelDecrement::~CGameEffectSpellTrapLevelDecrement()	n
+716800	19	CGameEffectSequencerFirePoint::~CGameEffectSequencerFirePoint()	n
+716820	19	CGameEffectRememorizeSpell::~CGameEffectRememorizeSpell()	n
+716840	19	CGameEffectVisualRange::~CGameEffectVisualRange()	n
+716860	19	CGameEffectBackStabMod::~CGameEffectBackStabMod()	n
+716880	19	CGameEffectRandomDrop::~CGameEffectRandomDrop()	n
+7168A0	19	CGameEffectRandomPhase::~CGameEffectRandomPhase()	n
+7168C0	19	CGameEffectSetGlobal::~CGameEffectSetGlobal()	n
+7168E0	19	CGameEffectRemoveSpellImmunity::~CGameEffectRemoveSpellImmunity()	n
+716900	19	CGameEffectImmunityToDisplayString::~CGameEffectImmunityToDisplayString()	n
+716920	19	CGameEffectExplore::~CGameEffectExplore()	n
+716940	19	CGameEffectScreenShake::~CGameEffectScreenShake()	y
+716960	19	CGameEffectUnpauseCaster::~CGameEffectUnpauseCaster()	n
+716980	19	CGameEffectSummonDisable::~CGameEffectSummonDisable()	n
+7169A0	19	CGameEffectRepeatingApplyEffect::~CGameEffectRepeatingApplyEffect()	n
+7169C0	19	CGameEffectHideInShadows::~CGameEffectHideInShadows()	n
+7169E0	19	CGameEffectDetectIllusion::~CGameEffectDetectIllusion()	n
+716A00	19	CGameEffectSetTrap::~CGameEffectSetTrap()	n
+716A20	19	CGameEffectMeleeTHAC0Bonus::~CGameEffectMeleeTHAC0Bonus()	n
+716A40	19	CGameEffectMeleeDamageBonus::~CGameEffectMeleeDamageBonus()	n
+716A60	19	CGameEffectMissileDamageBonus::~CGameEffectMissileDamageBonus()	n
+716A80	19	CGameEffectDisableCircle::~CGameEffectDisableCircle()	n
+716AA0	19	CGameEffectFistTHAC0Bonus::~CGameEffectFistTHAC0Bonus()	n
+716AC0	19	CGameEffectFistDamageBonus::~CGameEffectFistDamageBonus()	n
+716AE0	19	CGameEffectClassStringOverride::~CGameEffectClassStringOverride()	n
+716B00	19	CGameEffectPreventSpellProtectionEffects::~CGameEffectPreventSpellProtectionEffects()	n
+716B20	19	CGameEffectImmunityToBackstab::~CGameEffectImmunityToBackstab()	n
+716B40	19	CGameEffectPreventAISlowDown::~CGameEffectPreventAISlowDown()	n
+716B60	19	CGameEffectExistanceDelayOverride::~CGameEffectExistanceDelayOverride()	n
+716B80	19	CGameEffectNoPermanentDeath::~CGameEffectNoPermanentDeath()	n
+716BA0	19	CGameEffectImmunityToVisualEffect::~CGameEffectImmunityToVisualEffect()	n
+716BC0	19	CGameEffectImmunityToTurnUndead::~CGameEffectImmunityToTurnUndead()	n
+716BE0	19	CGameEffectJumpToPocketPlane::~CGameEffectJumpToPocketPlane()	n
+716C00	19	CGameEffectChaosShield::~CGameEffectChaosShield()	n
+716C20	19	CGameEffectNPCBump::~CGameEffectNPCBump()	n
+716C40	19	CGameEffectCriticalHitBonus::~CGameEffectCriticalHitBonus()	n
+716C60	19	CGameEffectUseAnyItem::~CGameEffectUseAnyItem()	n
+716C80	19	CGameEffectAssassination::~CGameEffectAssassination()	n
+716CA0	19	CGameEffectResurrectParty::~CGameEffectResurrectParty()	n
+716CC0	19	CGameEffectHitMod::~CGameEffectHitMod()	y
+716CE0	19	CGameEffectForceSurge::~CGameEffectForceSurge()	n
+716D00	19	CGameEffectSurgeMod::~CGameEffectSurgeMod()	n
+716D20	19	CGameEffectScriptingState::~CGameEffectScriptingState()	n
+716D40	19	CGameEffectCurseApplyEffect::~CGameEffectCurseApplyEffect()	n
+716D60	19	CGameEffectThac0Left::~CGameEffectThac0Left()	n
+716D80	19	CGameEffectThac0Right::~CGameEffectThac0Right()	n
+716DA0	19	CGameEffectTracking::~CGameEffectTracking()	n
+716DC0	19	CGameEffectImmuneToTracking::~CGameEffectImmuneToTracking()	n
+716DE0	19	CGameEffectSetLocalExternal::~CGameEffectSetLocalExternal()	n
+716E00	19	CGameEffectImmunityToTimeStop::~CGameEffectImmunityToTimeStop()	n
+716E20	19	CGameEffectWish::~CGameEffectWish()	n
+716E40	19	CGameEffectImmunityToSequester::~CGameEffectImmunityToSequester()	n
+716E60	19	CGameEffectHighLevelAbility::~CGameEffectHighLevelAbility()	n
+716E80	19	CGameEffectStoneSkinsGolem::~CGameEffectStoneSkinsGolem()	n
+716EA0	19	CGameEffectDoNotDraw::~CGameEffectDoNotDraw()	n
+716EC0	19	CGameEffectRest::~CGameEffectRest()	n
+716EE0	19	CGameEffectUsability::~CGameEffectUsability()	n
+716F00	19	CGameEffectChangeWeather::~CGameEffectChangeWeather()	n
+716F20	19	CGameEffectRemoveEffectOfResource::~CGameEffectRemoveEffectOfResource()	n
+716F40	19	CGameEffectEvadeAreaOfEffect::~CGameEffectEvadeAreaOfEffect()	n
+716F60	19	CGameEffectTurnUndeadModifier::~CGameEffectTurnUndeadModifier()	n
+716F80	19	CGameEffectApplySpell::~CGameEffectApplySpell()	n
+716FA0	19	CGameEffectVisualSpellHitIWD::~CGameEffectVisualSpellHitIWD()	n
+716FC0	19	CGameEffectSetSpellState::~CGameEffectSetSpellState()	n
+716FE0	19	CGameEffectSlowPoison::~CGameEffectSlowPoison()	n
+717000	19	CGameEffectFloatText::~CGameEffectFloatText()	n
+717020	19	CGameEffectSpecificDamageMod::~CGameEffectSpecificDamageMod()	n
+717040	19	CGameEffectStaticCharge::~CGameEffectStaticCharge()	n
+717060	19	CGameEffectTurnUndead::~CGameEffectTurnUndead()	n
+717080	19	CGameEffectSevenEyes::~CGameEffectSevenEyes()	n
+7170A0	19	CGameEffectSevenEyesRun::~CGameEffectSevenEyesRun()	n
+7170C0	19	CGameEffectRemoveAllOfType::~CGameEffectRemoveAllOfType()	n
+7170E0	19	CGameEffectChangeStatic::~CGameEffectChangeStatic()	n
+717100	19	CGameEffectBackStabSpell::~CGameEffectBackStabSpell()	n
+717120	19	CGameEffectCriticalHitSpell::~CGameEffectCriticalHitSpell()	n
+717140	19	CGameEffectOverrideAnimation::~CGameEffectOverrideAnimation()	n
+717160	19	CGameEffectSwapHitpoints::~CGameEffectSwapHitpoints()	n
+717180	19	CGameEffectSelectiveEnchantmentBonus::~CGameEffectSelectiveEnchantmentBonus()	n
+7171A0	19	CGameEffectOverrideWeaponType::~CGameEffectOverrideWeaponType()	n
+7171C0	19	CGameEffectSaveVsSchoolMod::~CGameEffectSaveVsSchoolMod()	n
+7171E0	19	CGameEffectFreezeGame::~CGameEffectFreezeGame()	y
+717200	19	CGameEffectInciteRunningAttack::~CGameEffectInciteRunningAttack()	y
+717220	19	CGameEffectDetectEvil::~CGameEffectDetectEvil()	y
+717240	19	CGameEffectMoveViewport::~CGameEffectMoveViewport()	y
+717260	19	CGameEffectCloakOfWarding::~CGameEffectCloakOfWarding()	n
+717280	19	CGameEffectPainMirror::~CGameEffectPainMirror()	n
+7172A0	19	CGameEffectGuardianMantle::~CGameEffectGuardianMantle()	n
+7172C0	19	CGameEffectArmor::~CGameEffectArmor()	n
+7172E0	19	CGameEffectChangeBackground::~CGameEffectChangeBackground()	n
+717300	19	CGameEffectTintScreen::~CGameEffectTintScreen()	y
+717320	19	CGameEffectFlashScreen::~CGameEffectFlashScreen()	y
+717340	19	CGameEffectIgnoreReputationBreak::~CGameEffectIgnoreReputationBreak()	n
+717360	19	CGameEffectCriticalMissSpell::~CGameEffectCriticalMissSpell()	n
+717380	19	CGameEffectCriticalMissModifier::~CGameEffectCriticalMissModifier()	n
+7173A0	19	CGameEffectMakeUnselectable::~CGameEffectMakeUnselectable()	n
+7173C0	19	CGameEffectApplySpellOnMove::~CGameEffectApplySpellOnMove()	n
+7173E0	19	CGameEffectIgnoreDrainDeath::~CGameEffectIgnoreDrainDeath()	n
+717400	19	CGameEffectPSTSpriteAttachedObjectVFX::~CGameEffectPSTSpriteAttachedObjectVFX()	n
+717420	19	CGameEffectUnimplemented::~CGameEffectUnimplemented()	n
+717440	19	CGameEffectLuminocityAnimationEffect::~CGameEffectLuminocityAnimationEffect()	y
+717460	19	CGameEffectGenericAnimationEffect::~CGameEffectGenericAnimationEffect()	y
+717480	19	CGameEffectSpecial::~CGameEffectSpecial()	y
+7174A0	19	CGameEffectAddAttachedObject::~CGameEffectAddAttachedObject()	y
+7174C0	19	CGameEffectHealTransfer::~CGameEffectHealTransfer()	y
+7174E0	19	CGameEffectNon_CumulativeCurse::~CGameEffectNon_CumulativeCurse()	y
+717500	19	CGameEffectPrayer::~CGameEffectPrayer()	y
+717520	19	CGameEffectNon_CumulativeEmbalming::~CGameEffectNon_CumulativeEmbalming()	y
+717540	19	CGameEffectJumbleCurse::~CGameEffectJumbleCurse()	y
+717560	19	CGameEffectFistOfIron::~CGameEffectFistOfIron()	y
+717580	19	CGameEffectChangeGeneralState::~CGameEffectChangeGeneralState()	y
+7175A0	19	CGameEffectSoulExodus::~CGameEffectSoulExodus()	y
+7175C0	19	CGameEffectCannotSaveOrRest::~CGameEffectCannotSaveOrRest()	n
+7175E0	19	CGameEffectOverrideProjectile::~CGameEffectOverrideProjectile()	n
+717600	32	CGameEffect::~CGameEffect()	n
+717620	32	CGameEffectAC::~CGameEffectAC()	y
+717640	32	CGameEffectOverrideProjectile::~CGameEffectOverrideProjectile()	n
+717660	32	CGameEffectCannotSaveOrRest::~CGameEffectCannotSaveOrRest()	n
+717680	32	CGameEffectCastingFailure::~CGameEffectCastingFailure()	y
+7176A0	32	CGameEffectSkillStealth::~CGameEffectSkillStealth()	y
+7176C0	32	CGameEffectDispelEffects::~CGameEffectDispelEffects()	n
+7176E0	32	CGameEffectAlignmentChange::~CGameEffectAlignmentChange()	n
+717700	32	CGameEffectAlignmentReversal::~CGameEffectAlignmentReversal()	n
+717720	32	CGameEffectSlay::~CGameEffectSlay()	n
+717740	32	CGameEffectAnimationChange::~CGameEffectAnimationChange()	n
+717760	32	CGameEffectThac0::~CGameEffectThac0()	y
+717780	32	CGameEffectWIS::~CGameEffectWIS()	y
+7177A0	32	CGameEffectUnstun::~CGameEffectUnstun()	n
+7177C0	32	CGameEffectForceVisible::~CGameEffectForceVisible()	n
+7177E0	32	CGameEffectSTR::~CGameEffectSTR()	y
+717800	32	CGameEffectVocalize::~CGameEffectVocalize()	n
+717820	32	CGameEffectStun::~CGameEffectStun()	y
+717840	32	CGameEffectVisible::~CGameEffectVisible()	n
+717860	32	CGameEffectStoneToFlesh::~CGameEffectStoneToFlesh()	n
+717880	32	CGameEffectSpellMemorizationMage::~CGameEffectSpellMemorizationMage()	y
+7178A0	32	CGameEffectSoulExodus::~CGameEffectSoulExodus()	y
+7178C0	32	CGameEffectSetLocalVariable::~CGameEffectSetLocalVariable()	n
+7178E0	32	CGameEffectEvadeAreaOfEffect::~CGameEffectEvadeAreaOfEffect()	n
+717900	32	CGameEffectResistAcid::~CGameEffectResistAcid()	y
+717920	32	CGameEffectFlashScreen::~CGameEffectFlashScreen()	y
+717940	32	CGameEffectTeleport::~CGameEffectTeleport()	n
+717980	32	CGameEffectSaveVsPoly::~CGameEffectSaveVsPoly()	y
+7179A0	32	CGameEffectNon_CumulativeEmbalming::~CGameEffectNon_CumulativeEmbalming()	y
+7179C0	32	CGameEffectReplaceSelf::~CGameEffectReplaceSelf()	n
+7179E0	32	CGameEffectPreventAISlowDown::~CGameEffectPreventAISlowDown()	n
+717A00	32	CGameEffectCurePoison::~CGameEffectCurePoison()	y
+717A20	32	CGameEffectOverrideAnimation::~CGameEffectOverrideAnimation()	n
+717A40	32	CGameEffectIntoxication::~CGameEffectIntoxication()	y
+717A60	32	CGameEffectDispelSecondaryType::~CGameEffectDispelSecondaryType()	n
+717A80	32	CGameEffectSilence::~CGameEffectSilence()	y
+717AA0	32	CGameEffectFistOfIron::~CGameEffectFistOfIron()	y
+717AC0	32	CGameEffectMissileTHAC0Bonus::~CGameEffectMissileTHAC0Bonus()	n
+717AE0	32	CGameEffectCurseApplyEffect::~CGameEffectCurseApplyEffect()	n
+717B00	32	CGameEffectHitPoints::~CGameEffectHitPoints()	y
+717B20	32	CGameEffectDetectEvil::~CGameEffectDetectEvil()	y
+717B40	32	CGameEffectRetreatFrom::~CGameEffectRetreatFrom()	y
+717B60	32	CGameEffectPuppetMaster::~CGameEffectPuppetMaster()	n
+717B80	32	CGameEffectResistMagic::~CGameEffectResistMagic()	n
+717BA0	32	CGameEffectUnimplemented::~CGameEffectUnimplemented()	n
+717BC0	32	CGameEffectPolymorph::~CGameEffectPolymorph()	n
+717BE0	32	CGameEffectScreenShake::~CGameEffectScreenShake()	y
+717C00	32	CGameEffectColorChange::~CGameEffectColorChange()	n
+717C20	32	CGameEffectStaticCharge::~CGameEffectStaticCharge()	n
+717C40	32	CGameEffectCureDisease::~CGameEffectCureDisease()	y
+717C60	32	CGameEffectImmunitySpell::~CGameEffectImmunitySpell()	n
+717C80	32	CGameEffectSlow::~CGameEffectSlow()	n
+717CA0	32	CGameEffectChangeGeneralState::~CGameEffectChangeGeneralState()	y
+717CC0	32	CGameEffectSelectiveToHitBonus::~CGameEffectSelectiveToHitBonus()	n
+717CE0	32	CGameEffectImmunityToSequester::~CGameEffectImmunityToSequester()	n
+717D00	32	CGameEffectLuck::~CGameEffectLuck()	y
+717D20	32	CGameEffectGuardianMantle::~CGameEffectGuardianMantle()	n
+717D40	32	CGameEffectShowCreatures::~CGameEffectShowCreatures()	n
+717D60	32	CGameEffectCheckForBerserk::~CGameEffectCheckForBerserk()	n
+717D80	32	CGameEffectSaveVsDeath::~CGameEffectSaveVsDeath()	y
+717DA0	32	CGameEffectAddAttachedObject::~CGameEffectAddAttachedObject()	y
+717DC0	32	CGameEffectDisableButton::~CGameEffectDisableButton()	n
+717DE0	32	CGameEffectMeleeDamageBonus::~CGameEffectMeleeDamageBonus()	n
+717E00	32	CGameEffectColorLightSolid::~CGameEffectColorLightSolid()	n
+717E20	32	CGameEffectRemoveAllOfType::~CGameEffectRemoveAllOfType()	n
+717E40	32	CGameEffectRegeneration::~CGameEffectRegeneration()	y
+717E60	32	CGameEffectMaze::~CGameEffectMaze()	n
+717E80	32	CGameEffectSaveVsSpell::~CGameEffectSaveVsSpell()	y
+717EA0	32	CGameEffectJumbleCurse::~CGameEffectJumbleCurse()	y
+717EC0	32	CGameEffectDispelSanctuary::~CGameEffectDispelSanctuary()	n
+717EE0	32	CGameEffectCriticalHitBonus::~CGameEffectCriticalHitBonus()	n
+717F00	32	CGameEffectDEX::~CGameEffectDEX()	y
+717F20	32	CGameEffectSaveVsSchoolMod::~CGameEffectSaveVsSchoolMod()	n
+717F40	32	CGameEffectImmunityToSpellLevel::~CGameEffectImmunityToSpellLevel()	y
+717F60	32	CGameEffectDispelSchoolOne::~CGameEffectDispelSchoolOne()	n
+717F80	32	CGameEffectResistElectricity::~CGameEffectResistElectricity()	y
+717FA0	32	CGameEffectMakeUnselectable::~CGameEffectMakeUnselectable()	n
+717FC0	32	CGameEffectConfusion::~CGameEffectConfusion()	y
+717FE0	32	CGameEffectVisualRange::~CGameEffectVisualRange()	n
+718000	32	CGameEffectBlur::~CGameEffectBlur()	y
+718020	32	CGameEffectSetSpellState::~CGameEffectSetSpellState()	n
+718040	32	CGameEffectSexChange::~CGameEffectSexChange()	n
+718060	32	CGameEffectBounceEffect::~CGameEffectBounceEffect()	n
+718080	32	CGameEffectSparkle::~CGameEffectSparkle()	y
+7180A0	32	CGameEffectNon_CumulativeCurse::~CGameEffectNon_CumulativeCurse()	y
+7180C0	32	CGameEffectApplyEffectEquipItem::~CGameEffectApplyEffectEquipItem()	n
+7180E0	32	CGameEffectRest::~CGameEffectRest()	n
+718100	32	CGameEffectPanic::~CGameEffectPanic()	y
+718120	32	CGameEffectChangeBackground::~CGameEffectChangeBackground()	n
+718140	32	CGameEffectVisualAnimationEffect::~CGameEffectVisualAnimationEffect()	n
+718160	32	CGameEffectRangeEffect::~CGameEffectRangeEffect()	n
+718180	32	CGameEffectSaveVsWands::~CGameEffectSaveVsWands()	y
+7181A0	32	CGameEffectIgnoreDrainDeath::~CGameEffectIgnoreDrainDeath()	n
+7181C0	32	CGameEffectLearnSpell::~CGameEffectLearnSpell()	y
+7181E0	32	CGameEffectFistDamageBonus::~CGameEffectFistDamageBonus()	n
+718200	32	CGameEffectColorGlowDissipate::~CGameEffectColorGlowDissipate()	n
+718220	32	CGameEffectBackStabSpell::~CGameEffectBackStabSpell()	n
+718240	32	CGameEffectSkillLockPicking::~CGameEffectSkillLockPicking()	y
+718260	32	CGameEffectPowerWordSleep::~CGameEffectPowerWordSleep()	n
+718280	32	CGameEffectSavingThrowChange::~CGameEffectSavingThrowChange()	n
+7182A0	32	CGameEffectGenericAnimationEffect::~CGameEffectGenericAnimationEffect()	y
+7182C0	32	CGameEffectRemoveIntoxication::~CGameEffectRemoveIntoxication()	n
+7182E0	32	CGameEffectHitMod::~CGameEffectHitMod()	y
+718300	32	CGameEffectHaste2::~CGameEffectHaste2()	n
+718320	32	CGameEffectInciteRunningAttack::~CGameEffectInciteRunningAttack()	y
+718340	32	CGameEffectMoraleBreak::~CGameEffectMoraleBreak()	n
+718360	32	CGameEffectProficiency::~CGameEffectProficiency()	n
+718380	32	CGameEffectResistFire::~CGameEffectResistFire()	y
+7183A0	32	CGameEffectCriticalMissSpell::~CGameEffectCriticalMissSpell()	n
+7183C0	32	CGameEffectNon_CumulativeChantBad::~CGameEffectNon_CumulativeChantBad()	n
+7183E0	32	CGameEffectSetGlobal::~CGameEffectSetGlobal()	n
+718400	32	CGameEffectCharm::~CGameEffectCharm()	n
+718420	32	CGameEffectFloatText::~CGameEffectFloatText()	n
+718440	32	CGameEffectCureBlindness::~CGameEffectCureBlindness()	y
+718460	32	CGameEffectBounceSchool::~CGameEffectBounceSchool()	n
+718480	32	CGameEffectSleep::~CGameEffectSleep()	y
+7184A0	32	CGameEffectPrayer::~CGameEffectPrayer()	y
+7184C0	32	CGameEffectResistanceToPoison::~CGameEffectResistanceToPoison()	y
+7184E0	32	CGameEffectImmuneToTracking::~CGameEffectImmuneToTracking()	n
+718500	32	CGameEffectInvisible::~CGameEffectInvisible()	y
+718520	32	CGameEffectCloakOfWarding::~CGameEffectCloakOfWarding()	n
+718540	32	CGameEffectDither::~CGameEffectDither()	n
+718560	32	CGameEffectRemovePortraitIcon::~CGameEffectRemovePortraitIcon()	n
+718580	32	CGameEffectResurrect::~CGameEffectResurrect()	y
+7185A0	32	CGameEffectPSTSpriteAttachedObjectVFX::~CGameEffectPSTSpriteAttachedObjectVFX()	n
+7185C0	32	CGameEffectDisplayString::~CGameEffectDisplayString()	n
+7185E0	32	CGameEffectHideInShadows::~CGameEffectHideInShadows()	n
+718600	32	CGameEffectColorGlowPulse::~CGameEffectColorGlowPulse()	y
+718620	32	CGameEffectSevenEyes::~CGameEffectSevenEyes()	n
+718640	32	CGameEffectImmunityToProjectile::~CGameEffectImmunityToProjectile()	y
+718660	32	CGameEffectPowerWordKill::~CGameEffectPowerWordKill()	n
+718680	32	CGameEffectSaveVsBreath::~CGameEffectSaveVsBreath()	y
+7186A0	32	CGameEffectSpecial::~CGameEffectSpecial()	y
+7186C0	32	CGameEffectMinorGlobe::~CGameEffectMinorGlobe()	n
+7186E0	32	CGameEffectImmunityToTurnUndead::~CGameEffectImmunityToTurnUndead()	n
+718700	32	CGameEffectDeath::~CGameEffectDeath()	y
+718720	32	CGameEffectSelectiveEnchantmentBonus::~CGameEffectSelectiveEnchantmentBonus()	n
+718740	32	CGameEffectDurationCasting::~CGameEffectDurationCasting()	n
+718760	32	CGameEffectRevealMagic::~CGameEffectRevealMagic()	n
+718780	32	CGameEffectResistCold::~CGameEffectResistCold()	y
+7187A0	32	CGameEffectCriticalMissModifier::~CGameEffectCriticalMissModifier()	n
+7187C0	32	CGameEffectRandomSummon::~CGameEffectRandomSummon()	n
+7187E0	32	CGameEffectSequencerFire::~CGameEffectSequencerFire()	n
+718800	32	CGameEffectAwaken::~CGameEffectAwaken()	n
+718820	32	CGameEffectApplySpell::~CGameEffectApplySpell()	n
+718840	32	CGameEffectSummon::~CGameEffectSummon()	n
+718860	32	CGameEffectCastingLevelBonus::~CGameEffectCastingLevelBonus()	n
+718880	32	CGameEffectPoison::~CGameEffectPoison()	y
+7188A0	32	CGameEffectHealTransfer::~CGameEffectHealTransfer()	y
+7188C0	32	CGameEffectSetDoNotJump::~CGameEffectSetDoNotJump()	n
+7188E0	32	CGameEffectChangeWeather::~CGameEffectChangeWeather()	n
+718900	32	CGameEffectCON::~CGameEffectCON()	y
+718920	32	CGameEffectTintScreen::~CGameEffectTintScreen()	y
+718940	32	CGameEffectReplaceItem::~CGameEffectReplaceItem()	n
+718960	32	CGameEffectBardSong::~CGameEffectBardSong()	n
+718980	32	CGameEffectHeal::~CGameEffectHeal()	y
+7189A0	32	CGameEffectApplySpellOnMove::~CGameEffectApplySpellOnMove()	n
+7189C0	32	CGameEffectIdentify::~CGameEffectIdentify()	n
+7189E0	32	CGameEffectPreventSpellProtectionEffects::~CGameEffectPreventSpellProtectionEffects()	n
+718A00	32	CGameEffectCHR::~CGameEffectCHR()	y
+718A20	32	CGameEffectCriticalHitSpell::~CGameEffectCriticalHitSpell()	n
+718A40	32	CGameEffectSkillPickPocket::~CGameEffectSkillPickPocket()	y
+718A60	32	CGameEffectProtectionCircle::~CGameEffectProtectionCircle()	n
+718A80	32	CGameEffectLore::~CGameEffectLore()	y
+718AA0	32	CGameEffectLuminocityAnimationEffect::~CGameEffectLuminocityAnimationEffect()	y
+718AC0	32	CGameEffectResistanceToMagic::~CGameEffectResistanceToMagic()	y
+718AE0	32	CGameEffectSurgeMod::~CGameEffectSurgeMod()	n
+718B00	32	CGameEffectColorTintSolid::~CGameEffectColorTintSolid()	n
+718B20	32	CGameEffectFreezeGame::~CGameEffectFreezeGame()	y
+718B40	32	CGameEffectReputation::~CGameEffectReputation()	n
+718B60	32	CGameEffectPushPull::~CGameEffectPushPull()	n
+718B80	32	CGameEffectDefrost::~CGameEffectDefrost()	n
+718BA0	32	CGameEffectIgnoreReputationBreak::~CGameEffectIgnoreReputationBreak()	n
+718BC0	32	CGameEffectNon_CumulativeLuck::~CGameEffectNon_CumulativeLuck()	n
+718BE0	32	CGameEffectImmunityToDisplayString::~CGameEffectImmunityToDisplayString()	n
+718C00	32	CGameEffectBerserk::~CGameEffectBerserk()	y
+718C20	32	CGameEffectSpecificDamageMod::~CGameEffectSpecificDamageMod()	n
+718C40	32	CGameEffectCureFeebleMindedness::~CGameEffectCureFeebleMindedness()	n
+718C60	32	CGameEffectImmunitySchool::~CGameEffectImmunitySchool()	n
+718C80	32	CGameEffectMorale::~CGameEffectMorale()	n
+718CA0	32	CGameEffectPainMirror::~CGameEffectPainMirror()	n
+718CC0	32	CGameEffectHoldCreatureSpell::~CGameEffectHoldCreatureSpell()	n
+718CE0	32	CGameEffectImmunityToTimeStop::~CGameEffectImmunityToTimeStop()	n
+718D00	32	CGameEffectSingleColorPulseAll::~CGameEffectSingleColorPulseAll()	n
+718D20	32	CGameEffectSevenEyesRun::~CGameEffectSevenEyesRun()	n
+718D40	32	CGameEffectDispelInvisible::~CGameEffectDispelInvisible()	n
+718D60	32	CGameEffectDrainChargeFromAllItems::~CGameEffectDrainChargeFromAllItems()	n
+718D80	32	CGameEffectHaste::~CGameEffectHaste()	y
+718DA0	32	CGameEffectOverrideWeaponType::~CGameEffectOverrideWeaponType()	n
+718DC0	32	CGameEffectVisualSpellHit::~CGameEffectVisualSpellHit()	n
+718DE0	32	CGameEffectSetTrap::~CGameEffectSetTrap()	n
+718E00	32	CGameEffectCalm::~CGameEffectCalm()	n
+718E20	32	CGameEffectVisualSpellHitIWD::~CGameEffectVisualSpellHitIWD()	n
+718E40	32	CGameEffectResistMagicCold::~CGameEffectResistMagicCold()	y
+718E60	32	CGameEffectImprisonment::~CGameEffectImprisonment()	n
+718E80	32	CGameEffectINT::~CGameEffectINT()	y
+718EA0	32	CGameEffectArmor::~CGameEffectArmor()	n
+718EC0	32	CGameEffectWebHold::~CGameEffectWebHold()	n
+718EE0	32	CGameEffectChaosShield::~CGameEffectChaosShield()	n
+718F00	32	CGameEffectColorGlowSolid::~CGameEffectColorGlowSolid()	y
+718F20	32	CGameEffectChangeStatic::~CGameEffectChangeStatic()	n
+718F40	32	CGameEffectImmunityToEffect::~CGameEffectImmunityToEffect()	y
+718F60	32	CGameEffectBounceSchoolDecrement::~CGameEffectBounceSchoolDecrement()	n
+718F80	32	CGameEffectDamage::~CGameEffectDamage()	y
+718FA0	32	CGameEffectSwapHitpoints::~CGameEffectSwapHitpoints()	n
+718FC0	32	CGameEffectFindFamiliar::~CGameEffectFindFamiliar()	n
+718FE0	32	CGameEffectSequencerFirePoint::~CGameEffectSequencerFirePoint()	n
+719000	32	CGameEffectAttackNo::~CGameEffectAttackNo()	y
+719020	32	CGameEffectSlowPoison::~CGameEffectSlowPoison()	n
+719040	32	CGameEffectNonDetection::~CGameEffectNonDetection()	n
+719060	32	CGameEffectIgnoreDialogPause::~CGameEffectIgnoreDialogPause()	n
+719080	32	CGameEffectRestrictEquipItem::~CGameEffectRestrictEquipItem()	n
+7190A0	32	CGameEffectMoveViewport::~CGameEffectMoveViewport()	y
+7190C0	32	CGameEffectMirrorImageRun::~CGameEffectMirrorImageRun()	y
+7190E0	32	CGameEffectStoneSkinsGolem::~CGameEffectStoneSkinsGolem()	n
+719100	32	CGameEffectDisableSpellType::~CGameEffectDisableSpellType()	n
+719120	32	CGameEffectTurnUndead::~CGameEffectTurnUndead()	n
+719140	32	CGameEffectResistPiercing::~CGameEffectResistPiercing()	y
+719160	32	CGameEffectBerserkStage2::~CGameEffectBerserkStage2()	n
+719180	32	CGameEffectRemoveHold::~CGameEffectRemoveHold()	n
+7191A0	32	CGameEffectTurnUndeadModifier::~CGameEffectTurnUndeadModifier()	n
+7191C0	32	CGameEffectXP::~CGameEffectXP()	y
+7191E0	32	CGameEffectDisableCircle::~CGameEffectDisableCircle()	n
+719200	32	CGameEffectNon_CumulativeBless::~CGameEffectNon_CumulativeBless()	y
+719220	32	CGameEffectVisualEffect::~CGameEffectVisualEffect()	n
+719240	32	CGameEffectDamageMod::~CGameEffectDamageMod()	y
+719260	32	CGameEffectAssassination::~CGameEffectAssassination()	n
+719280	32	CGameEffectAddInnateAbility::~CGameEffectAddInnateAbility()	y
+7192A0	32	CGameEffectTimeStop::~CGameEffectTimeStop()	n
+7192C0	32	CGameEffectDestroyWeapon::~CGameEffectDestroyWeapon()	n
+7192E0	32	CGameEffectRandomDrop::~CGameEffectRandomDrop()	n
+719300	32	CGameEffectTranslucent::~CGameEffectTranslucent()	y
+719320	32	CGameEffectBounceLevelDecrement::~CGameEffectBounceLevelDecrement()	n
+719340	32	CGameEffectCureDeafness::~CGameEffectCureDeafness()	n
+719360	32	CGameEffectThac0Right::~CGameEffectThac0Right()	n
+719380	32	CGameEffectSanctuary::~CGameEffectSanctuary()	n
+7193A0	32	CGameEffectClairvoyance::~CGameEffectClairvoyance()	n
+7193C0	32	CGameEffectSTRExtra::~CGameEffectSTRExtra()	y
+7193E0	32	CGameEffectSummonDisable::~CGameEffectSummonDisable()	n
+719400	32	CGameEffectMovementRate::~CGameEffectMovementRate()	n
+719420	32	CGameEffectBounceSpell::~CGameEffectBounceSpell()	n
+719440	32	CGameEffectInfravision::~CGameEffectInfravision()	n
+719460	32	CGameEffectJumpToArea::~CGameEffectJumpToArea()	n
+719480	32	CGameEffectImmunitySchoolDecrement::~CGameEffectImmunitySchoolDecrement()	n
+7194A0	32	CGameEffectDestroyItem::~CGameEffectDestroyItem()	n
+7194C0	32	CGameEffectSequencerInstance::~CGameEffectSequencerInstance()	n
+7194E0	32	CGameEffectDetectTraps::~CGameEffectDetectTraps()	n
+719500	32	CGameEffectMentalSpeed::~CGameEffectMentalSpeed()	n
+719520	32	CGameEffectFatigue::~CGameEffectFatigue()	y
+719540	32	CGameEffectRemoveEffectOfResource::~CGameEffectRemoveEffectOfResource()	n
+719560	32	CGameEffectDestroySelf::~CGameEffectDestroySelf()	n
+719580	32	CGameEffectSetSnare::~CGameEffectSetSnare()	n
+7195A0	32	CGameEffectHoldCreature::~CGameEffectHoldCreature()	y
+7195C0	32	CGameEffectImmunityToBackstab::~CGameEffectImmunityToBackstab()	n
+7195E0	32	CGameEffectPetrification::~CGameEffectPetrification()	y
+719600	32	CGameEffectDispelSchool::~CGameEffectDispelSchool()	n
+719620	32	CGameEffectDisease::~CGameEffectDisease()	n
+719640	32	CGameEffectScriptingState::~CGameEffectScriptingState()	n
+719660	32	CGameEffectApplyEffect::~CGameEffectApplyEffect()	n
+719680	32	CGameEffectCopySelf::~CGameEffectCopySelf()	n
+7196A0	32	CGameEffectShowArea::~CGameEffectShowArea()	n
+7196C0	32	CGameEffectExplore::~CGameEffectExplore()	n
+7196E0	32	CGameEffectPortraitIcon::~CGameEffectPortraitIcon()	n
+719700	32	CGameEffectImmunitySecondaryType::~CGameEffectImmunitySecondaryType()	n
+719720	32	CGameEffectResistSlashing::~CGameEffectResistSlashing()	y
+719740	32	CGameEffectWish::~CGameEffectWish()	n
+719760	32	CGameEffectGreasePool::~CGameEffectGreasePool()	n
+719780	32	CGameEffectRemoveRandomSpell::~CGameEffectRemoveRandomSpell()	n
+7197A0	32	CGameEffectImmunityToPortraitIcon::~CGameEffectImmunityToPortraitIcon()	n
+7197C0	32	CGameEffectMeleeTHAC0Bonus::~CGameEffectMeleeTHAC0Bonus()	n
+7197E0	32	CGameEffectHitPointsOnDeath::~CGameEffectHitPointsOnDeath()	n
+719800	32	CGameEffectFreedom::~CGameEffectFreedom()	n
+719820	32	CGameEffectEndNonDetection::~CGameEffectEndNonDetection()	n
+719840	32	CGameEffectNPCBump::~CGameEffectNPCBump()	n
+719860	32	CGameEffectRestrictEquipItemType::~CGameEffectRestrictEquipItemType()	n
+719880	32	CGameEffectBounceSecondaryTypeDecrement::~CGameEffectBounceSecondaryTypeDecrement()	n
+7198A0	32	CGameEffectImmuneToWeapon::~CGameEffectImmuneToWeapon()	y
+7198C0	32	CGameEffectRememorizeSpell::~CGameEffectRememorizeSpell()	n
+7198E0	32	CGameEffectCastSpell::~CGameEffectCastSpell()	y
+719900	32	CGameEffectBounceProjectile::~CGameEffectBounceProjectile()	n
+719920	32	CGameEffectResistMissile::~CGameEffectResistMissile()	y
+719940	32	CGameEffectDoNotDraw::~CGameEffectDoNotDraw()	n
+719960	32	CGameEffectRestoreMovementRate::~CGameEffectRestoreMovementRate()	n
+719980	32	CGameEffectMeleeEffect::~CGameEffectMeleeEffect()	n
+7199A0	32	CGameEffectGold::~CGameEffectGold()	y
+7199C0	32	CGameEffectFistTHAC0Bonus::~CGameEffectFistTHAC0Bonus()	n
+7199E0	32	CGameEffectNon_CumulativeChant::~CGameEffectNon_CumulativeChant()	n
+719A00	32	CGameEffectLevelDrain::~CGameEffectLevelDrain()	n
+719A20	32	CGameEffectBlindness::~CGameEffectBlindness()	y
+719A40	32	CGameEffectResurrectParty::~CGameEffectResurrectParty()	n
+719A60	32	CGameEffectRemoveInnateAbility::~CGameEffectRemoveInnateAbility()	y
+719A80	32	CGameEffectContingencyInstance::~CGameEffectContingencyInstance()	n
+719AA0	32	CGameEffectEquipWeapon::~CGameEffectEquipWeapon()	n
+719AC0	32	CGameEffectRandomPhase::~CGameEffectRandomPhase()	n
+719AE0	32	CGameEffectSetSequence::~CGameEffectSetSequence()	y
+719B00	32	CGameEffectImmunityLevelDecrement::~CGameEffectImmunityLevelDecrement()	n
+719B20	32	CGameEffectSetAIScript::~CGameEffectSetAIScript()	n
+719B40	32	CGameEffectTracking::~CGameEffectTracking()	n
+719B60	32	CGameEffectEntangle::~CGameEffectEntangle()	n
+719B80	32	CGameEffectCleanAir::~CGameEffectCleanAir()	n
+719BA0	32	CGameEffectLevel::~CGameEffectLevel()	n
+719BC0	32	CGameEffectRepeatingApplyEffect::~CGameEffectRepeatingApplyEffect()	n
+719BE0	32	CGameEffectMovementRateModal::~CGameEffectMovementRateModal()	n
+719C00	32	CGameEffectMinHitPoints::~CGameEffectMinHitPoints()	n
+719C20	32	CGameEffectInfravisionOff::~CGameEffectInfravisionOff()	n
+719C40	32	CGameEffectImmunityToVisualEffect::~CGameEffectImmunityToVisualEffect()	n
+719C60	32	CGameEffectApplyEffectEquipItemType::~CGameEffectApplyEffectEquipItemType()	n
+719C80	32	CGameEffectLevelRestoration::~CGameEffectLevelRestoration()	n
+719CA0	32	CGameEffectCreateItem::~CGameEffectCreateItem()	n
+719CC0	32	CGameEffectSequencerStart::~CGameEffectSequencerStart()	n
+719CE0	32	CGameEffectCastSpellPoint::~CGameEffectCastSpellPoint()	y
+719D00	32	CGameEffectPhysicalSpeed::~CGameEffectPhysicalSpeed()	n
+719D20	32	CGameEffectSkillTraps::~CGameEffectSkillTraps()	y
+719D40	32	CGameEffectUsability::~CGameEffectUsability()	n
+719D60	32	CGameEffectPauseCaster::~CGameEffectPauseCaster()	n
+719D80	32	CGameEffectDamageLuck::~CGameEffectDamageLuck()	n
+719DA0	32	CGameEffectPortrait::~CGameEffectPortrait()	n
+719DC0	32	CGameEffectClassStringOverride::~CGameEffectClassStringOverride()	n
+719DE0	32	CGameEffectNon_CumulativeDrawUponHolyMight::~CGameEffectNon_CumulativeDrawUponHolyMight()	n
+719E00	32	CGameEffectStoneSkins::~CGameEffectStoneSkins()	n
+719E20	32	CGameEffectFeebleMindedness::~CGameEffectFeebleMindedness()	n
+719E40	32	CGameEffectForceSurge::~CGameEffectForceSurge()	n
+719E60	32	CGameEffectPlaySound::~CGameEffectPlaySound()	y
+719E80	32	CGameEffectContingencyStart::~CGameEffectContingencyStart()	n
+719EA0	32	CGameEffectDetectAlignment::~CGameEffectDetectAlignment()	n
+719EC0	32	CGameEffectRemoveSpellImmunity::~CGameEffectRemoveSpellImmunity()	n
+719EE0	32	CGameEffectCastingGlow::~CGameEffectCastingGlow()	n
+719F00	32	CGameEffectBounceSecondaryType::~CGameEffectBounceSecondaryType()	n
+719F20	32	CGameEffectResistMagicFire::~CGameEffectResistMagicFire()	y
+719F40	32	CGameEffectSetLocalExternal::~CGameEffectSetLocalExternal()	n
+719F60	32	CGameEffectShieldGlobe::~CGameEffectShieldGlobe()	n
+719F80	32	CGameEffectRemoveConfusion::~CGameEffectRemoveConfusion()	n
+719FA0	32	CGameEffectProtectionFromCreature::~CGameEffectProtectionFromCreature()	n
+719FC0	32	CGameEffectDetectIllusion::~CGameEffectDetectIllusion()	n
+719FE0	32	CGameEffectFamiliarBlock::~CGameEffectFamiliarBlock()	n
+71A000	32	CGameEffectPowerWordStun::~CGameEffectPowerWordStun()	n
+71A020	32	CGameEffectUnsummon::~CGameEffectUnsummon()	n
+71A040	32	CGameEffectJumpToPocketPlane::~CGameEffectJumpToPocketPlane()	n
+71A060	32	CGameEffectSelectiveDamageBonus::~CGameEffectSelectiveDamageBonus()	n
+71A080	32	CGameEffectImmunitySecondaryTypeDecrement::~CGameEffectImmunitySecondaryTypeDecrement()	n
+71A0A0	32	CGameEffectMirrorImage::~CGameEffectMirrorImage()	n
+71A0C0	32	CGameEffectSpellTrapLevelDecrement::~CGameEffectSpellTrapLevelDecrement()	n
+71A0E0	32	CGameEffectEnableButton::~CGameEffectEnableButton()	n
+71A100	32	CGameEffectSeeInvisible::~CGameEffectSeeInvisible()	n
+71A120	32	CGameEffectResistCrushing::~CGameEffectResistCrushing()	y
+71A140	32	CGameEffectHighLevelAbility::~CGameEffectHighLevelAbility()	n
+71A160	32	CGameEffectRemovePanic::~CGameEffectRemovePanic()	n
+71A180	32	CGameEffectBerserkStage1::~CGameEffectBerserkStage1()	n
+71A1A0	32	CGameEffectName::~CGameEffectName()	n
+71A1C0	32	CGameEffectMissileDamageBonus::~CGameEffectMissileDamageBonus()	n
+71A1E0	32	CGameEffectNon_CumulativeAid::~CGameEffectNon_CumulativeAid()	y
+71A200	32	CGameEffectSecondaryCastList::~CGameEffectSecondaryCastList()	n
+71A220	32	CGameEffectAIChange::~CGameEffectAIChange()	n
+71A240	32	CGameEffectUseAnyItem::~CGameEffectUseAnyItem()	n
+71A260	32	CGameEffectDamageVisualEffect::~CGameEffectDamageVisualEffect()	n
+71A280	32	CGameEffectDispelSecondaryTypeOne::~CGameEffectDispelSecondaryTypeOne()	n
+71A2A0	32	CGameEffectCreateWeapon::~CGameEffectCreateWeapon()	n
+71A2C0	32	CGameEffectBackStabMod::~CGameEffectBackStabMod()	n
+71A2E0	32	CGameEffectRemoveCurse::~CGameEffectRemoveCurse()	y
+71A300	32	CGameEffectBounceLevel::~CGameEffectBounceLevel()	n
+71A320	32	CGameEffectDeafness::~CGameEffectDeafness()	n
+71A340	32	CGameEffectThac0Left::~CGameEffectThac0Left()	n
+71A360	32	CGameEffectPlayMovie::~CGameEffectPlayMovie()	n
+71A380	32	CGameEffectDisintegrate::~CGameEffectDisintegrate()	n
+71A3A0	32	CGameEffectSkillTracking::~CGameEffectSkillTracking()	n
+71A3C0	32	CGameEffectUnpauseCaster::~CGameEffectUnpauseCaster()	n
+71A3E0	32	CGameEffectKnock::~CGameEffectKnock()	y
+71A400	32	CGameEffectImmunitySpellIWD::~CGameEffectImmunitySpellIWD()	n
+71A420	32	CGameEffectSpellMemorizationCleric::~CGameEffectSpellMemorizationCleric()	y
+71A440	32	CGameEffectExistanceDelayOverride::~CGameEffectExistanceDelayOverride()	n
+71A460	32	CGameEffectRandomTeleport::~CGameEffectRandomTeleport()	n
+71A4A0	32	CGameEffectAuraCleansing::~CGameEffectAuraCleansing()	n
+71A500	901	CGameEffect::CGameEffect(void)	n
+71A910	137	CGameEffectChangeGeneralState::Copy(void)	y
+71A9A0	137	CGameEffectJumbleCurse::Copy(void)	y
+71AA30	137	CGameEffectFistOfIron::Copy(void)	y
+71AAC0	186	CGameEffectNon_CumulativeEmbalming::Copy(void)	y
+71AB80	137	CGameEffectPrayer::Copy(void)	y
+71AC10	137	CGameEffectAddAttachedObject::Copy(void)	y
+71ACA0	137	CGameEffectSpecial::Copy(void)	y
+71AD30	140	CGameEffectGenericAnimationEffect::Copy(void)	y
+71ADC0	147	CGameEffectLuminocityAnimationEffect::Copy(void)	y
+71AE60	140	CGameEffectHealTransfer::Copy(void)	y
+71AEF0	137	CGameEffectDetectEvil::Copy(void)	y
+71AF80	146	CGameEffectUnimplemented::Copy(void)	n
+71B020	156	CGameEffectInciteRunningAttack::Copy(void)	y
+71B0C0	146	CGameEffectPSTSpriteAttachedObjectVFX::Copy(void)	n
+71B160	146	CGameEffectIgnoreDrainDeath::Copy(void)	n
+71B200	146	CGameEffectOverrideProjectile::Copy(void)	n
+71B2A0	146	CGameEffectApplySpellOnMove::Copy(void)	n
+71B340	146	CGameEffectMakeUnselectable::Copy(void)	n
+71B3E0	146	CGameEffectCriticalMissModifier::Copy(void)	n
+71B480	146	CGameEffectCriticalMissSpell::Copy(void)	n
+71B520	146	CGameEffectIgnoreReputationBreak::Copy(void)	n
+71B5C0	146	CGameEffectFreezeGame::Copy(void)	y
+71B660	146	CGameEffectFlashScreen::Copy(void)	y
+71B700	146	CGameEffectTintScreen::Copy(void)	y
+71B7A0	137	CGameEffectSoulExodus::Copy(void)	y
+71B830	146	CGameEffectChangeBackground::Copy(void)	n
+71B8D0	149	CGameEffectArmor::Copy(void)	n
+71B970	149	CGameEffectGuardianMantle::Copy(void)	n
+71BA10	149	CGameEffectPainMirror::Copy(void)	n
+71BAB0	149	CGameEffectCloakOfWarding::Copy(void)	n
+71BB50	146	CGameEffectMoveViewport::Copy(void)	y
+71BBF0	146	CGameEffectSaveVsSchoolMod::Copy(void)	n
+71BC90	146	CGameEffectOverrideWeaponType::Copy(void)	n
+71BD30	146	CGameEffectSelectiveEnchantmentBonus::Copy(void)	n
+71BDD0	146	CGameEffectSwapHitpoints::Copy(void)	n
+71BE70	146	CGameEffectOverrideAnimation::Copy(void)	n
+71BF10	146	CGameEffectCriticalHitSpell::Copy(void)	n
+71BFB0	146	CGameEffectBackStabSpell::Copy(void)	n
+71C050	146	CGameEffectChangeStatic::Copy(void)	n
+71C0F0	146	CGameEffectCannotSaveOrRest::Copy(void)	n
+71C190	146	CGameEffectRemoveAllOfType::Copy(void)	n
+71C230	146	CGameEffectSevenEyesRun::Copy(void)	n
+71C2D0	146	CGameEffectSevenEyes::Copy(void)	n
+71C370	146	CGameEffectTurnUndead::Copy(void)	n
+71C410	149	CGameEffectStaticCharge::Copy(void)	n
+71C4B0	146	CGameEffectSpecificDamageMod::Copy(void)	n
+71C550	146	CGameEffectFloatText::Copy(void)	n
+71C5F0	146	CGameEffectSlowPoison::Copy(void)	n
+71C690	146	CGameEffectSetSpellState::Copy(void)	n
+71C730	146	CGameEffectApplySpell::Copy(void)	n
+71C7D0	146	CGameEffectTurnUndeadModifier::Copy(void)	n
+71C870	146	CGameEffectEvadeAreaOfEffect::Copy(void)	n
+71C910	146	CGameEffectRemoveEffectOfResource::Copy(void)	n
+71C9B0	146	CGameEffectChangeWeather::Copy(void)	n
+71CA50	146	CGameEffectUsability::Copy(void)	n
+71CAF0	146	CGameEffectHaste2::Copy(void)	n
+71CB90	146	CGameEffectRest::Copy(void)	n
+71CC30	146	CGameEffectDoNotDraw::Copy(void)	n
+71CCD0	146	CGameEffectStoneSkinsGolem::Copy(void)	n
+71CD70	146	CGameEffectHighLevelAbility::Copy(void)	n
+71CE10	146	CGameEffectImmunityToSequester::Copy(void)	n
+71CEB0	146	CGameEffectWish::Copy(void)	n
+71CF50	146	CGameEffectImmunityToTimeStop::Copy(void)	n
+71CFF0	146	CGameEffectSetLocalExternal::Copy(void)	n
+71D090	146	CGameEffectImmuneToTracking::Copy(void)	n
+71D130	146	CGameEffectTracking::Copy(void)	n
+71D1D0	146	CGameEffectThac0Right::Copy(void)	n
+71D270	146	CGameEffectThac0Left::Copy(void)	n
+71D310	146	CGameEffectResurrectParty::Copy(void)	n
+71D3B0	146	CGameEffectAssassination::Copy(void)	n
+71D450	146	CGameEffectUseAnyItem::Copy(void)	n
+71D4F0	146	CGameEffectCriticalHitBonus::Copy(void)	n
+71D590	146	CGameEffectNPCBump::Copy(void)	n
+71D630	146	CGameEffectChaosShield::Copy(void)	n
+71D6D0	146	CGameEffectJumpToPocketPlane::Copy(void)	n
+71D770	146	CGameEffectImmunityToTurnUndead::Copy(void)	n
+71D810	146	CGameEffectImmunityToVisualEffect::Copy(void)	n
+71D8B0	146	CGameEffectNoPermanentDeath::Copy(void)	n
+71D950	146	CGameEffectExistanceDelayOverride::Copy(void)	n
+71D9F0	146	CGameEffectPreventAISlowDown::Copy(void)	n
+71DA90	146	CGameEffectImmunityToBackstab::Copy(void)	n
+71DB30	146	CGameEffectPreventSpellProtectionEffects::Copy(void)	n
+71DBD0	146	CGameEffectClassStringOverride::Copy(void)	n
+71DC70	146	CGameEffectFistDamageBonus::Copy(void)	n
+71DD10	146	CGameEffectFistTHAC0Bonus::Copy(void)	n
+71DDB0	146	CGameEffectDisableCircle::Copy(void)	n
+71DE50	146	CGameEffectMissileDamageBonus::Copy(void)	n
+71DEF0	146	CGameEffectMeleeDamageBonus::Copy(void)	n
+71DF90	146	CGameEffectMeleeTHAC0Bonus::Copy(void)	n
+71E030	146	CGameEffectCurseApplyEffect::Copy(void)	n
+71E0D0	146	CGameEffectScriptingState::Copy(void)	n
+71E170	146	CGameEffectSurgeMod::Copy(void)	n
+71E210	146	CGameEffectForceSurge::Copy(void)	n
+71E2B0	146	CGameEffectHitMod::Copy(void)	y
+71E350	146	CGameEffectSetTrap::Copy(void)	n
+71E3F0	146	CGameEffectDetectIllusion::Copy(void)	n
+71E490	146	CGameEffectHideInShadows::Copy(void)	n
+71E530	146	CGameEffectRandomPhase::Copy(void)	n
+71E5D0	146	CGameEffectRepeatingApplyEffect::Copy(void)	n
+71E670	146	CGameEffectSummonDisable::Copy(void)	n
+71E710	146	CGameEffectUnpauseCaster::Copy(void)	n
+71E7B0	146	CGameEffectScreenShake::Copy(void)	y
+71E850	146	CGameEffectExplore::Copy(void)	n
+71E8F0	146	CGameEffectImmunityToDisplayString::Copy(void)	n
+71E990	146	CGameEffectRemoveSpellImmunity::Copy(void)	n
+71EA30	146	CGameEffectSetGlobal::Copy(void)	n
+71EAD0	146	CGameEffectRandomDrop::Copy(void)	n
+71EB70	146	CGameEffectBackStabMod::Copy(void)	n
+71EC10	146	CGameEffectVisualRange::Copy(void)	n
+71ECB0	146	CGameEffectRememorizeSpell::Copy(void)	n
+71ED50	146	CGameEffectSequencerFirePoint::Copy(void)	n
+71EDF0	146	CGameEffectSpellTrapLevelDecrement::Copy(void)	n
+71EE90	146	CGameEffectSequencerFire::Copy(void)	n
+71EF30	146	CGameEffectSequencerStart::Copy(void)	n
+71EFD0	146	CGameEffectSequencerInstance::Copy(void)	n
+71F1B0	146	CGameEffectSetSnare::Copy(void)	n
+71F250	146	CGameEffectBardSong::Copy(void)	n
+71F2F0	146	CGameEffectDamageLuck::Copy(void)	n
+71F390	146	CGameEffectRangeEffect::Copy(void)	n
+71F430	146	CGameEffectMeleeEffect::Copy(void)	n
+71F4D0	146	CGameEffectBerserkStage2::Copy(void)	n
+71F570	146	CGameEffectBerserkStage1::Copy(void)	n
+71F610	146	CGameEffectCheckForBerserk::Copy(void)	n
+71F6B0	146	CGameEffectRemoveRandomSpell::Copy(void)	n
+71F750	146	CGameEffectDrainChargeFromAllItems::Copy(void)	n
+71F7F0	146	CGameEffectRemoveConfusion::Copy(void)	n
+71F890	146	CGameEffectRemovePortraitIcon::Copy(void)	n
+71F930	146	CGameEffectCleanAir::Copy(void)	n
+71F9D0	146	CGameEffectClairvoyance::Copy(void)	n
+71FA70	146	CGameEffectDisintegrate::Copy(void)	n
+71FB10	146	CGameEffectPuppetMaster::Copy(void)	n
+71FBB0	146	CGameEffectCopySelf::Copy(void)	n
+71FC50	146	CGameEffectPushPull::Copy(void)	n
+71FCF0	146	CGameEffectContingencyStart::Copy(void)	n
+71FD90	146	CGameEffectProficiency::Copy(void)	n
+71FE30	146	CGameEffectContingencyInstance::Copy(void)	n
+71FED0	146	CGameEffectTimeStop::Copy(void)	n
+71FF70	146	CGameEffectDispelSecondaryTypeOne::Copy(void)	n
+720010	146	CGameEffectDispelSchoolOne::Copy(void)	n
+7200B0	146	CGameEffectBounceSecondaryTypeDecrement::Copy(void)	n
+720150	146	CGameEffectBounceSchoolDecrement::Copy(void)	n
+7201F0	146	CGameEffectImmunitySecondaryTypeDecrement::Copy(void)	n
+720290	146	CGameEffectRevealMagic::Copy(void)	n
+720330	146	CGameEffectLevelRestoration::Copy(void)	n
+7203D0	146	CGameEffectImmunitySchoolDecrement::Copy(void)	n
+720470	146	CGameEffectRandomTeleport::Copy(void)	n
+720510	146	CGameEffectDispelSecondaryType::Copy(void)	n
+7205B0	146	CGameEffectDispelSchool::Copy(void)	n
+720650	146	CGameEffectProtectionCircle::Copy(void)	n
+7206F0	147	CGameEffectStoneSkins::Copy(void)	n
+720790	146	CGameEffectPowerWordSleep::Copy(void)	n
+720830	146	CGameEffectLevelDrain::Copy(void)	n
+7208D0	146	CGameEffectVisualEffect::Copy(void)	n
+720970	146	CGameEffectSecondaryCastList::Copy(void)	n
+720A10	146	CGameEffectMaze::Copy(void)	n
+720AB0	146	CGameEffectFreedom::Copy(void)	n
+720B50	146	CGameEffectImprisonment::Copy(void)	n
+720BF0	146	CGameEffectPowerWordStun::Copy(void)	n
+720C90	146	CGameEffectPowerWordKill::Copy(void)	n
+720D30	146	CGameEffectMinHitPoints::Copy(void)	n
+720DD0	146	CGameEffectBounceSpell::Copy(void)	n
+720E70	146	CGameEffectImmunitySpellIWD::Copy(void)	n
+720F10	146	CGameEffectImmunitySpell::Copy(void)	n
+720FB0	146	CGameEffectImmunitySecondaryType::Copy(void)	n
+721050	146	CGameEffectImmunitySchool::Copy(void)	n
+7210F0	146	CGameEffectBounceSecondaryType::Copy(void)	n
+721190	146	CGameEffectBounceSchool::Copy(void)	n
+721230	146	CGameEffectImmunityLevelDecrement::Copy(void)	n
+7212D0	146	CGameEffectBounceLevelDecrement::Copy(void)	n
+721370	146	CGameEffectBounceLevel::Copy(void)	n
+721410	146	CGameEffectBounceEffect::Copy(void)	n
+7214B0	146	CGameEffectBounceProjectile::Copy(void)	n
+721550	146	CGameEffectIgnoreDialogPause::Copy(void)	n
+7215F0	146	CGameEffectSeeInvisible::Copy(void)	n
+721690	146	CGameEffectCastingLevelBonus::Copy(void)	n
+721730	146	CGameEffectPhysicalSpeed::Copy(void)	n
+7217D0	146	CGameEffectMentalSpeed::Copy(void)	n
+721870	146	CGameEffectAuraCleansing::Copy(void)	n
+721910	146	CGameEffectSetLocalVariable::Copy(void)	n
+7219B0	146	CGameEffectJumpToArea::Copy(void)	n
+721A50	146	CGameEffectSetDoNotJump::Copy(void)	n
+721AF0	146	CGameEffectApplyEffectEquipItemType::Copy(void)	n
+721B90	146	CGameEffectApplyEffectEquipItem::Copy(void)	n
+721C30	146	CGameEffectRestrictEquipItemType::Copy(void)	n
+721CD0	146	CGameEffectRestrictEquipItem::Copy(void)	n
+721D70	146	CGameEffectSelectiveDamageBonus::Copy(void)	n
+721E10	146	CGameEffectSelectiveToHitBonus::Copy(void)	n
+721EB0	146	CGameEffectApplyEffect::Copy(void)	n
+721F50	146	CGameEffectHoldCreatureSpell::Copy(void)	n
+721FF0	146	CGameEffectPlaySound::Copy(void)	y
+722090	146	CGameEffectResistanceToPoison::Copy(void)	y
+722130	146	CGameEffectRemoveInnateAbility::Copy(void)	y
+7221D0	146	CGameEffectAddInnateAbility::Copy(void)	y
+722270	146	CGameEffectDamageVisualEffect::Copy(void)	n
+722310	146	CGameEffectImmunityToPortraitIcon::Copy(void)	n
+7223B0	146	CGameEffectDestroySelf::Copy(void)	n
+722450	146	CGameEffectMissileTHAC0Bonus::Copy(void)	n
+7224F0	146	CGameEffectResistanceToMagic::Copy(void)	y
+722590	146	CGameEffectPauseCaster::Copy(void)	n
+722630	146	CGameEffectRemoveIntoxication::Copy(void)	n
+7226D0	146	CGameEffectRestoreMovementRate::Copy(void)	n
+722770	146	CGameEffectRemoveHold::Copy(void)	n
+722810	146	CGameEffectRemovePanic::Copy(void)	n
+7228B0	146	CGameEffectDispelSanctuary::Copy(void)	n
+722950	146	CGameEffectPlayMovie::Copy(void)	n
+7229F0	146	CGameEffectReplaceSelf::Copy(void)	n
+722A90	146	CGameEffectDetectTraps::Copy(void)	n
+722B30	146	CGameEffectIdentify::Copy(void)	n
+722BD0	146	CGameEffectCastSpellPoint::Copy(void)	y
+722C70	146	CGameEffectLearnSpell::Copy(void)	y
+722D10	146	CGameEffectCastSpell::Copy(void)	y
+722DB0	146	CGameEffectDisableSpellType::Copy(void)	n
+722E50	146	CGameEffectEnableButton::Copy(void)	n
+722EF0	146	CGameEffectDisableButton::Copy(void)	n
+722F90	146	CGameEffectReplaceItem::Copy(void)	n
+723030	146	CGameEffectPortraitIcon::Copy(void)	n
+7230D0	146	CGameEffectVisualSpellHitIWD::Copy(void)	n
+723170	146	CGameEffectVisualSpellHit::Copy(void)	n
+723210	146	CGameEffectCastingGlow::Copy(void)	n
+7232B0	146	CGameEffectDisplayString::Copy(void)	n
+723350	146	CGameEffectSetSequence::Copy(void)	y
+7233F0	146	CGameEffectForceVisible::Copy(void)	n
+723490	146	CGameEffectPolymorph::Copy(void)	n
+723530	146	CGameEffectPetrification::Copy(void)	y
+7235D0	146	CGameEffectNon_CumulativeLuck::Copy(void)	n
+723670	146	CGameEffectNon_CumulativeDrawUponHolyMight::Copy(void)	n
+723710	146	CGameEffectNon_CumulativeChantBad::Copy(void)	n
+7237B0	146	CGameEffectNon_CumulativeChant::Copy(void)	n
+723850	137	CGameEffectNon_CumulativeCurse::Copy(void)	y
+7238E0	146	CGameEffectNon_CumulativeBless::Copy(void)	y
+723980	146	CGameEffectNon_CumulativeAid::Copy(void)	y
+723A20	146	CGameEffectConfusion::Copy(void)	y
+723AC0	146	CGameEffectFamiliarBlock::Copy(void)	n
+723B60	146	CGameEffectHitPointsOnDeath::Copy(void)	n
+723C00	146	CGameEffectFindFamiliar::Copy(void)	n
+723CA0	147	CGameEffectRandomSummon::Copy(void)	n
+723D40	146	CGameEffectMovementRateModal::Copy(void)	n
+723DE0	146	CGameEffectMovementRate::Copy(void)	n
+723E80	146	CGameEffectKnock::Copy(void)	y
+723F20	146	CGameEffectTeleport::Copy(void)	n
+723FC0	146	CGameEffectDestroyItem::Copy(void)	n
+724060	146	CGameEffectCreateItem::Copy(void)	n
+724100	146	CGameEffectVisualAnimationEffect::Copy(void)	n
+7241A0	146	CGameEffectImmuneToWeapon::Copy(void)	y
+724240	146	CGameEffectMirrorImageRun::Copy(void)	y
+7242E0	146	CGameEffectMirrorImage::Copy(void)	n
+724380	146	CGameEffectShowCreatures::Copy(void)	n
+724420	146	CGameEffectShowArea::Copy(void)	n
+7244C0	146	CGameEffectDispelInvisible::Copy(void)	n
+724560	146	CGameEffectDetectAlignment::Copy(void)	n
+724600	146	CGameEffectDither::Copy(void)	n
+7246A0	146	CGameEffectEquipWeapon::Copy(void)	n
+724740	146	CGameEffectDestroyWeapon::Copy(void)	n
+7247E0	146	CGameEffectCreateWeapon::Copy(void)	n
+724880	146	CGameEffectRetreatFrom::Copy(void)	y
+724920	146	CGameEffectHoldCreature::Copy(void)	y
+7249C0	146	CGameEffectReputation::Copy(void)	n
+724A60	146	CGameEffectPortrait::Copy(void)	n
+724B00	146	CGameEffectMoraleBreak::Copy(void)	n
+724BA0	146	CGameEffectGold::Copy(void)	y
+724C40	146	CGameEffectXP::Copy(void)	y
+724CE0	146	CGameEffectName::Copy(void)	n
+724D80	146	CGameEffectImmunityToSpellLevel::Copy(void)	y
+724E20	146	CGameEffectImmunityToEffect::Copy(void)	y
+724EC0	146	CGameEffectProtectionFromCreature::Copy(void)	n
+724F60	146	CGameEffectDurationCasting::Copy(void)	n
+725000	146	CGameEffectRegeneration::Copy(void)	y
+7250A0	146	CGameEffectSTRExtra::Copy(void)	y
+725140	146	CGameEffectLevel::Copy(void)	n
+7251E0	146	CGameEffectSkillTracking::Copy(void)	n
+725280	146	CGameEffectIntoxication::Copy(void)	y
+725320	146	CGameEffectFatigue::Copy(void)	y
+7253C0	146	CGameEffectSkillPickPocket::Copy(void)	y
+725460	146	CGameEffectSkillTraps::Copy(void)	y
+725500	146	CGameEffectSkillLockPicking::Copy(void)	y
+7255A0	146	CGameEffectResistMissile::Copy(void)	y
+725640	146	CGameEffectResistPiercing::Copy(void)	y
+7256E0	146	CGameEffectResistCrushing::Copy(void)	y
+725780	146	CGameEffectResistSlashing::Copy(void)	y
+725820	146	CGameEffectResistMagicCold::Copy(void)	y
+7258C0	146	CGameEffectResistMagicFire::Copy(void)	y
+725960	146	CGameEffectImmunityToProjectile::Copy(void)	y
+725A00	146	CGameEffectSetAIScript::Copy(void)	n
+725AA0	146	CGameEffectCureDeafness::Copy(void)	n
+725B40	146	CGameEffectDeafness::Copy(void)	n
+725BE0	146	CGameEffectCureDisease::Copy(void)	y
+725C80	146	CGameEffectDisease::Copy(void)	n
+725D20	146	CGameEffectCureFeebleMindedness::Copy(void)	n
+725DC0	146	CGameEffectFeebleMindedness::Copy(void)	n
+725E60	146	CGameEffectCureBlindness::Copy(void)	y
+725F00	146	CGameEffectBlindness::Copy(void)	y
+725FA0	146	CGameEffectDamageMod::Copy(void)	y
+726040	146	CGameEffectAIChange::Copy(void)	n
+7260E0	146	CGameEffectSexChange::Copy(void)	n
+726180	146	CGameEffectEndNonDetection::Copy(void)	n
+726220	146	CGameEffectNonDetection::Copy(void)	n
+7262C0	146	CGameEffectUnsummon::Copy(void)	n
+726360	146	CGameEffectSummon::Copy(void)	n
+726400	146	CGameEffectTranslucent::Copy(void)	y
+7264A0	146	CGameEffectGreasePool::Copy(void)	n
+726540	146	CGameEffectWebHold::Copy(void)	n
+7265E0	146	CGameEffectShieldGlobe::Copy(void)	n
+726680	146	CGameEffectMinorGlobe::Copy(void)	n
+726720	146	CGameEffectEntangle::Copy(void)	n
+7267C0	146	CGameEffectSanctuary::Copy(void)	n
+726860	146	CGameEffectBlur::Copy(void)	y
+726900	146	CGameEffectInfravisionOff::Copy(void)	n
+7269A0	146	CGameEffectInfravision::Copy(void)	n
+726A40	146	CGameEffectCastingFailure::Copy(void)	y
+726AE0	146	CGameEffectSkillStealth::Copy(void)	y
+726B80	146	CGameEffectDispelEffects::Copy(void)	n
+726C20	146	CGameEffectAlignmentChange::Copy(void)	n
+726CC0	146	CGameEffectAlignmentReversal::Copy(void)	n
+726D60	146	CGameEffectSlay::Copy(void)	n
+726E00	146	CGameEffectThac0::Copy(void)	y
+726EA0	146	CGameEffectAnimationChange::Copy(void)	n
+726F40	146	CGameEffectWIS::Copy(void)	y
+726FE0	146	CGameEffectVocalize::Copy(void)	n
+727080	146	CGameEffectVisible::Copy(void)	n
+727120	146	CGameEffectUnstun::Copy(void)	n
+7271C0	146	CGameEffectStun::Copy(void)	y
+727260	146	CGameEffectSTR::Copy(void)	y
+727300	146	CGameEffectStoneToFlesh::Copy(void)	n
+7273A0	146	CGameEffectSpellMemorizationCleric::Copy(void)	y
+727440	146	CGameEffectSpellMemorizationMage::Copy(void)	y
+7274E0	146	CGameEffectSparkle::Copy(void)	y
+727580	146	CGameEffectSlow::Copy(void)	n
+727620	146	CGameEffectSleep::Copy(void)	y
+7276C0	146	CGameEffectSilence::Copy(void)	y
+727760	146	CGameEffectSavingThrowChange::Copy(void)	n
+727800	146	CGameEffectSaveVsSpell::Copy(void)	y
+7278A0	146	CGameEffectSaveVsBreath::Copy(void)	y
+727940	146	CGameEffectSaveVsPoly::Copy(void)	y
+7279E0	146	CGameEffectSaveVsWands::Copy(void)	y
+727A80	146	CGameEffectSaveVsDeath::Copy(void)	y
+727B20	146	CGameEffectResurrect::Copy(void)	y
+727BC0	146	CGameEffectResistMagic::Copy(void)	n
+727C60	146	CGameEffectResistFire::Copy(void)	y
+727D00	146	CGameEffectResistElectricity::Copy(void)	y
+727DA0	146	CGameEffectResistCold::Copy(void)	y
+727E40	146	CGameEffectResistAcid::Copy(void)	y
+727EE0	146	CGameEffectRemoveCurse::Copy(void)	y
+727F80	146	CGameEffectPoison::Copy(void)	y
+728020	146	CGameEffectPanic::Copy(void)	y
+7280C0	146	CGameEffectMorale::Copy(void)	n
+728160	146	CGameEffectLuck::Copy(void)	y
+728200	146	CGameEffectLore::Copy(void)	y
+7282A0	146	CGameEffectInvisible::Copy(void)	y
+728340	146	CGameEffectINT::Copy(void)	y
+7283E0	159	CGameEffectHitPoints::Copy(void)	y
+728480	149	CGameEffectHeal::Copy(void)	y
+728520	146	CGameEffectHaste::Copy(void)	y
+7285C0	146	CGameEffectDEX::Copy(void)	y
+728660	146	CGameEffectDefrost::Copy(void)	n
+728700	146	CGameEffectDeath::Copy(void)	y
+7287A0	176	CGameEffectDamage::Copy(void)	y
+728850	146	CGameEffectCurePoison::Copy(void)	y
+7288F0	146	CGameEffectCON::Copy(void)	y
+728990	146	CGameEffectColorGlowDissipate::Copy(void)	n
+728A30	146	CGameEffectSingleColorPulseAll::Copy(void)	n
+728AD0	146	CGameEffectColorLightSolid::Copy(void)	n
+728B70	146	CGameEffectColorTintSolid::Copy(void)	n
+728C10	146	CGameEffectColorGlowPulse::Copy(void)	y
+728CB0	146	CGameEffectColorGlowSolid::Copy(void)	y
+728D50	146	CGameEffectColorChange::Copy(void)	n
+728DF0	157	CGameEffectCHR::Copy(void)	y
+728E90	146	CGameEffectCharm::Copy(void)	n
+728F30	146	CGameEffectCalm::Copy(void)	n
+728FD0	146	CGameEffectBerserk::Copy(void)	y
+729070	146	CGameEffectAwaken::Copy(void)	n
+729110	146	CGameEffectAttackNo::Copy(void)	y
+7291B0	146	CGameEffectAC::Copy(void)	y
+74B340	12	CGameEffectUsabilityList::~CGameEffectUsabilityList()	n
+74B370	25	CGameEffectUsabilityList::~CGameEffectUsabilityList()	n
+788410	56	CProjectile::CanSaveGame(uint &,int,int)	n
+788450	92	CProjectileArea::CanSaveGame(uint &,int,int)	n
+7884B0	2	CProjectileNewScorcher::DeliverEffects(void)	n
+7884C0	163	CProjectileBAM::CasterIsReady(void)	n
+788570	19	CProjectile::AddEffect(CGameEffect *)	n
+788590	74	CProjectile::LoadEffectsByType(CTypedPtrList<CPtrList,CGameEffect *> &,uint)	n
+7885E0	235	CPsSpellIgnusFury::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7886D0	244	CPsSpellAbyssalFury::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7888B0	292	CPsSpellCelestialHost::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7889E0	12	CProjectileArea::SetTargetType(CAIObjectType const&)	n
+788F00	36	CProjectilePSTGameAnimatingObject::InflateFxRectForEffects(CRect &,CPoint &)	y
+788F30	233	CProjectileArea::Marshal(SProjectileWrapper *)	n
+789020	105	CPsSpellChainLightningStorm::Render(CGameArea *,CVidMode *)	y
+789090	148	CProjectileArea::CompressTime(uint)	n
+789250	210	CPsSpellDesertHell::Fire(CGameArea *,int,int,CPoint,int,short)	y
+789330	184	CPsSpellMeteorStormBombardment::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7893F0	217	CPsSpellElysiumsFires::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7894D0	217	CPsSpellElysiumsTears::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7895B0	173	CProjectileSpellHit::AIUpdate(void)	n
+789660	317	CProjectileCastingGlow::AIUpdate(void)	n
+7897A0	137	CProjectileSegment::AIUpdate(void)	n
+789830	137	CProjectileConeOfCold::AIUpdate(void)	n
+7898C0	166	CProjectileMushroom::AIUpdate(void)	n
+789970	74	CProjectile::RemoveSelf(void)	n
+78A090	80	CProjectileBAM::AddEffect(CGameEffect *)	n
+78A0E0	521	CProjectileTravelDoor::AIUpdate(void)	n
+78A2F0	504	CPsSpellHowlOfPandemonium::Fire(CGameArea *,int,int,CPoint,int,short)	y
+78A4F0	148	CProjectileArea::AddEffect(CGameEffect *)	n
+78A590	361	CProjectileSkyStrike::AIUpdate(void)	n
+78A700	625	CPsSpellForceMissile::CallBack(void)	y
+78A980	814	CProjectileNewScorcher::ApplyEffectsToArea(void)	n
+78ACB0	944	CPsSpellBladestorm::Fire(CGameArea *,int,int,CPoint,int,short)	y
+78B060	947	CProjectileSkyStrike::Render(CGameArea *,CVidMode *)	n
+78B420	1338	CProjectileScorcher::Render(CGameArea *,CVidMode *)	n
+78B960	1042	CProjectileSkyStrikeBAM::Render(CGameArea *,CVidMode *)	n
+78BD80	919	CProjectileCastingGlow::Render(CGameArea *,CVidMode *)	n
+78C120	94	CProjectilePSTGameAnimatingObject::RemoveSelf(void)	y
+78C180	1314	CProjectileNewScorcher::Render(CGameArea *,CVidMode *)	n
+78C6B0	956	CPsSpellElysiumsTears::AIUpdate(void)	y
+78CA70	2073	CProjectilePSTMissile::Move(CPoint)	y
+78D290	814	CProjectileBAM::Move(CPoint)	n
+78D5C0	335	CProjectileFireHands::AIUpdate(void)	n
+78D710	781	CPsSpellCloudKill::Fire(CGameArea *,int,int,CPoint,int,short)	y
+78DA20	603	CMeteorStormBombardmentMeteor::Fire(CGameArea *,int,int,CPoint,int,short)	n
+78DC80	363	CProjectileColorSpray::AIUpdate(void)	n
+78DDF0	838	CPsSpellBallLightning::Fire(CGameArea *,int,int,CPoint,int,short)	y
+78E140	1825	CPsSpellElysiumsFires::AIUpdate(void)	y
+78E870	1927	CPsSpellStrength::Fire(CGameArea *,int,int,CPoint,int,short)	y
+78F000	2426	CPsSpellPowerOfOne::Fire(CGameArea *,int,int,CPoint,int,short)	y
+78F980	2028	CProjectileLightningBounce::AIUpdate(void)	n
+790A70	1484	CPsSpellAbyssalFury::Render(CGameArea *,CVidMode *)	y
+791040	826	CProjectileTravelDoor::Render(CGameArea *,CVidMode *)	n
+791380	855	CProjectileSpellHit::Render(CGameArea *,CVidMode *)	n
+7916E0	2025	CProjectileBAM::Render(CGameArea *,CVidMode *)	n
+791ED0	1582	CProjectileAreaFade::Render(CGameArea *,CVidMode *)	n
+792500	287	CProjectile::~CProjectile()	n
+792620	124	CPsSpellCelestialHost::~CPsSpellCelestialHost()	y
+7926A0	124	CPsSpellBladestorm::~CPsSpellBladestorm()	y
+792720	12	CPsSpellDesertHell::~CPsSpellDesertHell()	y
+792730	77	CPsSpellChainLightningStorm::~CPsSpellChainLightningStorm()	y
+792780	12	CPsSpellIgnusFury::~CPsSpellIgnusFury()	y
+792790	125	CPsSpellAbyssalFury::~CPsSpellAbyssalFury()	y
+792810	77	CPsSpellMeteorStormBombardment::~CPsSpellMeteorStormBombardment()	y
+792860	77	CPsSpellElysiumsFires::~CPsSpellElysiumsFires()	y
+7928B0	77	CPsSpellElysiumsTears::~CPsSpellElysiumsTears()	y
+792900	163	CProjectileBAM::~CProjectileBAM()	n
+7929B0	77	CPsSpellCloudKill::~CPsSpellCloudKill()	y
+792A00	12	CProjectilePSTGameAnimatingObject::~CProjectilePSTGameAnimatingObject()	y
+792A10	12	CProjectileConeOfCold::~CProjectileConeOfCold()	n
+792A20	18	CProjectileBAM::~CProjectileBAM()	n
+792A40	25	CProjectileConeOfCold::~CProjectileConeOfCold()	n
+792A60	84	CPsSpellSwarmCurse::~CPsSpellSwarmCurse()	y
+792AC0	84	CProjectileAdder::~CProjectileAdder()	y
+792B20	85	CPsSpellCloudKill::~CPsSpellCloudKill()	y
+792B80	92	CProjectileAdder::~CProjectileAdder()	y
+792BE0	92	CPsSpellSwarmCurse::~CPsSpellSwarmCurse()	y
+792C40	12	CPsSpellFireAndIce::~CPsSpellFireAndIce()	y
+792C50	12	CPsSpellRuneOfTorment::~CPsSpellRuneOfTorment()	y
+792C60	84	CPsSpellConflagration::~CPsSpellConflagration()	y
+792CC0	84	CPsSpellDeathBolt::~CPsSpellDeathBolt()	y
+792D20	113	CPSTSpellSpiritualHammer::~CPSTSpellSpiritualHammer()	y
+792DA0	12	CProjectilePSTSpriteAttachedObject::~CProjectilePSTSpriteAttachedObject()	y
+792DB0	25	CProjectilePSTGameAnimatingObject::~CProjectilePSTGameAnimatingObject()	y
+792DD0	25	CProjectilePSTSpriteAttachedObject::~CProjectilePSTSpriteAttachedObject()	y
+792DF0	25	CPsSpellFireAndIce::~CPsSpellFireAndIce()	y
+792E10	25	CPsSpellRuneOfTorment::~CPsSpellRuneOfTorment()	y
+792E30	92	CPsSpellConflagration::~CPsSpellConflagration()	y
+792E90	92	CPsSpellDeathBolt::~CPsSpellDeathBolt()	y
+792EF0	121	CPSTSpellSpiritualHammer::~CPSTSpellSpiritualHammer()	y
+792F70	84	CPsSpellBallLightning::~CPsSpellBallLightning()	y
+792FD0	92	CPsSpellBallLightning::~CPsSpellBallLightning()	y
+793030	18	CProjectile::~CProjectile()	n
+793050	25	CPsSpellDesertHell::~CPsSpellDesertHell()	y
+793070	25	CPsSpellIgnusFury::~CPsSpellIgnusFury()	y
+793090	85	CPsSpellElysiumsFires::~CPsSpellElysiumsFires()	y
+7930F0	85	CPsSpellChainLightningStorm::~CPsSpellChainLightningStorm()	y
+793150	85	CPsSpellMeteorStormBombardment::~CPsSpellMeteorStormBombardment()	y
+7931B0	85	CPsSpellElysiumsTears::~CPsSpellElysiumsTears()	y
+793210	132	CPsSpellCelestialHost::~CPsSpellCelestialHost()	y
+7932A0	132	CPsSpellBladestorm::~CPsSpellBladestorm()	y
+793330	133	CPsSpellAbyssalFury::~CPsSpellAbyssalFury()	y
+7942E0	981	CProjectile::CProjectile(CProjectileFileFormat *)	n
+7946C0	65	CProjectile::ClearEffects(void)	n
+794710	67	CProjectile::DetermineHeight(CGameObject *)	n
+794760	125	CProjectile::LoadEffects(CTypedPtrList<CPtrList,CGameEffect *> &,uint)	n
+7947E0	297	CProjectile::AddExtraEffects(void)	n
+794910	1409	CProjectile::DeliverEffects(void)	n
+794EA0	82	CProjectile::GetDirection(CPoint)	n
+794F00	201	CProjectile::PlaySound(CResRef,int,int)	n
+794FD0	872	CPsSpellShroudOfShadows::AIUpdate(void)	y
+795340	81	CProjectileAdder::OnArrival(void)	y
+7953A0	482	CProjectileFall::Fire(CGameArea *,int,int,CPoint,int,short)	n
+795590	167	CProjectileAmbiant::Fire(CGameArea *,int,int,CPoint,int,short)	n
+795640	253	CProjectileSkyStrike::Fire(CGameArea *,int,int,CPoint,int,short)	n
+795740	221	CProjectileSegment::Fire(CGameArea *,CPoint const&,int)	n
+795820	131	CProjectileMushroom::Fire(CGameArea *,CPoint)	n
+7958B0	255	CProjectileArea::OnArrival(void)	n
+7959B0	196	CProjectile::OnArrival(void)	n
+796500	1173	CProjectile::GetStart(int,CPoint &,uchar)	n
+7969A0	1014	CProjectilePSTMissile::Fire(CGameArea *,int,int,CPoint,int,short)	y
+796DA0	1358	CProjectileMulti::Fire(CGameArea *,int,int,CPoint,int,short)	n
+7972F0	649	CProjectileAdder::Fire(CGameArea *,int,int,CPoint,int,short)	y
+797580	470	CProjectileSpeakWithDead::Fire(CGameArea *,int,int,CPoint,int,short)	y
+797760	182	CProjectileSpellHit::Fire(CGameArea *,int,int,CPoint,int,short)	n
+797820	276	CProjectileCastingGlow::Fire(CGameArea *,int,int,CPoint,int,short)	n
+797940	214	CProjectileTravelDoor::Fire(CGameArea *,int,int,CPoint,int,short)	n
+797A20	733	CProjectileLightningBounce::Fire(CGameArea *,int,int,CPoint,int,short)	n
+797D00	2167	CProjectileBAM::Fire(CGameArea *,int,int,CPoint,int,short)	n
+798580	41	CProjectileFireHands::Fire(CGameArea *,int,int,CPoint,int,short)	n
+7985B0	67	CProjectileNewScorcher::Fire(CGameArea *,int,int,CPoint,int,short)	n
+798600	41	CProjectileScorcher::Fire(CGameArea *,int,int,CPoint,int,short)	n
+798630	68	CProjectileArea::Fire(CGameArea *,int,int,CPoint,int,short)	n
+798680	1417	CProjectileColorSpray::Fire(CGameArea *,int,int,CPoint,int,short)	n
+798C10	158	CPsSpellSwarmCurse::Fire(CGameArea *,int,int,CPoint,int,short)	y
+798CB0	532	CPsSpellPacify::Fire(CGameArea *,int,int,CPoint,int,short)	y
+798ED0	1112	CProjectileNewScorcher::AIUpdate(void)	n
+799330	899	CProjectileScorcher::AIUpdate(void)	n
+7996C0	390	CProjectileNewScorcher::ApplyEffectsToTarget(int *,bool)	n
+799850	1566	CProjectileBAM::CProjectileBAM(CResRef)	n
+799E70	104	CProjectileBAM::SetRange(ushort,ushort)	n
+799EE0	746	CProjectileBAM::CalculateFXRect(CRect &,CPoint &,int,CVidCell *)	n
+79A1D0	1850	CProjectileBAM::BounceAI(void)	n
+79A910	2786	CProjectileBAM::AIUpdate(void)	n
+79B480	110	CProjectilePSTMissile::AIUpdate(void)	y
+79B4F0	514	CProjectileArea::AIUpdate(void)	n
+79B700	169	CProjectileBAM::SetVidCell(CVidCell *)	n
+79B7B0	527	CProjectileArea::CProjectileArea(CResRef)	n
+79B9C0	226	CProjectileScorcher::CProjectileScorcher(CResRef)	n
+79BAB0	302	CProjectileNewScorcher::CProjectileNewScorcher(CResRef)	n
+79BBE0	18	CProjectileNewScorcher::InitVertexOffsets(void)	n
+79BC00	197	CProjectileLightningBolt::CProjectileLightningBolt(void)	n
+79BCD0	210	CProjectileLightningBounce::CProjectileLightningBounce(void)	n
+79BDB0	313	CProjectileLightningBoltGround::Fire(CGameArea *,int,int,CPoint,int,short)	n
+79BEF0	305	CProjectileLightningBolt::DeliverEffects(void)	n
+79C030	56	CProjectileLightningBoltGround::CProjectileLightningBoltGround(void)	n
+79C070	200	CProjectileInvisibleTravelling::CProjectileInvisibleTravelling(void)	n
+79C140	206	CProjectileMushroom::CProjectileMushroom(void)	n
+79C210	247	CProjectileColorSpray::CProjectileColorSpray(void)	n
+79C310	298	CProjectileFireHands::CProjectileFireHands(void)	n
+79C440	583	CProjectileConeOfCold::CProjectileConeOfCold(CGameAIBase *)	n
+79C690	307	CProjectileSegment::CProjectileSegment(CResRef,CVidPalette *,short,short)	n
+79C7D0	660	CProjectileConeOfCold::DoLayers(CPoint const&,short,short,int)	n
+79CA70	1245	CProjectileSkyStrike::CProjectileSkyStrike(CString const&,CString const&,uchar,int,ushort)	n
+79CF50	426	CProjectilePSTMissile::CProjectilePSTMissile(CResRef,uint)	y
+79D2A0	288	CProjectileAdder::CProjectileAdder(void)	y
+79D3C0	44	CProjectilePSTGameAnimatingObject::DeflateFxRectForRender(CRect &)	y
+79D3F0	183	CProjectilePSTGameAnimatingObject::NewVidCell(CResRef,uint)	y
+79D4B0	550	CProjectilePSTGameAnimatingObject::CProjectilePSTGameAnimatingObject(CResRef,int,uint,uint,int,ProjectilePSTAnimObjLoop)	y
+79DB60	1634	CProjectilePSTGameAnimatingObject::RenderSmall(CGameArea *,CVidMode *,CRect *,CPoint *,CRect *)	y
+79E1D0	252	CProjectilePSTGameAnimatingObject::SetVidCell(CVidCell *)	y
+79E2D0	3774	CProjectilePSTGameAnimatingObject::Render(CGameArea *,CVidMode *)	y
+79F250	55	CPsSpellDeathBolt::Render(CGameArea *,CVidMode *)	y
+79F290	450	CProjectilePSTGameAnimatingObjectMotionBlur::Render(CGameArea *,CVidMode *)	y
+79F460	261	CProjectilePSTGameAnimatingObject::PlaySound(CResRef,int,int,int,int,int)	y
+79F600	1838	CPSTSpellMechanusCannon::AIUpdate(void)	y
+79FD30	262	CProjectileRaiseDead::AIUpdate(void)	y
+7A02B0	107	CProjectilePSTGameAnimatingObject::AIUpdate(void)	y
+7A0320	493	CProjectilePSTGameAnimatingObject::AddToArea(CGameArea *,CPoint const&,int,uchar,CResRef,int,int,int)	y
+7A0510	354	CPsSpellFireAndIce::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A0680	191	CPsSpellStygianIceStorm::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A0740	180	CPsSpellRuneOfTorment::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A0800	245	CPsSpellConflagration::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A0900	1626	CPsSpellChainLightningStorm::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A0F60	165	CPsSpellDeathBolt::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A1010	332	CMeteorStormBombardmentMeteor::OnArrival(void)	n
+7A1160	740	CPsSpellBlacksphere::AIUpdate(void)	y
+7A1450	328	CPsSpellPowerWordKill::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A15A0	244	CPsSpellPowerWordBlind::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A16A0	423	CPsSpellAxOfTorment::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A1850	2952	CPsSpellImprovedStrength::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A23E0	415	CPsSpellMissileOfPatience::RemoveSelf(void)	y
+7A2580	383	CPsSpellVampiricTouch::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A2700	363	CPsSpellEmbalming::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A2870	221	CPSTSpellCallLightning::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A2950	1087	CProjectileSpeakWithDead::AIUpdate(void)	y
+7A2D90	273	CPSTSpellMechanusCannon::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A2EB0	403	CPSTSpellSpiritualHammer::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A3050	881	CProjectileRaiseDead::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A33D0	282	CProjectilePSTAbilityGracesKiss::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A3E20	358	CProjectileInstantAreaFade::Fire(CGameArea *,int,int,CPoint,int,short)	n
+7A3F90	1494	CProjectilePSTGameAnimatingObject::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A4570	138	CPsSpellGlobeOfInvulnerability::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A4700	3010	CPsSpellMissileOfPatience::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7A52D0	1480	CProjectileAdder::AIUpdate(void)	y
+7A58A0	2186	CProjectileConeOfCold::Fire(CGameArea *,int,int,CPoint,int,short)	n
+7A6130	558	CProjectileBAM::OnArrival(void)	n
+7A6360	69	CPsSpellMissileOfPatience::OnArrival(void)	y
+7A63B0	6002	CPsSpellBladestorm::AIUpdate(void)	y
+7A7B30	2485	CPsSpellFireAndIce::AIUpdate(void)	y
+7A84F0	2389	CPsSpellHowlOfPandemonium::AIUpdate(void)	y
+7A8E50	1151	CPsSpellPowerWordKill::AIUpdate(void)	y
+7A9820	1177	CProjectilePSTGameAnimatingObject::Fire(CGameArea *,int,CPoint,int,CPoint,int,uchar)	y
+7A9DF0	203	CProjectilePSTGameAnimatingObjectMotionBlur::AIUpdate(void)	y
+7A9FF0	1824	CPsSpellPowerWordBlind::AIUpdate(void)	y
+7AA710	5538	CPsSpellDeathBolt::AIUpdate(void)	y
+7ABCC0	2566	CPsSpellAxOfTorment::AIUpdate(void)	y
+7AC6D0	192	CProjectilePSTGameAnimatingObjectMotionBlur::CProjectilePSTGameAnimatingObjectMotionBlur(CResRef,int,uint,uint,int,ProjectilePSTAnimObjLoop,uchar,uchar,uchar,uchar)	y
+7AC790	223	CProjectileAreaFade::CProjectileAreaFade(CResRef,uint,int)	n
+7AD5A0	245	CProjectileInstantAreaFade::CProjectileInstantAreaFade(CResRef,uint,int,uchar)	n
+7AD870	86	CProjectileRaiseDead::CProjectileRaiseDead(CResRef)	y
+7AD8D0	177	CProjectilePSTSpriteAttachedObject::CProjectilePSTSpriteAttachedObject(CResRef,uint,int,ProjectilePSTAnimObjLoop,uchar,int)	y
+7AD990	103	CProjectilePSTSpriteAttachedObject::Render(CGameArea *,CVidMode *,CProjectilePSTGameAnimatingObject::ProjectilePSTAnimObjPairedSeq)	y
+7ADA00	157	CProjectilePSTSpriteAttachedObject::SetPosition(CGameSprite *,CRect &,CPoint &)	y
+7ADAA0	623	CProjectilePSTSpriteAttachedObject::GetSpellRes(void)	y
+7ADD10	168	CPSTSpellSpiritualHammer::CPSTSpellSpiritualHammer(short,CResRef)	y
+7ADDC0	112	CPSTSpellMechanusCannon::CPSTSpellMechanusCannon(CResRef)	y
+7ADE30	306	CProjectileSpeakWithDead::CProjectileSpeakWithDead(void)	y
+7ADF70	231	CPSTSpellCallLightning::CPSTSpellCallLightning(CResRef,short)	y
+7AE060	692	CPsSpellSwarmCurse::CPsSpellSwarmCurse(CResRef,short,CGameAIBase *)	y
+7AE560	190	CPsSpellMissileOfPatience::CPsSpellMissileOfPatience(short)	y
+7AE620	453	CPsSpellMissileOfPatience::TransferEffects(int,int,CPoint)	y
+7AE7F0	935	CPsSpellMissileOfPatience::AIUpdate(void)	y
+7AEBA0	129	CPsSpellPacify::CPsSpellPacify(short)	y
+7AEC30	374	CPsSpellElysiumsTearsMeteor::CPsSpellElysiumsTearsMeteor(short,int,CResRef,uchar,uchar,uchar)	y
+7AEDB0	1358	CPsSpellElysiumsTears::CPsSpellElysiumsTears(short,uchar,uchar,uchar)	y
+7AF300	3532	CPsSpellElysiumsFires::CPsSpellElysiumsFires(uchar,uchar,uchar)	y
+7B01D0	1068	CPsSpellStrength::CPsSpellStrength(short)	y
+7B0600	1068	CPsSpellPowerOfOne::CPsSpellPowerOfOne(short)	y
+7B0A30	1068	CPsSpellImprovedStrength::CPsSpellImprovedStrength(short)	y
+7B0E60	279	CPsSpellHoldUndead::CPsSpellHoldUndead(short,CResRef,uchar)	y
+7B0F80	266	CPsSpellIceKnife::CPsSpellIceKnife(int,CResRef)	y
+7B1090	494	CPsSpellAxOfTorment::CPsSpellAxOfTorment(short,CAIObjectType &,CResRef)	y
+7B1280	232	CPsSpellShroudOfShadows::CPsSpellShroudOfShadows(CResRef)	y
+7B1370	1522	CPsSpellShroudOfShadows::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7B1970	4068	CProjectilePSTSpriteAttachedObject::AIUpdate(CGameSprite *)	y
+7B2960	365	CPsSpellTashasLaughter::CPsSpellTashasLaughter(uchar)	y
+7B2AD0	223	CPsSpellPowerWordBlind::CPsSpellPowerWordBlind(uchar,CResRef)	y
+7B2BB0	182	CPsSpellPowerWordKill::CPsSpellPowerWordKill(CResRef)	y
+7B2C70	227	CPsSpellBlacksphere::CPsSpellBlacksphere(CResRef,int,uint,int,uchar)	y
+7B2D60	313	CMeteorStormBombardmentMeteor::CMeteorStormBombardmentMeteor(CPsSpellMeteorStormBombardment *,CResRef)	y
+7B2EA0	1446	CPsSpellMeteorStormBombardment::CPsSpellMeteorStormBombardment(CAIObjectType &)	y
+7B3A00	1196	CPsSpellAbyssalFury::CPsSpellAbyssalFury(void)	y
+7B3F20	1231	CPsSpellIgnusFury::CPsSpellIgnusFury(CAIObjectType &,short)	y
+7B4690	397	CPsSpellDeathBolt::CPsSpellDeathBolt(CResRef)	y
+7B4820	1435	CPsSpellChainLightningStorm::CPsSpellChainLightningStorm(CAIObjectType &)	y
+7B4DC0	211	CPsSpellConflagration::CPsSpellConflagration(CResRef)	y
+7B4EA0	370	CPsSpellRuneOfTorment::CPsSpellRuneOfTorment(CAIObjectType &,CResRef)	y
+7B5020	416	CPsSpellForceMissile::CPsSpellForceMissile(int,CResRef,int,int,int)	y
+7B51C0	362	CPsSpellCloudKill::CPsSpellCloudKill(CGameSprite *)	y
+7B53D0	1166	CPsSpellDesertHell::CPsSpellDesertHell(CAIObjectType &,CResRef)	y
+7B5860	167	CPsSpellStygianIceStorm::CPsSpellStygianIceStorm(CAIObjectType &,CResRef)	y
+7B5910	1363	CPsSpellBladestorm::CPsSpellBladestorm(short,CGameAIBase *,CResRef)	y
+7B5E70	109	CPsSpellGlobeOfInvulnerability::CPsSpellGlobeOfInvulnerability(short,CResRef)	y
+7B5EE0	1191	CPsSpellHowlOfPandemonium::CPsSpellHowlOfPandemonium(short,uchar,CResRef)	y
+7B6390	563	CPsSpellFireAndIce::CPsSpellFireAndIce(void)	y
+7B6700	1394	CPsSpellCelestialHost::CPsSpellCelestialHost(CGameAIBase *)	y
+7B6C80	1299	CProjectileSpellHit::CProjectileSpellHit(CString const&,CString const&,CString const&,uint,uchar)	n
+7B71A0	1427	CProjectileCastingGlow::CProjectileCastingGlow(CString const&,CString const&,CString const&,uint,uchar,uchar,uchar)	n
+7B7740	1384	CProjectileTravelDoor::CProjectileTravelDoor(CString const&,CString const&,CString const&,uint,uchar)	n
+7B7CB0	1644	CProjectileBAM::CProjectileBAM(CProjectileBAMFileFormat *)	n
+7B8320	324	CProjectilePSTMissile::CProjectilePSTMissile(CProjectileBAMFileFormat *)	y
+7B8470	120	CProjectileSkyStrikeBAM::CProjectileSkyStrikeBAM(CProjectileBAMFileFormat *)	n
+7B84F0	95	CProjectileNewScorcher::CProjectileNewScorcher(CProjectileBAMFileFormat *)	n
+7B8550	1459	CProjectileArea::CProjectileArea(CProjectileAreaFileFormat *,CGameAIBase *,CResRef)	n
+7B9580	673	CProjectileArea::CreateObject(CGameArea *,CAreaFileProjectileObject *,uchar *,uint,uint)	n
+7C4D20	2935	CPsSpellMeteorStormBombardment::AIUpdate(void)	y
+7C58A0	13359	CPsSpellCelestialHost::AIUpdate(void)	y
+7C8CD0	2980	CPsSpellCloudKill::AIUpdate(void)	y
+7C9880	333	CProjectileArea::CreateSecondary(int &)	n
+7C99D0	244	CProjectileArea::RayAreaEffect(void)	n
+7C9AD0	239	CProjectileArea::CreateFakeSecondaries(int,CTypedPtrList<CPtrList,int *> &)	n
+7C9BC0	2322	CProjectileArea::Explode(void)	n
+7CA4E0	355	CProjectileMulti::CProjectileMulti(ushort,CResRef,short,ushort)	n
+7CA650	82	CPsSpellBallLightning::CPsSpellBallLightning(short)	y
+7CA7D0	240	CProjectileMagicMissileMulti::CProjectileMagicMissileMulti(short,ushort)	n
+7CA8C0	178	CProjectileMulti::CProjectileMulti(ushort,CProjectileBAMFileFormat *,CGameAIBase *)	n
+7CA980	323	CProjectileChain::CProjectileChain(ushort,CResRef,short,short,int,CAIObjectType)	n
+7CAAD0	375	CProjectileChain::Fire(CGameArea *,int,int,CPoint,int,short)	n
+7CAC50	690	CProjectileChain::AIUpdate(void)	n
+7CAF10	1159	CProjectileFall::AIUpdate(void)	n
+7CB3A0	1290	CPSTSpellSpiritualHammer::AIUpdate(void)	y
+7CB8B0	834	CPSTSpellCallLightning::AIUpdate(void)	y
+7CBC00	2655	CPsSpellSwarmCurse::AIUpdate(void)	y
+7CC660	1618	CPsSpellPacify::AIUpdate(void)	y
+7CCCC0	2008	CPsSpellElysiumsTearsMeteor::AIUpdate(void)	y
+7CD9F0	635	CPsSpellHoldUndead::AreaEffect(uchar)	y
+7CDC70	1261	CPsSpellIceKnife::CheckForTargets(int)	y
+7CE160	584	CPsSpellIceKnife::OnArrival(void)	y
+7CE3B0	418	CPsSpellTashasLaughter::AreaEffect(uchar)	y
+7CE560	1722	CPsSpellIgnusFury::AIUpdate(void)	y
+7CEC20	3139	CPsSpellChainLightningStorm::AIUpdate(void)	y
+7CF870	3522	CPsSpellConflagration::AIUpdate(void)	y
+7D0640	4311	CPsSpellRuneOfTorment::AIUpdate(void)	y
+7D1720	2754	CPsSpellDesertHell::AIUpdate(void)	y
+7D21F0	1976	CPsSpellStygianIceStorm::AIUpdate(void)	y
+7D29B0	1040	CPsSpellGlobeOfInvulnerability::AIUpdate(void)	y
+7D2DC0	621	CProjectileLightningStorm::CProjectileLightningStorm(short,ushort)	n
+7D3030	46343	CProjectile::DecodeProjectile(ushort,CGameAIBase *,short,CSpell *)	y
+7DE630	1737	CProjectileArea::RectangleAreaEffect(void)	n
+7DED00	2139	CProjectileArea::AreaEffect(uchar)	n
+7DF560	7170	CPsSpellAbyssalFury::AIUpdate(void)	y
+7E1170	905	CPsSpellIceKnife::TransferEffects(int,int,CPoint)	y
+7E1500	298	CPsSpellIceKnife::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7E1630	1288	CPsSpellIceKnife::AIUpdate(void)	y
+7E1B40	1043	CPsSpellForceMissile::TransferEffects(int,int,CPoint)	y
+7E1F60	508	CPsSpellForceMissile::AIUpdate(void)	y
+7E2160	349	CPsSpellForceMissile::Fire(CGameArea *,int,int,CPoint,int,short)	y
+7E22C0	2	CProjectile::Fire(CGameArea *,int,int,CPoint,int,short)	n
+7E22D0	2	CProjectile::AIUpdate(void)	n
+7E22E0	2	CProjectile::CallBack(void)	n
+7E22F0	7	CProjectile::GetDefaultRenderFlags(void)	n
+7E2300	7	CProjectile::SetDefaultRenderFlags(uint)	n
+7E2310	3	CProjectile::SaveProjectile(void)	n
+7E2320	2	CProjectile::Marshal(SProjectileWrapper *)	n
+7E2330	7	CProjectile::GetLRMirroring(void)	n
+7E2340	7	CProjectile::GetUDMirroring(void)	n
+7E2350	7	CProjectile::SetLRMirroring(int)	n
+7E2360	7	CProjectile::SetUDMirroring(int)	n
+7E2370	2	CProjectile::SetTargetType(CAIObjectType const&)	n
+7E2380	2	CProjectileBAM::InflateFxRectForEffects(CRect &,CPoint &)	n
+7E2390	8	CProjectileBAM::SetNewDirection(short)	n
+7E23A0	7	CProjectileBAM::SetTranslucency(int)	n
+7E23B0	7	CProjectileBAM::GetTranslucency(void)	n
+7E23C0	23	CProjectileArea::SaveProjectile(void)	n
+7E23E0	8	CProjectileArea::SetRepetitionCount(short)	n
+7E23F0	8	CProjectileArea::SetExplosionRange(short)	n
+7E2400	7	CProjectileArea::SetDetonateOnlyIfTargets(int)	n
+7E2410	7	CProjectileArea::SetCheckForNonSprites(int)	n
+7E2420	8	CProjectileArea::SetDelay(short)	n
+7E2430	8	CProjectileArea::SetTriggerRange(short)	n
+7E2440	2	CProjectilePSTMissile::CallBack(void)	y
+7E2450	47	CProjectileInstant::Fire(CGameArea *,int,int,CPoint,int,short)	n
+7E2480	11	CProjectileChain::CallBack(void)	n
+7E2490	2	CProjectileChain::Render(CGameArea *,CVidMode *)	n
+7E24A0	20	CProjectilePSTGameAnimatingObject::DoAIUpdate(uchar,int)	y
+7E24C0	7	CProjectilePSTGameAnimatingObject::SetDefaultRenderFlags(uint)	y
+7E24D0	8	CProjectilePSTGameAnimatingObject::SetNewDirection(short)	y
+7E24E0	7	CProjectileAreaFade::SetDefaultRenderFlags(uint)	n
+7E24F0	2	CProjectileInstantAreaFade::Render(CGameArea *,CVidMode *)	n
+7E2570	12	CProjectileChain::SetTargetType(CAIObjectType const&)	n
+7E2640	12	CGameEffectList::~CGameEffectList()	n
+7E2650	25	CGameEffectList::~CGameEffectList()	n
+7E2690	65	CProjectileArea::GetTargetType(void)	n
+7E26E0	65	CProjectileChain::GetTargetType(void)	n
+7E2730	63	CProjectile::GetTargetType(void)	n
+7E2770	917	CGameEffectDeath::CGameEffectDeath(void)	y
+7E2B10	102	CProjectileSkyStrike::~CProjectileSkyStrike()	n
+7E2B80	138	CProjectileTravelDoor::~CProjectileTravelDoor()	n
+7E2C10	102	CProjectileCastingGlow::~CProjectileCastingGlow()	n
+7E2C80	102	CProjectileSpellHit::~CProjectileSpellHit()	n
+7E2CF0	12	CProjectileInstant::~CProjectileInstant()	n
+7E2D00	12	CPsSpellHowlOfPandemonium::~CPsSpellHowlOfPandemonium()	y
+7E2D10	12	CProjectileArea::~CProjectileArea()	n
+7E2D20	12	CProjectileScorcher::~CProjectileScorcher()	n
+7E2D30	12	CProjectileNewScorcher::~CProjectileNewScorcher()	n
+7E2D40	12	CProjectileLightningBolt::~CProjectileLightningBolt()	n
+7E2D50	12	CProjectileLightningBounce::~CProjectileLightningBounce()	n
+7E2D60	12	CProjectileLightningBoltGround::~CProjectileLightningBoltGround()	n
+7E2D70	12	CProjectileMushroom::~CProjectileMushroom()	n
+7E2D80	12	CProjectileColorSpray::~CProjectileColorSpray()	n
+7E2D90	12	CProjectileFireHands::~CProjectileFireHands()	n
+7E2DA0	12	CProjectileSegment::~CProjectileSegment()	n
+7E2DB0	66	CProjectileChain::~CProjectileChain()	n
+7E2E00	66	CProjectileFall::~CProjectileFall()	n
+7E2E50	12	CProjectileSkyStrikeBAM::~CProjectileSkyStrikeBAM()	n
+7E2E60	12	CProjectilePSTMissile::~CProjectilePSTMissile()	y
+7E2E80	12	CProjectileInvisibleTravelling::~CProjectileInvisibleTravelling()	n
+7E2EB0	25	CProjectileScorcher::~CProjectileScorcher()	n
+7E2ED0	25	CProjectileNewScorcher::~CProjectileNewScorcher()	n
+7E2EF0	25	CProjectileLightningBounce::~CProjectileLightningBounce()	n
+7E2F10	25	CProjectileMushroom::~CProjectileMushroom()	n
+7E2F30	25	CProjectileColorSpray::~CProjectileColorSpray()	n
+7E2F50	25	CProjectileFireHands::~CProjectileFireHands()	n
+7E2F70	25	CProjectileSegment::~CProjectileSegment()	n
+7E2F90	25	CProjectileLightningBolt::~CProjectileLightningBolt()	n
+7E2FB0	25	CProjectileSkyStrikeBAM::~CProjectileSkyStrikeBAM()	n
+7E2FD0	25	CProjectileLightningBoltGround::~CProjectileLightningBoltGround()	n
+7E2FF0	25	CProjectileInvisibleTravelling::~CProjectileInvisibleTravelling()	n
+7E3010	25	CMeteorStormBombardmentMeteor::~CMeteorStormBombardmentMeteor()	y
+7E3030	12	CProjectileAreaFade::~CProjectileAreaFade()	n
+7E3040	12	CPsSpellPacify::~CPsSpellPacify()	y
+7E3050	12	CPsSpellTashasLaughter::~CPsSpellTashasLaughter()	y
+7E3060	25	CProjectileArea::~CProjectileArea()	n
+7E3080	25	CPsSpellPacify::~CPsSpellPacify()	y
+7E30A0	25	CPsSpellTashasLaughter::~CPsSpellTashasLaughter()	y
+7E30C0	12	CPsSpellElysiumsTearsMeteor::~CPsSpellElysiumsTearsMeteor()	y
+7E30D0	25	CProjectileSpeakWithDead::~CProjectileSpeakWithDead()	y
+7E30F0	25	CPsSpellShroudOfShadows::~CPsSpellShroudOfShadows()	y
+7E3110	84	CProjectileMulti::~CProjectileMulti()	n
+7E3170	12	CProjectileSpeakWithDead::~CProjectileSpeakWithDead()	y
+7E3180	12	CPsSpellShroudOfShadows::~CPsSpellShroudOfShadows()	y
+7E3190	12	CPsSpellForceMissile::~CPsSpellForceMissile()	y
+7E31A0	25	CProjectilePSTMissile::~CProjectilePSTMissile()	y
+7E31C0	25	CPsSpellForceMissile::~CPsSpellForceMissile()	y
+7E31E0	74	CProjectileFall::~CProjectileFall()	n
+7E3230	25	CPsSpellBlacksphere::~CPsSpellBlacksphere()	y
+7E3250	12	CProjectileInstantAreaFade::~CProjectileInstantAreaFade()	n
+7E3270	12	CMeteorStormBombardmentMeteor::~CMeteorStormBombardmentMeteor()	y
+7E3280	25	CProjectileAreaFade::~CProjectileAreaFade()	n
+7E32C0	25	CPsSpellElysiumsTearsMeteor::~CPsSpellElysiumsTearsMeteor()	y
+7E32E0	12	CPsSpellHoldUndead::~CPsSpellHoldUndead()	y
+7E32F0	25	CProjectileInstantAreaFade::~CProjectileInstantAreaFade()	n
+7E3310	12	CPsSpellBlacksphere::~CPsSpellBlacksphere()	y
+7E3320	25	CPsSpellHoldUndead::~CPsSpellHoldUndead()	y
+7E3340	66	CProjectileLightningStorm::~CProjectileLightningStorm()	n
+7E3390	74	CProjectileLightningStorm::~CProjectileLightningStorm()	n
+7E33E0	74	CProjectileChain::~CProjectileChain()	n
+7E3450	25	CProjectilePSTGameAnimatingObjectMotionBlur::~CProjectilePSTGameAnimatingObjectMotionBlur()	y
+7E3470	12	CProjectilePSTGameAnimatingObjectMotionBlur::~CProjectilePSTGameAnimatingObjectMotionBlur()	y
+7E3480	12	CProjectileRaiseDead::~CProjectileRaiseDead()	y
+7E3490	12	CPSTSpellMechanusCannon::~CPSTSpellMechanusCannon()	y
+7E34A0	73	CPSTSpellCallLightning::~CPSTSpellCallLightning()	y
+7E3510	12	CPsSpellMissileOfPatience::~CPsSpellMissileOfPatience()	y
+7E3520	12	CPsSpellIceKnife::~CPsSpellIceKnife()	y
+7E3530	144	CPsSpellAxOfTorment::~CPsSpellAxOfTorment()	y
+7E35C0	12	CPsSpellPowerWordBlind::~CPsSpellPowerWordBlind()	y
+7E35D0	12	CPsSpellPowerWordKill::~CPsSpellPowerWordKill()	y
+7E35F0	12	CPsSpellStygianIceStorm::~CPsSpellStygianIceStorm()	y
+7E3600	12	CPsSpellGlobeOfInvulnerability::~CPsSpellGlobeOfInvulnerability()	y
+7E3640	25	CPsSpellStygianIceStorm::~CPsSpellStygianIceStorm()	y
+7E3680	25	CPsSpellPowerWordBlind::~CPsSpellPowerWordBlind()	y
+7E36A0	25	CPsSpellIceKnife::~CPsSpellIceKnife()	y
+7E36C0	25	CPsSpellMissileOfPatience::~CPsSpellMissileOfPatience()	y
+7E36E0	25	CProjectileRaiseDead::~CProjectileRaiseDead()	y
+7E3700	25	CPsSpellPowerWordKill::~CPsSpellPowerWordKill()	y
+7E3720	25	CPsSpellGlobeOfInvulnerability::~CPsSpellGlobeOfInvulnerability()	y
+7E3760	25	CPSTSpellMechanusCannon::~CPSTSpellMechanusCannon()	y
+7E3810	81	CPSTSpellCallLightning::~CPSTSpellCallLightning()	y
+7E38D0	84	CProjectileMagicMissileMulti::~CProjectileMagicMissileMulti()	n
+7E3930	92	CProjectileMulti::~CProjectileMulti()	n
+7E39F0	92	CProjectileMagicMissileMulti::~CProjectileMagicMissileMulti()	n
+7E3A50	152	CPsSpellAxOfTorment::~CPsSpellAxOfTorment()	y
+7E3AF0	25	CPsSpellHowlOfPandemonium::~CPsSpellHowlOfPandemonium()	y
+7E3B10	25	CPsSpellStrength::~CPsSpellStrength()	y
+7E3B30	12	CPsSpellEmbalming::~CPsSpellEmbalming()	y
+7E3B50	12	CProjectilePSTAbilityGracesKiss::~CProjectilePSTAbilityGracesKiss()	y
+7E3B60	12	CPsSpellVampiricTouch::~CPsSpellVampiricTouch()	y
+7E3B70	12	CPsSpellStrength::~CPsSpellStrength()	y
+7E3B80	12	CPsSpellPowerOfOne::~CPsSpellPowerOfOne()	y
+7E3B90	12	CPsSpellImprovedStrength::~CPsSpellImprovedStrength()	y
+7E3BA0	25	CProjectileInstant::~CProjectileInstant()	n
+7E3BC0	25	CPsSpellVampiricTouch::~CPsSpellVampiricTouch()	y
+7E3BE0	25	CPsSpellEmbalming::~CPsSpellEmbalming()	y
+7E3C00	25	CPsSpellPowerOfOne::~CPsSpellPowerOfOne()	y
+7E3C40	25	CPsSpellImprovedStrength::~CPsSpellImprovedStrength()	y
+7E3C60	25	CProjectilePSTAbilityGracesKiss::~CProjectilePSTAbilityGracesKiss()	y
+7E3C80	110	CProjectileSkyStrike::~CProjectileSkyStrike()	n
+7E3CF0	110	CProjectileCastingGlow::~CProjectileCastingGlow()	n
+7E3D60	102	CProjectileAmbiant::~CProjectileAmbiant()	n
+7E3DD0	110	CProjectileSpellHit::~CProjectileSpellHit()	n
+7E3E40	110	CProjectileAmbiant::~CProjectileAmbiant()	n
+7E3EB0	146	CProjectileTravelDoor::~CProjectileTravelDoor()	n
+7E3F50	1004	CProjectile::CProjectile(void)	n
+7E4350	5	CProjectilePSTGameAnimatingObject::OnArrival(void)	y
+7E4360	5	CProjectilePSTGameAnimatingObjectMotionBlur::OnArrival(void)	y
+7E4370	5	CProjectilePSTMissile::OnArrival(void)	y
+9EDD60	5854	CGameSprite::SpellPST(CGameAIBase *)	y
+A99B20	2374	CPlanescape::CPlanescape(void)	y
+A9A470	34	CPlanescape::~CPlanescape()	y
+A9A4A0	53	CPlanescape::Init(void)	y
+A9A4E0	95	CPlanescape::PSGetCharacterIDFromScriptName(char *)	y
+A9A540	147	CPlanescape::GetRaceText(CGameSprite *)	y
+A9A5E0	149	CPlanescape::GetFactionInfo(int,int &,uint &)	y
+A9A680	1052	CPlanescape::PushFactionInfo(CGameSprite *)	y
+A9AAA0	1844	CPlanescape::SetButtonArraySpecials(int *)	y
+A9B1E0	1381	CPlanescape::OnSpecialButtonClick(CInfButtonSettings *,int)	y
+A9B750	364	CPlanescape::SpellContextClickable(void)	y
+A9B8C0	459	CPlanescape::SpecialAbilitiesContextClickable(void)	y
+A9BA90	486	CPlanescape::SelectToolbar(void)	y
+A9BC80	8	CPlanescape::PushLevelUpInfo(CGameSprite *)	y
+A9BC90	170	CPlanescape::ClearBestiaryCache(void)	y
+A9BD40	404	CPlanescape::SetBestiaryKnown(int)	y
+A9BEE0	238	CPlanescape::GetBestiaryKnown(int)	y
+A9BFD0	659	CPlanescape::DisplayDialogText(CString,CString,uint,uint,int,bool)	y
+A9C270	24	CPlanescape::GetAlignmentFrame(uchar)	y
+A9C290	285	CPlanescape::PushSaveInfo(CSaveGameSlot *)	y
+A9C3B0	1706	CPlanescape::GetFeedback(CString,FeedbackType)	y
+A9CA60	73	CPlanescape::MakeHeader(CString)	y
+A9CAB0	1008	CPlanescape::GetInventoryPlaceholder(CGameSprite *,int)	y
+A9CEA0	118	CPlanescape::GetBiography(CGameSprite *)	y
+A9CF20	8478	CPlanescape::PlanescapeLeaveAreaName(CGameSprite *,int,CString,CPoint,CString,CString,CString,CString*,CString*,uint *,int *)	y
+A9F040	435	CPlanescape::IsWorldMapTrigger(CString,CString)	y
+A9F200	891	CPlanescape::AreaFirstAIUpdate(CGameArea *)	y
+A9F580	636	CPlanescape::HandleGameOverConditions(void)	y
+A9F800	956	CPlanescape::PlayEndCredits(void)	y
+A9FBC0	2846	CPlanescape::Cheat_SpawnAndJoinAllPartyMembers(void)	y
+AA06E0	865	CPlanescape::DoesTrapHitTarget(CProjectileBAM *,int,int)	y
+AA0A50	1015	CPlanescape::ProjectileRollToHit(CProjectileBAM *,CGameSprite *,CGameSprite *,int &,int,char,int)	y
+AA0E50	185	CPlanescape::ProjectileRollToHit(CProjectileBAM *,long,long,int &,int,char,int)	y
+AA0F10	102	CPlanescape::IsProjectileTypeTrap(ushort)	y
+AA0F80	8776	CPlanescape::SetGameFreeze(CGameArea *,int,int,long)	y
+AA31D0	271	CPlanescape::IsInCarceri(CGameObject *)	y
+AA32E0	204	CPlanescape::IsInBaator(CGameObject *)	y
+AA33B0	255	CPlanescape::IsInNegativeMaterialPlane(CGameObject *)	y
+AA34B0	768	CPlanescape::SendHitTrigger(long,long,ushort)	y
+AA37B0	576	CPlanescape::IsProjectileTargetAffected(int,CGameSprite *,int)	y
+AA39F0	675	CPlanescape::MultiFireSpell(CGameSprite *,int)	y
+AA3CA0	188	CPlanescape::FindDoorByDialogFile(CResRef)	y
+AA3D60	1128	CPlanescape::GetNamelessRevivalReaction(int)	y
+AA41D0	1297	CPlanescape::AssignFighterProficienciesOnLevelUp(CGameSprite *,CDerivedStats *,CDerivedStats *)	y
+AA46F0	411	CPlanescape::IsCharacterInParty(CAIObjectType const*)	y
+AA4890	228	CPlanescape::PSIsCharacterInParty(int)	y
+AA4980	606	CPlanescape::LetMorteBeCreepy(short,CItem *)	y
+AA4BE0	274	CPlanescape::GetInventoryVOSoundResRef(int)	y
+AA4D00	93	CPlanescape::IsMortuary(CResRef)	y
+AA4D60	121	CPlanescape::SetNamelessExploreRange(void)	y
+AA4DE0	5081	CPlanescape::HandleNamelessBonuses(CStringList *,CGameSprite *,CCreatureFileHeader *,CDerivedStats *,CDerivedStats *)	y
+AA61C0	429	CPlanescape::IsSpriteInDark(CGameSprite *)	y
+AA6370	1357	CPlanescape::EffectDamageDecodeHitSound(uint,CGameSprite *)	y
+AA68C0	48	CPlanescape::DisableMap(void)	y
+AA68F0	506	CPlanescape::GetGraceRingJoke(CGameSprite *)	y
+AA6AF0	248	CPlanescape::GlobalChanged(CString)	y
+AA6BF0	249	CPlanescape::IsThief(CGameSprite *)	y
+AA6CF0	803	CPlanescape::UpdateSpecialButton(CInfButtonSettings *,int,CString)	y
+AA7020	450	CPlanescape::OnSpecialButtonRClick(CInfButtonSettings *,int)	y
+AA71F0	19104	CPlanescape::GenerateProficienciesString(CGameSprite *)	y
+AABC90	4130	CPlanescape::Cheat_GiveAllSpells(void)	y
+AAD090	184	CScreenRangeFlashTint::~CScreenRangeFlashTint()	n
+AAD150	471	CScreenRangeFlashTint::RestoreTint(void)	n
+AAD330	1085	CScreenRangeFlashTint::CScreenRangeFlashTint(CInfinity *,RangeFlashType,uint,uint,uint,uint,int,int,int,uint,long,long,uchar,int)	n
+AAD770	1018	CScreenRangeFlashTint::AIUpdate(void)	n
+B309A0	3273	CGameAIBase::ForceSpellPST(CGameSprite *)	y

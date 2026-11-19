@@ -1,0 +1,422 @@
+# Original Torment.exe functions whose role we know. Decompiled bodies: .re/orig/dump/dec/<addr>.c (git-ignored)
+addr	size	assert_source	role	decompiled
+4089DC	81		JoinPartyEx flag helper	n
+40F27B	28		action 152 ChangeAIType (sprite case 77)	n
+41D7BC	55574		script compiler/parser	y
+43A252	27		action 137 StartDialog (sprite case 67)	n
+43A3C1	39		action 108 EscapeArea (sprite case 57)	n
+44B099	32246		base action dispatcher; action 63 Wait (sprite case 34); action 219 WaitRandom (sprite case 34)	y
+453258	26682		base trigger dispatcher	y
+45E41B	656		action 15 GiveItem (sprite case 12); action 20 LayHands (sprite case 16); action 25 PickPockets (sprite case 21); action 28 RemoveTraps (sprite case 23); action 31 Spell (sprite case 25); action 34 UseItem (sprite case 27); action 87 ProtectObject (sprite case 39); action 94 GroupAttack (sprite case 45); action 105 AttackOneRound (sprite case 55); action 139 PlayerDialog (sprite case 69); action 145 PickLock (sprite case 71); action 150 StartStore (sprite case 76); action 200 SetAnimState (sprite case 84); action 266 FloatRebus (sprite case 104)	n
+462750	13		projectile 223 CPsSpellStrength Render; projectile 228 CPsSpellImprovedStrength Render; projectile 231 CPsSpellHowlOfPandemonium Render; projectile 233 CPsSpellElysiumsFires Render; projectile 239 CPsSpellElysiumsTears Render; projectile 249 CPsSpellMeteorStormBombardment Render; projectile 251 CPsSpellIgnusFury Render; projectile 254 CPsSpellCelestialHost Render; projectile 280  Render; projectile 287 CPsSpellPowerOfOne Render; projectile 289 CPsSpellEmbalming Render	n
+463F03	942		global variable lookup	n
+49088D	2029		uses resrefs of CPsSpellImprovedStrength; uses resrefs of CPsSpellPowerOfOne; uses resrefs of CPsSpellStrength	n
+498F4F	75		action 8 Dialogue (sprite case 5)	n
+49E8F7	2084		uses resrefs of CPsSpellImprovedStrength; uses resrefs of CPsSpellPowerOfOne; uses resrefs of CPsSpellStrength	n
+4A56EB	350		CGameEffect constructor (opcode, p1, p2, timing, ...)	n
+4A5C21	32153	CGameEffect	effect factory (opcode -> effect object)	y
+4ADD0E	127		action 102 MoraleSet (sprite case 52); action 103 MoraleInc (sprite case 53); action 104 MoraleDec (sprite case 54); action 146 Polymorph (sprite case 72)	n
+4AF5A2	1248	CGameEffect	opcode 0 ApplyEffect	y
+4AFAAF	1176	CGameEffect	opcode 1 ApplyEffect	y
+4AFF47	28		opcode 2 ApplyEffect	y
+4AFF63	180		opcode 3 ApplyEffect	y
+4B0017	339		opcode 65 ApplyEffect	y
+4B016A	146		opcode 4 ApplyEffect	y
+4B021D	2313		opcode 5 ApplyEffect	y
+4B0EDC	1701	CGameEffect	opcode 6 ApplyEffect	y
+4B1581	180		opcode 7 ApplyEffect	y
+4B1635	253		opcode 8 ApplyEffect	y
+4B1732	274		opcode 9 ApplyEffect	y
+4B1844	253		opcode 51 ApplyEffect	y
+4B1941	253		opcode 52 ApplyEffect	y
+4B1A3E	378		opcode 50 ApplyEffect	y
+4B1BB8	1636	CGameEffect	opcode 10 ApplyEffect	y
+4B221C	230		opcode 11 ApplyEffect	y
+4B245B	9971	CGameEffect	opcode 12 ApplyEffect; uses resrefs of CPsSpellPowerOfOne; uses resrefs of CPsSpellStrength	y
+4B5DCF	5093		creature death handling (Nameless One rules, Game_Over); opcode 13 ApplyEffect	y
+4B7BA7	90		opcode 14 ApplyEffect	y
+4B7C01	1636	CGameEffect	opcode 15 ApplyEffect	y
+4B8265	28		opcode 16 ApplyEffect	y
+4B8281	1587		opcode 17 ApplyEffect	y
+4B88C8	1507	CGameEffect	opcode 18 ApplyEffect	y
+4B8ED0	1636	CGameEffect	opcode 19 ApplyEffect	y
+4B9534	363		opcode 20 ApplyEffect	y
+4B969F	708	CGameEffect	opcode 21 ApplyEffect	y
+4B9963	1131	CGameEffect	opcode 22 ApplyEffect	y
+4B9DCE	363	CGameEffect	opcode 23 ApplyEffect	y
+4B9F39	182		opcode 24 ApplyEffect	y
+4B9FEF	803	CGameEffect	opcode 25 ApplyEffect	y
+4BA322	698	CGameEffect	opcode 27 ApplyEffect	y
+4BA5DC	698	CGameEffect	opcode 28 ApplyEffect	y
+4BA896	698	CGameEffect	opcode 29 ApplyEffect	y
+4BAB50	698	CGameEffect	opcode 30 ApplyEffect	y
+4BAE0A	298	CGameEffect	opcode 31 ApplyEffect	y
+4BAF34	2491		opcode 32 ApplyEffect	y
+4BB8EF	708	CGameEffect	opcode 33 ApplyEffect	y
+4BBBB3	708	CGameEffect	opcode 34 ApplyEffect	y
+4BBE77	697	CGameEffect	opcode 35 ApplyEffect	y
+4BC130	708	CGameEffect	opcode 36 ApplyEffect	y
+4BC3F4	708	CGameEffect	opcode 37 ApplyEffect	y
+4BC6B8	102		opcode 38 ApplyEffect	y
+4BC71E	812		opcode 39 ApplyEffect	y
+4BCA4A	28		opcode 40 ApplyEffect	y
+4BCA66	2126		opcode 41 ApplyEffect	y
+4BD2B4	303		opcode 42 ApplyEffect	y
+4BD3E3	750		opcode 43 ApplyEffect	y
+4BD6D1	1636	CGameEffect	opcode 44 ApplyEffect	y
+4BDD35	102		opcode 45 ApplyEffect	y
+4BDD9B	221		opcode 46 ApplyEffect	y
+4BDE78	163		opcode 47 ApplyEffect	y
+4BDF1B	146		opcode 136 ApplyEffect	y
+4BDFAD	140		opcode 48 ApplyEffect	y
+4BE039	1636	CGameEffect	opcode 49 ApplyEffect	y
+4BE69D	703	CGameEffect	opcode 54 ApplyEffect	y
+4BE95C	1521		opcode 55 ApplyEffect	y
+4BEF69	1140		opcode 53 ApplyEffect	y
+4BF4AC	477		opcode 56 ApplyEffect	y
+4BF689	936		opcode 57 ApplyEffect	y
+4BFA31	376		opcode 58 ApplyEffect	y
+4BFBA9	442	CGameEffect	opcode 59 ApplyEffect	y
+4BFD63	75		opcode 60 ApplyEffect	y
+4BFDAE	303		opcode 62 ApplyEffect	y
+4BFEDD	134		opcode 63 ApplyEffect	y
+4BFF63	146		opcode 64 ApplyEffect	y
+4BFFF5	2735		opcode 67 ApplyEffect	y
+4C0AA4	87		opcode 68 ApplyEffect	y
+4C0AFB	134		opcode 69 ApplyEffect	y
+4C0B81	146		opcode 70 ApplyEffect	y
+4C0C13	1275		opcode 71 ApplyEffect	y
+4C110E	1231		opcode 72 ApplyEffect	y
+4C15F9	93		opcode 73 ApplyEffect	y
+4C1656	323		opcode 74 ApplyEffect	y
+4C1799	146		opcode 75 ApplyEffect	y
+4C182B	164		opcode 76 ApplyEffect	y
+4C18CF	146		opcode 77 ApplyEffect	y
+4C1961	1853	CGameEffect	opcode 78 ApplyEffect	y
+4C20C6	162		opcode 79 ApplyEffect	y
+4C2168	78		opcode 80 ApplyEffect	y
+4C21B6	98		opcode 81 ApplyEffect	y
+4C2218	764		opcode 82 ApplyEffect	y
+4C2713	47		opcode 83 ApplyEffect	y
+4C2742	698	CGameEffect	opcode 84 ApplyEffect	y
+4C29FC	698	CGameEffect	opcode 85 ApplyEffect	y
+4C2CB6	698	CGameEffect	opcode 86 ApplyEffect	y
+4C2F70	1555	CGameEffect	opcode 98 ApplyEffect	y
+4C35A3	698	CGameEffect	opcode 87 ApplyEffect	y
+4C385D	698	CGameEffect	opcode 88 ApplyEffect	y
+4C3B17	698	CGameEffect	opcode 89 ApplyEffect	y
+4C3DD1	580	CGameEffect	opcode 90 ApplyEffect	y
+4C4015	580	CGameEffect	opcode 91 ApplyEffect	y
+4C4259	580	CGameEffect	opcode 92 ApplyEffect	y
+4C449D	708	CGameEffect	opcode 93 ApplyEffect	y
+4C4761	708	CGameEffect	opcode 94 ApplyEffect	y
+4C4A25	580	CGameEffect	opcode 95 ApplyEffect	y
+4C4C69	708	CGameEffect	opcode 97 ApplyEffect	y
+4C4F2D	921	CGameEffect	opcode 96 ApplyEffect	y
+4C52C6	75		opcode 99 ApplyEffect	y
+4C5311	330		opcode 100 ApplyEffect	y
+4C5477	154		opcode 101 ApplyEffect	y
+4C5511	161		opcode 169 ApplyEffect	y
+4C55B2	47		opcode 102 ApplyEffect	y
+4C55E1	43		opcode 103 ApplyEffect	y
+4C560C	860	CGameEffect	opcode 104 ApplyEffect	y
+4C5968	911	CGameEffect	opcode 105 ApplyEffect	y
+4C5CF7	587	CGameEffect	opcode 106 ApplyEffect	y
+4C5F42	68		opcode 107 ApplyEffect	y
+4C5F86	613	CGameEffect	opcode 108 ApplyEffect	y
+4C61EB	1207		opcode 109 ApplyEffect	y
+4C66BE	1993		opcode 110 ApplyEffect	y
+4C6EA3	28		opcode 111 ApplyEffect	y
+4C6EBF	562		opcode 112 ApplyEffect	y
+4C7235	18		opcode 113 ApplyEffect	y
+4C7247	18		opcode 114 ApplyEffect	y
+4C7259	2403		opcode 115 ApplyEffect	y
+4C7BBC	163		opcode 116 ApplyEffect	y
+4C7C5F	82		opcode 117 ApplyEffect	y
+4C7CB1	18		opcode 118 ApplyEffect	y
+4C7CC3	342		opcode 119 ApplyEffect	y
+4C7E19	311		opcode 159 ApplyEffect	y
+4C7F50	590		opcode 120 ApplyEffect	y
+4C81CE	18		opcode 121 ApplyEffect	y
+4C81E0	759		opcode 122 ApplyEffect	y
+4C84D7	503		opcode 143 ApplyEffect	y
+4C86CE	241		opcode 123 ApplyEffect	y
+4C87BF	55		opcode 124 ApplyEffect	y
+4C87F6	28		opcode 125 ApplyEffect	y
+4C8812	178		opcode 126 ApplyEffect	y
+4C88EC	3594		opcode 127 ApplyEffect	y
+4C971E	776		opcode 128 ApplyEffect	y
+4C9A26	433		opcode 129 ApplyEffect	y
+4C9BD7	559		opcode 130 ApplyEffect	y
+4C9E06	28		opcode 131 ApplyEffect	y
+4C9E22	28		opcode 137 ApplyEffect	y
+4C9E3E	18		opcode 132 ApplyEffect	y
+4C9E50	94		opcode 133 ApplyEffect	y
+4C9EAE	759		opcode 134 ApplyEffect	y
+4CA1A5	2903		opcode 135 ApplyEffect	y
+4CACFC	1005		opcode 26 ApplyEffect	y
+4CB0E9	33		opcode 66 ApplyEffect	y
+4CB10A	71		opcode 138 ApplyEffect	y
+4CB151	362		opcode 139 ApplyEffect	y
+4CB2BB	899		opcode 140 ApplyEffect	y
+4CB65E	3501	CGameEffect	opcode 141 ApplyEffect	y
+4CC4A3	28		opcode 142 ApplyEffect	y
+4CC4BF	47		opcode 144 ApplyEffect	y
+4CC4EE	163		opcode 145 ApplyEffect	y
+4CC591	1137		opcode 146 ApplyEffect	y
+4CCA02	444		opcode 147 ApplyEffect	y
+4CCBBE	1137		opcode 148 ApplyEffect	y
+4CD02F	28		opcode 149 ApplyEffect	y
+4CD04B	28		opcode 150 ApplyEffect	y
+4CD067	880		opcode 151 ApplyEffect	y
+4CD3D7	101		opcode 152 ApplyEffect	y
+4CD43C	510		opcode 153 ApplyEffect	y
+4CD63A	389		opcode 154 ApplyEffect	y
+4CD7BF	227		opcode 155 ApplyEffect	y
+4CD8A2	266		opcode 156 ApplyEffect	y
+4CD9AC	57		opcode 157 ApplyEffect	y
+4CD9E5	389		opcode 158 ApplyEffect	y
+4CDB6A	117		opcode 160 ApplyEffect	y
+4CDBDF	220		opcode 161 ApplyEffect	y
+4CDCBB	145		opcode 162 ApplyEffect	y
+4CDD4C	289		opcode 163 ApplyEffect	y
+4CDE6D	114		opcode 164 ApplyEffect	y
+4CDEDF	31		opcode 165 ApplyEffect	y
+4CDEFE	88		opcode 166 ApplyEffect	y
+4CDF56	31		opcode 168 ApplyEffect	y
+4CDF75	33		opcode 167 ApplyEffect	y
+4CDF96	315		opcode 170 ApplyEffect	y
+4CE0F5	95		opcode 171 ApplyEffect	y
+4CE154	43		opcode 172 ApplyEffect	y
+4CE17F	33		opcode 173 ApplyEffect	y
+4CE1A0	47		opcode 174 ApplyEffect	y
+4CE672	634		opcode 175 ApplyEffect	y
+4D08CA	298		opcode 186 ApplyEffect	y
+4D09F4	2047		opcode 187 ApplyEffect	y
+4D1224	2597		opcode 188 ApplyEffect; opcode 189 ApplyEffect; opcode 190 ApplyEffect; opcode 191 ApplyEffect	y
+4D1C49	6121		opcode 192 ApplyEffect	y
+4D3442	307		opcode 193 ApplyEffect	y
+4D3575	217		opcode 194 ApplyEffect	y
+4D364E	1332		opcode 195 ApplyEffect	y
+4D3B82	28		opcode 197 ApplyEffect	y
+4D3B9E	28		opcode 198 ApplyEffect	y
+4D3BBA	28		opcode 199 ApplyEffect	y
+4D3BD6	28		opcode 200 ApplyEffect	y
+4D3BF2	1940		opcode 196 ApplyEffect	y
+4D4386	10161		opcode 201 ApplyEffect; uses resrefs of CPSTSpellSpiritualHammer; uses resrefs of CPsSpellAxOfTorment; uses resrefs of CPsSpellCelestialHost; uses resrefs of CPsSpellChainLightningStorm; uses resrefs of CPsSpellElysiumsTearsMeteor; uses resrefs of CPsSpellEmbalming; uses resrefs of CPsSpellPacify; uses resrefs of CPsSpellPowerWordKill; uses resrefs of CPsSpellVampiricTouch	y
+4D6B37	120		opcode 202 ApplyEffect	y
+4D6BAF	258		opcode 203 ApplyEffect	y
+4D6CB1	333		opcode 204 ApplyEffect	y
+4D70D1	374		opcode 205 ApplyEffect	y
+4D7247	1991		opcode 206 ApplyEffect	y
+4D7A0E	142		opcode 207 ApplyEffect	y
+4D7A9C	62		opcode 208 ApplyEffect	y
+4D7ADA	341		opcode 210 ApplyEffect	y
+4D8764	211		opcode 211 ApplyEffect	y
+4D8A07	721		opcode 209 ApplyEffect	y
+4E9A30	28		opcode 212 ApplyEffect	y
+52D2E9	306		action 166 SetNumTimesTalkedTo (sprite case 78); action 282 StopMoving (sprite case 106)	n
+559A5D	47815	CProjectile	projectile factory (projectile number -> object); uses resrefs of CPsSpellBladestorm; uses resrefs of CPsSpellDesertHell; uses resrefs of CPsSpellHoldUndead; uses resrefs of CPsSpellRuneOfTorment; uses resrefs of CPsSpellShroudOfShadows	y
+568295	2044	CProjectile	projectile 224 CBallLightningSphere? Render; projectile 230 CPsSpellCloudKill Render	n
+568DB8	1052		projectile 224 CBallLightningSphere? AIUpdate	y
+569F66	347		projectile 247  ctor; projectile 256  ctor; projectile 257  ctor	n
+56A0C1	1672		projectile 218 CPsSpellSwarmCurse Render; projectile 222 CPsSpellPacify Render; projectile 240 CPsSpellTashasLaughter Render	n
+56AD31	785		projectile 240 CPsSpellTashasLaughter Fire	y
+56B042	1428	CProjectile	projectile 237 CPsSpellHoldUndead AIUpdate; projectile 240 CPsSpellTashasLaughter AIUpdate	y
+57100A	285		projectile 267  ctor	n
+572024	338		projectile 243  ctor; uses resrefs of CPsSpellCloudKill; uses resrefs of CPsSpellTashasLaughter	n
+578020	480		projectile 288  ctor	n
+578200	480		projectile 289 CPsSpellEmbalming ctor	y
+5792F0	37		projectile 226  ctor; projectile 263 CPsSpellVampiricTouch ctor	n
+579710			projectile 223 CPsSpellStrength AIUpdate; projectile 228 CPsSpellImprovedStrength AIUpdate; projectile 287 CPsSpellPowerOfOne AIUpdate; projectile 289 CPsSpellEmbalming AIUpdate	n
+58C730	77		projectile 271  ctor	n
+5A4864	162		object id -> object (GetShare)	n
+5B8B72	87		action 3 Attack (sprite case 2); action 5 BackStab (sprite case 3); action 22 MoveToObject (sprite case 18); action 23 MoveToPoint (sprite case 19); action 29 RunAwayFrom (sprite case 24); action 85 RandomWalk (sprite case 37); action 89 Follow (sprite case 41); action 90 MoveToPointNoRecticle (sprite case 19); action 98 AttackNoSound (sprite case 2); action 142 UseDoor (sprite case 70); action 148 BashDoor (sprite case 74); action 208 ReturnToSavedPlace (sprite case 89); action 248 RunToPoint (sprite case 93); action 249 RunToPointNoRecticle (sprite case 93); action 250 RandomRun (sprite case 94); action 251 RunningAttack (sprite case 95); action 252 RunningAttackNoSound (sprite case 95); action 253 RunToObject (sprite case 96); action 255 RunFollow (sprite case 97); action 256 RunToSavedLocation (sprite case 98)	n
+5B95FF	16967		action 69 VEquip (sprite case 35)	n
+6972B5	2141		projectile 205 CProjectileSpeakWithDead Render; projectile 206  Render; projectile 227 CPsSpellForceMissile Render; projectile 229 CPsSpellShroudOfShadows Render; projectile 273  Render; projectile 281 CPsSpellForceMissile Render; projectile 282  Render	n
+698509	725		projectile 272  ctor	n
+698C21	2293		projectile 225 CPsSpellBallLightning? Fire	y
+69A7BB	2306		projectile 219  Render; projectile 221 CPsSpellIceKnife Render; projectile 238 CPsSpellMissileOfPatience Render; projectile 241 CPsSpellAxOfTorment Render; projectile 242 CPsSpellBlacksphere Render; projectile 245 CPsSpellFireAndIce Render; projectile 248 CPsSpellStygianIceStorm Render; projectile 252 CPsSpellPowerWordBlind Render; projectile 253 CPSTSpellMechanusCannon Render; projectile 255 CPsSpellRuneOfTorment Render; projectile 260 CPSTSpellSpiritualHammer Render; projectile 261 CPSTSpellCallLightning Render; projectile 265 CPsSpellPowerWordKill Render; projectile 266 CPsSpellGlobeOfInvulnerability Render; projectile 268  Render; projectile 270 CPsSpellConflagration Render	n
+69B4E5	5870		uses resrefs of CPsSpellShroudOfShadows	n
+6A6730	255		projectile 235  ctor; projectile 236  ctor; projectile 259  ctor; projectile 264  ctor; projectile 269  ctor; projectile 278  ctor	n
+6A682F	367		projectile 237 CPsSpellHoldUndead Fire	y
+6A8A30	13		projectile 237 CPsSpellHoldUndead Render	n
+6A8D30	288		projectile 216 CSkullMob ctor	n
+6A9E98	267		projectile 217 CSkullMobChunk ctor	n
+6AAAFF	373		projectile 215  ctor; projectile 277  ctor; projectile 286  ctor	n
+6AB093	474		projectile 206  ctor; projectile 273  ctor; projectile 282  ctor	y
+6AB26D	1880		projectile 206  Fire; projectile 273  Fire; projectile 282  Fire	y
+6AD801	688		projectile 218 CPsSpellSwarmCurse ctor; uses resrefs of CPsSpellSwarmCurse	y
+6ADB37	182		projectile 218 CPsSpellSwarmCurse Fire	y
+6ADBED	4636		projectile 218 CPsSpellSwarmCurse AIUpdate; uses resrefs of CPsSpellSwarmCurse	y
+6AEE09	183		projectile 219  ctor	y
+6AEEC0	37		projectile 219  AIUpdate	n
+6AEEE5	403		projectile 219  Fire; uses resrefs of CPsSpellSwarmCurse	y
+6AF078	615		projectile 279  ctor	n
+6AF3C2	2443		uses resrefs of CPsSpellElysiumsTearsMeteor; uses resrefs of CPsSpellEmbalming; uses resrefs of CPsSpellPowerWordKill; uses resrefs of CPsSpellVampiricTouch	n
+6AFD4D	366		projectile 220  ctor	n
+6B1129	365		projectile 221 CPsSpellIceKnife ctor; uses resrefs of CPsSpellIceKnife	y
+6B180F	355		projectile 221 CPsSpellIceKnife Fire	y
+6B1972	1823		projectile 221 CPsSpellIceKnife AIUpdate; uses resrefs of CPsSpellIceKnife	y
+6B23B5	1392		uses resrefs of CPsSpellIceKnife	n
+6B2925	154		projectile 222 CPsSpellPacify ctor	y
+6B29BF	480		projectile 222 CPsSpellPacify Fire	y
+6B2B9F	1933		projectile 222 CPsSpellPacify AIUpdate; uses resrefs of CPsSpellPacify	y
+6B332C	496		projectile 223 CPsSpellStrength ctor	y
+6B351C	1999		projectile 223 CPsSpellStrength Fire	y
+6B3CEB	496		projectile 287 CPsSpellPowerOfOne ctor	y
+6B3EDB	2522		projectile 287 CPsSpellPowerOfOne Fire	y
+6B48B5	496		projectile 228 CPsSpellImprovedStrength ctor	y
+6B4AA5	2587		projectile 228 CPsSpellImprovedStrength Fire; uses resrefs of CPsSpellImprovedStrength	y
+6B54C0	70		projectile 224 CBallLightningSphere? ctor; uses resrefs of CPsSpellBallLightning	y
+6B5565	1513		projectile 224 CBallLightningSphere? Fire; uses resrefs of CPsSpellBallLightning	y
+6B5B4E	377		projectile 225 CPsSpellBallLightning? ctor; uses resrefs of CPsSpellBallLightning	y
+6B5CC7	312		projectile 225 CPsSpellBallLightning? AIUpdate	y
+6B5DFF	214		projectile 225 CPsSpellBallLightning? Render	n
+6B5ED5	378		projectile 205 CProjectileSpeakWithDead ctor	y
+6B604F	761		projectile 205 CProjectileSpeakWithDead Fire	y
+6B6348	1877		projectile 205 CProjectileSpeakWithDead AIUpdate	y
+6B6A9D	482		projectile 227 CPsSpellForceMissile ctor; projectile 281 CPsSpellForceMissile ctor	y
+6B6C7F	377		projectile 227 CPsSpellForceMissile Fire; projectile 281 CPsSpellForceMissile Fire	y
+6B70E1	1231		uses resrefs of CPsSpellForceMissile	n
+6B75B0	527		projectile 227 CPsSpellForceMissile AIUpdate; projectile 281 CPsSpellForceMissile AIUpdate	y
+6B77BF	296		projectile 229 CPsSpellShroudOfShadows ctor	y
+6B78E7	1731		projectile 229 CPsSpellShroudOfShadows Fire; uses resrefs of CPsSpellShroudOfShadows	y
+6B7FAA	1315		projectile 229 CPsSpellShroudOfShadows AIUpdate	y
+6B84CD	406		projectile 230 CPsSpellCloudKill ctor	y
+6B86C2	1374		projectile 230 CPsSpellCloudKill Fire	y
+6B8C20	4321		projectile 230 CPsSpellCloudKill AIUpdate; uses resrefs of CPsSpellCloudKill	y
+6B9DFE	656		projectile 231 CPsSpellHowlOfPandemonium ctor	y
+6BA08E	519		projectile 231 CPsSpellHowlOfPandemonium Fire	y
+6BA295	2536		projectile 231 CPsSpellHowlOfPandemonium AIUpdate; uses resrefs of CPsSpellHowlOfPandemonium	y
+6BAC7D	846		projectile 232 CPsSpellBladestorm ctor	y
+6BB0A5	1613		projectile 232 CPsSpellBladestorm Fire	y
+6BB6F2	7115		projectile 232 CPsSpellBladestorm AIUpdate; uses resrefs of CPsSpellBladestorm; uses resrefs of CPsSpellDesertHell	y
+6BD2BD	142		projectile 232 CPsSpellBladestorm Render	n
+6BD34B	811		projectile 239 CPsSpellElysiumsTears ctor; projectile 280  ctor; uses resrefs of CPsSpellElysiumsTears	y
+6BD6D5	1666		projectile 239 CPsSpellElysiumsTears AIUpdate; projectile 280  AIUpdate	y
+6BDD57	227		projectile 239 CPsSpellElysiumsTears Fire; projectile 280  Fire	y
+6BDF3C	2664		uses resrefs of CPSTSpellSpiritualHammer; uses resrefs of CPsSpellAxOfTorment; uses resrefs of CPsSpellElysiumsTearsMeteor; uses resrefs of CPsSpellEmbalming; uses resrefs of CPsSpellPacify; uses resrefs of CPsSpellPowerWordKill; uses resrefs of CPsSpellVampiricTouch	y
+6BE9A4	811		projectile 233 CPsSpellElysiumsFires ctor; uses resrefs of CPsSpellElysiumsFires	y
+6BED2E	227		projectile 233 CPsSpellElysiumsFires Fire	y
+6BEE11	1740		projectile 233 CPsSpellElysiumsFires AIUpdate	y
+6BFEC3	671		projectile 234 CPsSpellAbyssalFury ctor	y
+6C0210	232		projectile 234 CPsSpellAbyssalFury Fire	y
+6C02F8	10944		projectile 234 CPsSpellAbyssalFury AIUpdate; uses resrefs of CPsSpellAbyssalFury	y
+6C2DB8	1766		projectile 234 CPsSpellAbyssalFury Render	n
+6C35A3	329		projectile 237 CPsSpellHoldUndead ctor; uses resrefs of CPsSpellHoldUndead	y
+6C3A8C	482		projectile 240 CPsSpellTashasLaughter ctor; uses resrefs of CPsSpellCloudKill; uses resrefs of CPsSpellRuneOfTorment; uses resrefs of CPsSpellTashasLaughter	y
+6C3EB9	235		projectile 238 CPsSpellMissileOfPatience ctor	y
+6C3FA4	4595		projectile 238 CPsSpellMissileOfPatience Fire; uses resrefs of CPsSpellCelestialHost; uses resrefs of CPsSpellMissileOfPatience	y
+6C5197	1034		projectile 238 CPsSpellMissileOfPatience AIUpdate	y
+6C55A1	529		uses resrefs of CPsSpellMissileOfPatience	n
+6C5975	322		projectile 241 CPsSpellAxOfTorment ctor	y
+6C5AB7	499		projectile 241 CPsSpellAxOfTorment Fire	y
+6C5CAA	3578		projectile 241 CPsSpellAxOfTorment AIUpdate; uses resrefs of CPsSpellAxOfTorment	y
+6C6AA4	707		projectile 244 CPsSpellDesertHell ctor	y
+6C6E12	199		projectile 244 CPsSpellDesertHell Fire	y
+6C6ED9	4410		projectile 244 CPsSpellDesertHell AIUpdate; uses resrefs of CPsSpellBladestorm; uses resrefs of CPsSpellDesertHell	y
+6C8013	142		projectile 244 CPsSpellDesertHell Render	n
+6C80A1	206		projectile 248 CPsSpellStygianIceStorm ctor	y
+6C816F	238		projectile 248 CPsSpellStygianIceStorm Fire	y
+6C825D	2303		projectile 248 CPsSpellStygianIceStorm AIUpdate; uses resrefs of CPsSpellStygianIceStorm	y
+6C8B5C	292		projectile 252 CPsSpellPowerWordBlind ctor; uses resrefs of CPsSpellPowerWordBlind	y
+6C8C80	78		projectile 252 CPsSpellPowerWordBlind Fire	y
+6C8CCE	1964		projectile 252 CPsSpellPowerWordBlind AIUpdate	y
+6C947A	228		projectile 265 CPsSpellPowerWordKill ctor	y
+6C955E	258		projectile 265 CPsSpellPowerWordKill Fire	y
+6C9660	1446		projectile 265 CPsSpellPowerWordKill AIUpdate	y
+6C9C06	116		projectile 266 CPsSpellGlobeOfInvulnerability ctor	y
+6C9C7A	172		projectile 266 CPsSpellGlobeOfInvulnerability Fire	y
+6C9D26	1119		projectile 266 CPsSpellGlobeOfInvulnerability AIUpdate; uses resrefs of CPsSpellGlobeOfInvulnerability	y
+6CA185	1163		projectile 249 CPsSpellMeteorStormBombardment ctor; uses resrefs of CPsSpellMeteorStormBombardment	y
+6CA66F	302		projectile 249 CPsSpellMeteorStormBombardment Fire	y
+6CA79D	5383		projectile 249 CPsSpellMeteorStormBombardment AIUpdate; uses resrefs of CPsSpellMeteorStormBombardment	y
+6CC30B	944		projectile 246 CPsSpellChainLightningStorm ctor	y
+6CC71A	2931		projectile 246 CPsSpellChainLightningStorm Fire; uses resrefs of CPsSpellChainLightningStorm	y
+6CD28D	5062		projectile 246 CPsSpellChainLightningStorm AIUpdate; uses resrefs of CPSTSpellCallLightning; uses resrefs of CPsSpellChainLightningStorm; uses resrefs of CPsSpellDeathBolt	y
+6CE653	134		projectile 246 CPsSpellChainLightningStorm Render	n
+6CE6D9	368		projectile 250 CPsSpellDeathBolt ctor	y
+6CE849	127		projectile 250 CPsSpellDeathBolt Fire	y
+6CE927	7899		projectile 250 CPsSpellDeathBolt AIUpdate; uses resrefs of CPsSpellDeathBolt	y
+6D0802	85		projectile 250 CPsSpellDeathBolt Render	n
+6D0857	503		projectile 255 CPsSpellRuneOfTorment ctor; uses resrefs of CPsSpellTashasLaughter	y
+6D0A6A	118		projectile 255 CPsSpellRuneOfTorment Fire	y
+6D0AE0	4718		projectile 255 CPsSpellRuneOfTorment AIUpdate; uses resrefs of CPsSpellRuneOfTorment	y
+6D1D4E	195		projectile 260 CPSTSpellSpiritualHammer ctor	y
+6D1E11	321		projectile 260 CPSTSpellSpiritualHammer Fire	y
+6D1F52	1792		projectile 260 CPSTSpellSpiritualHammer AIUpdate; uses resrefs of CPSTSpellSpiritualHammer	y
+6D2652	144		projectile 253 CPSTSpellMechanusCannon ctor	y
+6D26FE	231		projectile 253 CPSTSpellMechanusCannon Fire	y
+6D27E5	2560		projectile 253 CPSTSpellMechanusCannon AIUpdate; uses resrefs of CPSTSpellMechanusCannon	y
+6D31E5	121		projectile 268  ctor	y
+6D325E	1295		projectile 268  Fire	y
+6D376D	438		projectile 268  AIUpdate	y
+6D3923	655		projectile 245 CPsSpellFireAndIce ctor; uses resrefs of CPsSpellFireAndIce	y
+6D3BCE	641		projectile 245 CPsSpellFireAndIce Fire	y
+6D3E4F	4638		projectile 245 CPsSpellFireAndIce AIUpdate; uses resrefs of CPsSpellFireAndIce	y
+6D506D	252		projectile 270 CPsSpellConflagration ctor	y
+6D51C8	453		projectile 270 CPsSpellConflagration Fire	y
+6D538D	6977		projectile 270 CPsSpellConflagration AIUpdate; uses resrefs of CPsSpellConflagration	y
+6D6ECE	701		projectile 251 CPsSpellIgnusFury ctor	y
+6D71A7	316		projectile 251 CPsSpellIgnusFury Fire	y
+6D72E3	2664		projectile 251 CPsSpellIgnusFury AIUpdate; uses resrefs of CPsSpellIgnusFury	y
+6D7D4B	1124		projectile 254 CPsSpellCelestialHost ctor	y
+6D8226	431		projectile 254 CPsSpellCelestialHost Fire	y
+6D83D5	23786		projectile 254 CPsSpellCelestialHost AIUpdate; uses resrefs of CPsSpellCelestialHost; uses resrefs of CPsSpellDeathBolt; uses resrefs of CPsSpellMissileOfPatience	y
+6DEB14	209		projectile 261 CPSTSpellCallLightning ctor; uses resrefs of CPSTSpellCallLightning	y
+6DEBE5	205		projectile 261 CPSTSpellCallLightning Fire	y
+6DECB2	1337		projectile 261 CPSTSpellCallLightning AIUpdate	y
+6DF340	585		projectile 289 CPsSpellEmbalming Fire	y
+6DF730	283		projectile 242 CPsSpellBlacksphere ctor	y
+6DF84B	467		projectile 242 CPsSpellBlacksphere Fire; uses resrefs of CPsSpellBlacksphere	y
+6DFA1E	1569		projectile 242 CPsSpellBlacksphere AIUpdate; uses resrefs of CPsSpellBlacksphere	y
+6E01C0	19		projectile 206  AIUpdate; projectile 273  AIUpdate; projectile 282  AIUpdate	y
+72F6CC	22289	ObjCreature	uses resrefs of CPsSpellConflagration	y
+74CA56	2723		uses resrefs of CPsSpellGlobeOfInvulnerability	n
+76A7EA	10968	ObjCreatureAI	creature action dispatcher	y
+76D820	387		action 27 ProtectPoint (sprite case 22)	n
+778529	6849		creature trigger dispatcher	y
+77AEAB	1144		action 11 EquipItem (sprite case 8); action 14 GetItem (sprite case 11); action 47 Formation (sprite case 32)	n
+77ED03	61		action 207 SavePlace (sprite case 88)	n
+77FE4D	4848		action 134 AttackReevaluate (sprite case 65)	n
+785E47	3722		MoveToObjectEx timeout	y
+786E84	2990		action 303 TimedMoveToPoint (sprite case 107)	n
+78A96D	9392		action 95 SpellPoint (sprite case 46)	n
+78CE31	1275		action 38 Swing (sprite case 29)	n
+78D354	471		action 39 Recoil (sprite case 30)	n
+78D52B	380		action 218 PlaySequence (sprite case 91)	n
+78D78D	501		action 263 PlaySequenceTimed (sprite case 102)	n
+78DD17	456		action 40 PlayDead (sprite case 31)	n
+78FAB3	52		action 48 JumpToPoint (sprite case 33)	n
+790813	322		action 84 Face (sprite case 36)	n
+790955	214		action 215 FaceObject (sprite case 90)	n
+792560	5689		action 97 UseItemPoint (sprite case 48)	n
+79665A	291		action 88 Leader (sprite case 40)	n
+7972FE	6622	ObjCreatureAI	action 110 LeaveAreaLUA (sprite case 58)	y
+798CDC	1670	ObjCreatureAI	action 91 LeaveArea (sprite case 42)	n
+79F434	75		action 92 SelectWeaponAbility (sprite case 43)	n
+79FB29	584		action 17 Help (sprite case 13)	n
+79FD71	1252		action 96 Rest (sprite case 47)	n
+7A0255	462		action 10 Enemy (sprite case 7)	n
+7A0423	3370		action 19 JoinParty (sprite case 15)	y
+7A12F0	3631		action 21 LeaveParty (sprite case 17)	n
+7A2151	1572	ObjCreatureAI	action 100 RandomFly (sprite case 50)	n
+7A5DF8	507		action 138 SetDialog (sprite case 68)	n
+7A677D	49		action 9 DropItem (sprite case 6)	n
+7A68DD	2406		action 119 DropInventory (sprite case 61)	n
+7A7243	546		action 107 MoveToOffset (sprite case 56)	n
+7A7465	1162		action 112 UseContainer (sprite case 60)	n
+7A8C9E	17		action 13 FindTraps (sprite case 10)	n
+7A8CAF	2106		action 18 Hide (sprite case 14)	n
+7A94FC	201		action 262 ChangeColor (sprite case 101)	n
+7A95C5	573		action 264 BuyStuff (sprite case 103)	n
+7A9802	769		action 24 Panic (sprite case 20)	n
+7AC56E	17		action 33 Turn (sprite case 26)	n
+7AC57F	1775		action 124 Berserk (sprite case 62)	n
+7AF6DE	190		action 147 RemoveSpell (sprite case 73)	n
+7B1EE7	358		action 149 EquipMostDamagingMelee (sprite case 75)	n
+7B328C	64		action 203 IncrementKillStat (sprite case 86)	n
+7CD354	9174		uses resrefs of CPsSpellAbyssalFury; uses resrefs of CPsSpellForceMissile; uses resrefs of CPsSpellHowlOfPandemonium; uses resrefs of CPsSpellPowerWordBlind; uses resrefs of CPsSpellStygianIceStorm	n
+81FD5A	148		action 6 ? (sprite case 4); action 201 SetGlobalTint (sprite case 85)	n
+89BC79	82		CString from literal	n

@@ -4,7 +4,7 @@
 #   python tools/parity/ida.py dec  ee   "CGameEffectDamage::ApplyEffect(CGameSprite *)$"   ($ = exact name)
 #   python tools/parity/ida.py dec  orig 4B245B 4B5DCF             decompile original functions by address (hex)
 #   python tools/parity/ida.py xrefs orig 4B245B                   who calls these addresses
-#   python tools/parity/ida.py vt   orig 8DE26C                    first 24 slots of a vtable (ee: address = vtable+16)
+#   python tools/parity/ida.py vt   orig 8DE26C                    first 24 slots of a vtable (VT_SLOTS=N for more; ee: address = vtable+16)
 #   python tools/parity/ida.py find ee   "HandleNamelessDeath"     search the function list (no IDA run)
 #   python tools/parity/ida.py str  orig "Fortress_Death"          search strings -> referencing functions (no IDA run)
 #   python tools/parity/ida.py show orig 4B245B                    print an already decompiled function
