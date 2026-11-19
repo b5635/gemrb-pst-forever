@@ -1,443 +1,401 @@
-# PST parity investigation: instructions for an agent
+# PST parity investigation: instructions for the agent (Sonnet)
 
-You are continuing a reverse-engineering audit. The goal is to find **every** place where GemRB (an open-source
-re-implementation of the Infinity Engine, in this repository) behaves differently from the real Planescape:
-Torment engine, and to write each difference down with proof. **You investigate and document. You do not fix
-anything.** Fixing comes later, from your notes.
+You continue a reverse-engineering audit of how GemRB (this repository) runs Planescape: Torment compared with
+the real engine. **You investigate and write things down. You do not fix anything.** Fixes come later, from
+your notes, and a stronger model (Opus) will spot-check your work. So write every claim in a form somebody
+can re-check in under a minute (section 5).
 
-Read this whole file before you start. Then read, in this order:
-1. `dev/parity/findings.md`: what is already known. Do not re-report it; extend it.
-2. `dev/parity/README.md`: tools and file layout.
-3. `PARITY_PLAN.md`: why the work is ordered as it is.
+**The goal, in order of importance:**
+1. **The game can be finished, and every quest and every dialogue works as in the original.** That means every
+   script action, trigger, object selector and dialogue rule PST uses behaves exactly as the original engine
+   does: same parameters, same results, same side effects on variables, items, XP, party, journal and areas.
+   This is **track A** below, and it must reach **100 % coverage**: no action or trigger the game uses may be
+   left with status `todo`.
+2. Combat rules that decide fights (turn-based combat is this fork's priority): track B.
+3. Everything else (spells' numbers, presentation): track C.
 
----
-
-## 0. The rules (do not break these)
-
-1. **Do not change engine code, game data or GemRB data files.** You only write under `dev/parity/` and, if a
-   new tool is needed, under `tools/parity/`. Nothing else. If you think something must be fixed, write it as
-   a finding.
-2. **Feel free to copy decompiled code into the repository.** Decompiled code (.re/**/dec/*.c) is a primary research and implementation reference for this project. Use it freely within the authorized project environment to understand, trace, analyze, and reproduce the original game's behavior. 
-3. **The original exe is the truth.** Ranking of sources, highest first:
-   1. Original `Torment.exe` (decompiled at `.re/orig/`). This is PST 1.1 with Fixpack and UB installed.
-   2. PST:EE `Torment64` (`.re/ee/`). It has real function names, so read it first to understand a feature,
-      but **Beamdog changed things**. Before you call something a GemRB bug, find the same logic in the
-      original. If you can't, mark the finding **S** (suspected) and say "EE only, not found in original yet".
-   3. IESDP (`iesdp-gh-pages/`, via `tools/parity/iesdp.py`): community notes. Useful hints, often
-      incomplete, sometimes wrong. Example: for opcode 186 IESDP says "0 = clear", but the original clears on
-      −1 and ignores 0. Never use IESDP alone as proof.
-   4. GemRB comments ("pst does X") are claims, not proof.
-4. **Every finding needs evidence** a person can check in under a minute: original address
-   (`sub_4B5DCF`), EE function name, GemRB `file:line`, the game files involved, and the numbers.
-5. **Be honest about certainty.** Use the status codes in section 5. "I could not find it" is a valid result;
-   write it down.
-6. **Do not run two IDA commands on the same database at the same time.** The `.i64` is locked while IDA has it
-   open. Run IDA commands one after another.
-7. **Do not commit** unless the person running you says so. If they do, commit only `dev/parity/` and
-   `tools/parity/` files.
+Read this whole file before you start. Then read `HANDOFF.md` (where things stand), `findings.md` (what is
+known: don't re-report it, extend it) and `README.md` (tools, file layout).
 
 ---
 
-## 1. Your toolbox
+## 0. Rules (do not break these)
 
-All commands are run from `D:\gemrb` in PowerShell or Git Bash. Python is `python`.
+1. **Only write under `dev/parity/` and `tools/parity/`.** Don't change engine code, GemRB data
+   (`gemrb/unhardcoded`, `gemrb/GUIScripts`), game files or the install in `D:\Games\GemRB`. If something
+   must be fixed, it's a finding.
+2. **Decompiled code stays in the git-ignored workspace.** The repo pushes to a public GitHub remote, and the
+   decompiled code belongs to Black Isle and Beamdog. You may read it, quote it and keep verbatim excerpts as
+   much as you like in **`.re/notes/`** (git-ignored; create it). In committed files (`dev/parity/*.md`,
+   `*.tsv`), describe behaviour in your own words: conditions, numbers, order of operations, plus short
+   identifiers (addresses, offsets, constants, resrefs, variable names) and line references into the
+   workspace (`.re/orig/dump/dec/4B245B.c:429`). No pasted C blocks.
+3. **The original exe is the truth.** Ranking, highest first:
+   1. Original `Torment.exe` 1.1 + Fixpack 4.13 + UB 4.12, decompiled in `.re/orig/`.
+   2. PST:EE `Torment64` (`.re/ee/`): real C++ names, read it first to understand a feature, but Beamdog
+      changed things. A difference seen only in EE is status **S**, never **V**.
+   3. IESDP (`tools/parity/iesdp.py`): hints, often wrong for PST (e.g. op 186 "0 = clear": the original clears
+      on −1). Never proof.
+   4. GemRB comments ("pst does X") are claims to check, not proof.
+4. **One IDA command at a time.** The `.i64` is locked while IDA runs. Never run two `ida.py dec/xrefs/vt`
+   calls in parallel, and never from parallel sub-agents. `find`, `str`, `show` don't start IDA and are safe.
+5. **Commit after each finished batch** (every 10–20 ledger rows or one sub-package), only files under
+   `dev/parity/` and `tools/parity/`, message `PST parity <track/WP>: <what>, findings <ids>`. Never commit
+   `.re/`. Never push. Never `git add -A`.
+6. **Never invent an address, line or number.** Every `sub_XXXXXX` you write must exist in `.re/orig/dump/dec/`
+   or `.re/orig/dump/funcs.txt`; every GemRB `file:line` must be one you opened this session (line numbers
+   drift: also give the function name). If you didn't read it, don't cite it.
 
-### 1.1 IDA helper: `tools/parity/ida.py`
+---
 
-| Command | What it does | Speed |
+## 1. Session start (every time)
+
+```bash
+cd /d/gemrb
+ls .re/orig/Torment.exe.i64 .re/ee/Torment64.i64 .re/orig/dump/strings.txt   # workspace present?
+git status --short dev/parity tools/parity                                    # leftovers from last session?
+python tools/parity/script_ledger.py                                          # rows left in track A
+```
+If the workspace is missing, stop and tell the person (README "Rebuilding everything", ~15 min of IDA).
+Then open `HANDOFF.md`, pick up the "Next" item, and keep `HANDOFF.md` current when you stop (section 8).
+
+Shell: the Bash tool is Git Bash (POSIX). PowerShell 5.1 has no `&&`. IDA calls take 1–5 minutes: give them a
+10-minute timeout, and batch several names/addresses into one `dec` call.
+
+---
+
+## 2. Toolbox
+
+All from `D:\gemrb`. Python is `python`.
+
+| Command | What | Cost |
 |---|---|---|
-| `python tools/parity/ida.py find ee "Nameless"` | Search EE function names (demangled), printing `address size name` | instant |
-| `python tools/parity/ida.py find orig "sub_4B5"` | Search original function names (mostly `sub_XXXXXX`) | instant |
-| `python tools/parity/ida.py str ee "Game_Over"` | Strings in the EE binary and the functions that use them | instant |
-| `python tools/parity/ida.py str orig "Game_Over"` | Same for the original. **The best way into the original** | instant |
-| `python tools/parity/ida.py dec ee "CPsSpellPacify::"` | Decompile every EE function whose name contains the text. End with `$` for an exact name | 1–3 min |
-| `python tools/parity/ida.py dec orig 4C61EB 4C66BE` | Decompile original functions by hex address | 1–3 min |
-| `python tools/parity/ida.py xrefs orig 4B245B` | Every caller of an address | 1–3 min |
-| `python tools/parity/ida.py vt orig 8DE26C` | First 24 entries of a vtable | 1–3 min |
-| `python tools/parity/ida.py show orig 4B245B` | Print a function that is already decompiled | instant |
+| `python tools/parity/case.py action <id>` | the original's handler case for an action (creature switch `sub_76A7EA` via `byte_76D476`, else base `sub_44B099`) | instant |
+| `python tools/parity/case.py trigger <hexid>` | the original's trigger case (`sub_453258`, `sub_778529`) | instant |
+| `python tools/parity/ida.py show orig <addr>` | print an already decompiled original function | instant |
+| `python tools/parity/ida.py find ee "CGameSprite::Swing"` | search EE function names (address, size, name) | instant |
+| `python tools/parity/ida.py find orig "sub_4B5"` | search original function names | instant |
+| `python tools/parity/ida.py str orig "Fortress_Death_Counter"` | strings in the original + functions using them: **the best way in** | instant |
+| `python tools/parity/ida.py dec orig 4C61EB 4C66BE` | decompile original functions | IDA |
+| `python tools/parity/ida.py dec ee "CGameDialog::"` | decompile EE functions whose name contains the text (`$` = exact end) | IDA |
+| `python tools/parity/ida.py xrefs orig 4B245B` | callers of an address | IDA |
+| `python tools/parity/ida.py vt orig 8DE26C` | vtable entries (`VT_SLOTS=N` for more) | IDA |
+| `python tools/parity/facts.py orig <addr>` | numbers, effects and calls in a function | instant |
+| `python tools/parity/dossier.py SPWIxxx` | everything on one spell | instant |
+| `python tools/parity/opuses.py 147 148 [--full]` | every use of an opcode in SPL/ITM headers and equipped effects (**not** SPL casting effects, see trap 9) | ~30 s |
+| `python tools/parity/iesdp.py action pst 22` / `trigger pst 0x4092` / `opcode pst 192` / `format spl_v1` | IESDP lookups | instant |
+| `python tools/parity/script_ledger.py` | rebuild `dev/parity/script_ledger.tsv`, keeping verdicts | instant |
+| `python tools/parity/export_maps.py` | refresh `dev/parity/maps/*.tsv` after new decompiles | ~10 s |
 
-Decompiled output goes to `.re/<game>/dump/dec/`. **Look there first.** About 640 EE files and 230 original
-files already exist (all effect handlers, all `CPsSpell*` classes, the action and trigger dispatchers, the
-PST rule functions). Use `ls .re/ee/dump/dec | grep -i <word>`.
-
-Batch several names or addresses into one `dec` call: each call costs an IDA start-up.
-
-### 1.2 Data reader: `tools/parity/pstres.py`
-
+Data access (original, EE and "what GemRB loads"):
 ```python
-import sys; sys.path.insert(0, r"D:\gemrb\tools\parity")
-import pstres
-o = pstres.orig()    # original game: override + bifs (Fixpack + UB)
-e = pstres.ee()      # PST:EE
-g = pstres.gemrb()   # what GemRB loads: gemrb/unhardcoded/pst, then shared, then the original game
-d = g.res("SPWI805", "spl")        # bytes, or None
-g.where("SPWI805", "spl")          # which folder/bif it comes from
-g.names("bcs")                     # every BCS resref
-pstres.text(o.res("action", "ids"))  # 2DA/IDS as text (decrypts if needed)
-o.string(1234)                     # dialog.tlk string
+import sys; sys.path.insert(0, r"D:\gemrb\tools\parity"); import pstres
+o, e, g = pstres.orig(), pstres.ee(), pstres.gemrb()
+o.res("DMORTE", "dlg"); g.where("BALDUR", "bcs"); o.names("bcs"); pstres.text(o.res("action", "ids")); o.string(1234)
 ```
+`tools/tb_gamedata.py` `GameData().spell("SPWI101")` parses SPL headers and effects.
 
-File formats (byte offsets of SPL, ITM, CRE, PRO, EFF and so on): `python tools/parity/iesdp.py format spl_v1`
-(names as in `iesdp-gh-pages/file_formats/ie_formats/`). There is also `tools/tb_gamedata.py`
-(`GameData().spell("SPWI805")` gives parsed headers and effects).
+**Look before you decompile.** ~420 original and ~645 EE functions are already in `.re/orig/dump/dec/` and
+`.re/ee/dump/dec/`. Maps: `dev/parity/maps/` (`actions.tsv`, `triggers.tsv`, `opcodes.tsv`, `projectiles.tsv`,
+`orig_index.tsv` = every original function whose role we know, `orig_strings.tsv`). After any new decompile,
+add what you learned to `maps/orig_index.tsv` via `export_maps.py` and the `ORIG` dict in `facts.py`.
 
-### 1.3 IESDP lookup: `tools/parity/iesdp.py`
+**Finding a feature in the original** (in this order): 1) a string it uses (`ida.py str orig`: resref, variable
+name, 2DA name, log text); 2) `.re/orig/dump/srcmap.txt`: original functions grouped by the source file named
+in their asserts (`CGameDialog`, `CStore`, `CKillStats`, `CRuleTables`, `CAIObjectType`, `CVisibility`,
+`CGameSpawning`, `CGameJournal`, `ObjCreature`, `CItem`, `CSpell`…); 3) the EE function's constants and call
+pattern, then the same constants in the original; 4) callers (`xrefs`).
 
-```
-python tools/parity/iesdp.py opcode pst 192
-python tools/parity/iesdp.py action pst 22
-python tools/parity/iesdp.py trigger pst 0x4092
-python tools/parity/iesdp.py grep pst "Embalm"
-```
-
-### 1.3a Maps (start here for "where is X")
-
-`dev/parity/maps/*.tsv` (see its README): opcode, action, trigger and projectile number → original function
-addresses; struct offsets; known-function index. Grep them first, then open the `.c` file they name. After you
-decompile something new, run `python tools/parity/export_maps.py`.
-
-### 1.4 Existing generated tables (read these, don't regenerate unless needed)
-
-- `dev/parity/opcodes.md`: every opcode PST data uses, GemRB function, EE class, original handler address, use count.
-- `dev/parity/spells.md`: the 36 hardcoded spells.
-- `dev/parity/scripting.md`: every action/trigger PST scripts use, with use counts and GemRB status.
-- `dev/parity/pst_functions.md`: every PST-only EE function, biggest first.
-- `.re/*.json`: raw data behind those tables (`orig_apply.json` = opcode → original handler address,
-  `opmap.json` = PST opcode → EE class, `fxspecial.json` = PST special cases per EE effect class,
-  `psbehav.json`, `gemext.json`, `scripts.json`, `orig_actions.json`, `orig_triggers.json`).
-
-### 1.5 GemRB source map
+**GemRB source map**
 
 | What | Where |
 |---|---|
-| Effect opcodes | `gemrb/plugins/FXOpcodes/FXOpcodes.cpp`, `gemrb/plugins/PSTOpcodes/PSTOpcodes.cpp`, `gemrb/core/EffectQueue.cpp` |
-| Which name each PST opcode number has | `gemrb/unhardcoded/pst/effects.ids` |
-| Script actions / triggers | `gemrb/core/GameScript/Actions.cpp`, `Triggers.cpp`, the tables in `GameScript.cpp` (`actionnames[]`, `triggernames[]`) |
-| Projectiles | `gemrb/core/Projectile.cpp`, `gemrb/plugins/PROImporter/PROImporter.cpp`, files in `gemrb/unhardcoded/pst/*.pro`, row → name in `gemrb/unhardcoded/pst/gemprjtl.ids` |
-| GemRB's helper spells for PST | `gemrb/unhardcoded/pst/*.spl` |
-| Creature rules (damage, death, saves, levels) | `gemrb/core/Scriptable/Actor.cpp` |
-| PST start-of-game / death / respawn | `gemrb/core/IniSpawn.cpp`, `gemrb/unhardcoded/pst/source/baldur.baf` |
-| PST GUI rules (level-up, records) | `gemrb/GUIScripts/pst/*.py` |
-| Feature switches for PST | search `PST_` in `gemrb/core/` (`GFFlags::PST_STATE_FLAGS` and others) |
-
-Use the Grep tool or `grep -rn` to find a function. Always quote GemRB as `path:line`.
-
----
-
-## 2. How to read decompiled code (important, read twice)
-
-### 2.1 The two binaries are different
-
-- **Original:** 32-bit MSVC. Methods are `__thiscall`: `this` is the object, `a2` is usually the target creature.
-  Fields appear as `*(_DWORD *)(this + 12)` (byte offset) or `this[3]` (index × 4 bytes: `this[3]` = byte 12).
-- **EE:** 64-bit GCC with names. Field offsets are **different** from the original (pointers are 8 bytes,
-  structures were changed). **Never reuse an offset from EE in the original, or the other way round.** Match
-  by logic and constants instead.
-
-### 2.2 Known offsets (original exe)
-
-Effect object (`this` inside an `ApplyEffect`):
-
-| Byte | Meaning |
-|---|---|
-| +8 (`this[2]`) | parameter1 |
-| +12 (`this[3]`) | parameter2 |
-| +16 | timing mode (word) |
-| +18 | duration |
-| +24 (`this + 6` as `_DWORD*`) | resource (8 chars) |
-| `this[17]` (+68) | "done/remove" flag that ApplyEffect sets (1 = finished) |
-| `this[49]` | "first time" flag (ApplyEffect often does work only when it is set, then clears it) |
-
-Creature (`a2`):
-
-| Byte | Meaning |
-|---|---|
-| +84 | global object id |
-| +1172 | script name (death variable) |
-| +1288 | base state bits (`STATE_*`) |
-| +1292 | current HP (signed 16-bit; ≤ −10 is "dead") |
-| +3204 | derived state bits |
-| +7146/+7150 | animation object |
-
-Confirm any new offset in at least two places before you rely on it, and add it to this table in your notes.
-
-### 2.3 Known offsets (EE) that helped
-
-Creature: `+1396` current HP, `+1398` max HP, `+4072` derived stats (`CDerivedStats`), `+4073 & 8` = probably
-the "dead" state bit (skipped by every targeting loop), `+18512/+18520` object type / EA. These are EE offsets only.
-
-### 2.3a Before you begin
-
-Check that the workspace exists: `ls .re/orig/Torment.exe.i64 .re/ee/Torment64.i64 .re/ee/dump/strings.txt`.
-If any file is missing, stop and tell the person: section "Rebuilding everything" in `dev/parity/README.md`
-recreates them (about 15 minutes of IDA time).
-
-### 2.4 Finding the original equivalent of an EE function
-
-Try these in order:
-1. **Strings.** Pick a literal the EE function uses (a resref like `"SPWI805"`, a variable like
-   `"Fortress_Death_Counter"`, a format string) and run `ida.py str orig "<literal>"`. The third column names the
-   original function.
-2. **Source-file asserts.** `.re/orig/dump/srcmap.txt` maps original functions to the `.cpp` file their
-   assert strings mention (`CGameEffect`, `ObjCreature`, `CProjectile`, …). EE class names map onto those files.
-3. **Dispatchers.** These are already identified:
-   - Effects: `sub_4A5C21` builds the effect object for opcode N. Its `ApplyEffect` is `.re/orig_apply.json[N]`.
-   - Projectiles and hardcoded spells: `sub_559A5D` (switch on projectile number).
-   - Actions: `sub_76A7EA` (creature level; `byte_76D476[action id]` gives the case number; id 313 is case 57;
-     ids above 0x12F and unhandled cases fall through to `sub_44B099`, the base switch).
-   - Triggers: `sub_453258` (base) and `sub_778529` (creature level).
-   - Script compiler/parser: `sub_41D7BC` (not a dispatcher, ignore).
-4. **Callers.** `ida.py xrefs orig <addr>` on a function you know, then walk up or down.
-5. **Constants.** Distinctive numbers (241, 160, 0x800, 100-HP pools) appear in both binaries.
-
-### 2.5 Reading tips
-
-- Hex-Rays names are random (`v23`). Rename them in your head and in your notes ("v28 = HP pool").
-- `rand() % 241 + 160` means 160–400. Write ranges, not formulas.
-- `sub_89BC79("Name")` / `sub_463F03(&dword_96EDC8, …)` in the original: build a CString and look up a GLOBAL
-  variable; `+40` on the result is the variable's value.
-- `CGameEffect::ClearItemEffect(v, 74)` in EE: start building an effect with opcode 74. The lines after it fill
-  its fields; `CGameEffect::DecodeEffect` creates it, and a virtual call at `+240` on the creature adds it.
-- Ticks: 15 ticks = 1 second (AI updates). A round is 75 ticks (5 s) in this fork.
-- **Vtables (original):** slot 2 is `ApplyEffect`. A 5-line ApplyEffect that only sets `this[17] = 1` does
-  nothing. Check the other slots against the defaults before saying "no-op" (see findings section 7).
+| Action / trigger implementations | `gemrb/core/GameScript/Actions.cpp`, `Triggers.cpp`, helpers in `GSUtils.cpp` |
+| Name → function binding | `actionnames[]` / `triggernames[]` / `objectnames[]` in `GameScript.cpp`; PST's `action.ids`/`trigger.ids` names choose the function; GemRB's own `gemact.ids` / `gemtrig.ids` in `gemrb/unhardcoded/{pst,shared}` add or override ids |
+| Object selectors and matching | `GameScript/Objects.cpp`, `Matching.cpp`, `Targets.cpp` |
+| BCS / dialogue text parsing | `GameScript/ParseBCS.cpp`, `ParseText.cpp`, `GameScript.cpp` (`GenerateAction`, `GenerateTrigger`) |
+| Script running (levels, responses, Continue, blocking) | `GameScript.cpp` (`Update`, `EvaluateBlock`, `ExecuteResponse`), `Scriptable/Scriptable.cpp` (action queue, `ProcessActions`) |
+| Variables (GLOBAL, LOCALS, area, KAPUTZ) | `GSUtils.cpp` `SetVariable`/`CheckVariable` (KAPUTZ ~`:1797`) |
+| Dialogue | `core/DialogHandler.cpp`, `core/Dialog.cpp`, `plugins/DLGImporter/` |
+| Stores, items, inventory | `core/Store.cpp`, `Item.cpp`, `Inventory.cpp`, `GUIScripts/pst/GUISTORE.py` |
+| Spawns (area INI files) | `core/IniSpawn.cpp` |
+| GemRB's invented PST master script | `gemrb/unhardcoded/pst/source/baldur.baf` (compiled `BALDUR.bcs`, not in the original game) |
+| Combat | `core/Scriptable/Actor.cpp` (`GetToHit` ~7196, `PerformAttack` ~7706, `Damage` ~4392, `Die` ~5725, `GetSavingThrow` ~3308, `LuckyRoll` ~11312), `CombatInfo.cpp`; turn-based layer `core/TurnBasedCombat/` |
+| Effects | `plugins/FXOpcodes/FXOpcodes.cpp`, `plugins/PSTOpcodes/PSTOpcodes.cpp`, `core/EffectQueue.cpp` |
+| PST switches | `grep -rn "GFFlags::PST\|HAS_KAPUTZ\|pstflags" gemrb/core gemrb/plugins` |
 
 ---
 
-## 3. Work packages
+## 3. Reading decompiled code (read twice)
 
-Do them in this order. Each one has its own output file, so the packages can't collide. Inside a package,
-work in the order given (most important first). After every 5–10 items, save your file. Don't keep findings
-only in your head.
-
-### WP1: per-spell expectations (highest priority)
-
-**Why:** the spell test (`tools/tb_spell_suite.py`) only checks that *something* happened. It needs to know what
-*should* happen.
-
-**Items:** the 36 `CPsSpell*` classes listed in `dev/parity/spells.md`, plus `CPSTSpellMechanusCannon`,
-`CPSTSpellSpiritualHammer` and `CPSTSpellCallLightning`.
-Order: Abyssal Fury, Power Word Blind, Power Word Kill, Ice Knife, Bladestorm, Celestial Host, Rune of Torment,
-Blacksphere, Missile of Patience, Meteor Storm Bombardment, Stygian Ice Storm, Howl of Pandemonium, Pacify,
-Hold Undead, Fire and Ice, Ignus' Fury, Swarm Curse, Chain Lightning Storm, Death Bolt, Desert Hell,
-Conflagration, Elysium's Fires, Elysium's Tears (+Meteor), Cloud Kill, Vampiric Touch, Tasha's, Shroud of
-Shadows, Globe of Invulnerability, Embalming, Strength, Improved Strength, Power of One, Force Missile,
-Ball Lightning, Ax of Torment, then the three `CPSTSpell*`.
-
-**Steps for one spell:**
-1. Decompiled files: `ls .re/ee/dump/dec | grep CPsSpell<Name>`. Usually there are a constructor, `Fire`,
-   `AIUpdate`, sometimes `OnArrival`, `TransferEffects`, `CheckForTargets`, `Render`.
-2. Read the constructor (resources, sizes, flags), then `Fire` (what happens at launch), then `AIUpdate`
-   (the state machine: what happens each tick, when it hits, when it ends).
-3. Read the spell's own SPL in the original (`tb_gamedata.GameData().spell("SPWIxxx")`): effects, target type,
-   range, projectile number.
-4. Answer these questions. Every one needs an answer, or "not in code":
-   - **Targets:** who can be hit? (radius in pixels/feet, allies? caster? undead only? sorted by HP? how many?)
-   - **Roll:** attack roll (`ProjectileRollToHit`), saving throw (which type), magic resistance?
-   - **Effects in the SPL** that are applied (all, or only some headers? per target or once?)
-   - **Effects created in code:** opcode, parameter1/2, duration (ticks), random ranges.
-   - **Damage:** dice, scaling (caster level, `CheckForIncreasedSpellLevel`), damage type.
-   - **Timing:** when the damage lands relative to cast start (ticks), how long the whole spell runs.
-   - **Side effects:** creatures moved, screen freeze, background change, flashes, sounds, script triggers
-     (`SendHitTrigger`).
-   - **Visuals and sounds:** resrefs played and in which order (a short list is enough).
-5. Find the same spell in the original: `ida.py str orig "<a resref from step 1>"` and confirm at least the
-   targeting rule and the numbers. Write `orig: sub_XXXXXX` or `orig: not found`.
-6. Compare with GemRB: the `.pro` (`gemrb/unhardcoded/pst/<name>.pro`; its row in `gemprjtl.ids` is the SPL
-   projectile number minus 1). Read its helper spells (`failureSpell` at offset 0x44 and `successSpell` at
-   0x4C of the PRO, 8-char resrefs) and any GemRB code special-casing the spell
-   (`grep -rn "<resref>\|<projectile id>" gemrb/`). List each question in step 4 where GemRB differs.
-7. Write the entry in **`dev/parity/spell_expect.md`** (human-readable, template in section 4.2) **and** in
-   **`dev/parity/spell_expect.json`** (machine-readable for the suite, schema in 4.3).
-
-### WP2: effect opcodes side by side
-
-**Items:** every row of `dev/parity/opcodes.md`. Order: PST-only first (186–212, 82, 100, 138, 146–148), then
-by use count (12, 187, 146, 174, 54, 0, 191, 147, …), then the rest.
-**Output:** `dev/parity/wp2_opcodes.md`, one entry per opcode (template 4.1, shortened).
-
-Steps for opcode N:
-1. Original: `python tools/parity/ida.py show orig <orig_apply.json[N]>`. If it is tiny, check its vtable for
-   other overridden slots (`ida.py vt orig <vtable from orig_opvt.json[N]>`).
-2. EE: the class from `opcodes.md` → `ls .re/ee/dump/dec | grep <Class>_`; read `ApplyEffect`, `OnAddSpecific`,
-   `CheckSave`, `OnRemove`.
-3. GemRB: the `fx_` function from `opcodes.md` (grep `^int fx_name` in the plugins).
-4. Compare: parameter meanings (every value of parameter2 the PST data uses: see `.re/opcodes.json` `p2`),
-   timing handling, caps and limits, saving throws, special resrefs, plane checks, spell states, sub-effects,
-   what happens on removal.
-5. Verdict: **match**, **differs** (say exactly how), **missing**, or **not checked**.
-
-### WP3: PST branches in generic effects
-
-**Items:** the table in findings section 8 plus every class in `.re/fxspecial.json` with `ENGINE_MODE == 3` or a
-non-empty `resrefs`/`planes`/`spellstates`. Read only the branch and compare it with GemRB.
-**Output:** append to `dev/parity/wp2_opcodes.md` under a heading "PST branches".
-
-### WP4: script actions
-
-**Items:** `dev/parity/scripting.md` "All actions used" (147). Order: the remaining Ex actions first
-(`RunAwayFromEx` NoAttacks, `DeactivateEx` RenderMode, `FullHealEx`, `StartCutSceneEx`), then by use count.
-**Output:** `dev/parity/wp4_actions.md`.
-
-Steps for action id A:
-1. Signature and documentation: `python tools/parity/iesdp.py action pst A`.
-2. Original handler: if `A <= 0x12F`, the case number is `byte_76D476[A]` (read it with `tools/parity/pe.py`:
-   `PE(r".re\orig\Torment.exe").bytes(0x76D476 + A, 1)`). Find `case <n>:` in `.re/orig/dump/dec/76A7EA.c`.
-   If that case is `goto LABEL_214` or A > 0x12F, look for `case A:` in `.re/orig/dump/dec/44B099.c`. Handlers
-   often call one `sub_`: decompile it.
-3. Action parameters on the creature's current action (original): the current action id is the word at
-   creature +962, int0 is at +1132 (`this[283]`) and int1 at +1136 (seen in `sub_785E47`, `sub_7A0423`, case 72).
-   int2 is probably +1140: confirm it before you rely on it. Strings and objects are stored elsewhere: find
-   them by reading.
-4. GemRB: `GameScript::<Name>` in `gemrb/core/GameScript/Actions.cpp`.
-5. Compare: parameters used, blocking or instant, what it does when the target is missing or dead, side
-   effects (variables, journal, XP, party changes), PST-only behaviour.
-
-### WP5: triggers
-
-**Items:** `scripting.md` triggers (102). Original: `case <id>:` in `453258.c` or `778529.c`. GemRB:
-`GameScript::<Name>` in `Triggers.cpp`. Same comparison style. **Output:** `dev/parity/wp5_triggers.md`.
-Event triggers (ids below 0x4000, like `AttackedBy` and `Died`) are set elsewhere: find where the original
-sets them (`str orig` on the trigger name rarely works; look for callers that write trigger ids).
-
-### WP6: PST rule functions
-
-**Items:** `dev/parity/pst_functions.md` (140), biggest first. Skip pure UI, cheats and rendering, and say
-that you skipped them. Most important: `HandleNamelessDeath`, `GetNamelessRevivalReaction`,
-`HandleNamelessBonuses`, `AssignFighterProficienciesOnLevelUp`, `SpellPST`, `SpellPointPST`, `ForceSpellPST`,
-`ForceSpellPointPST`, `MultiFireSpell`, `IsProjectileTargetAffected`, `ProjectileRollToHit`, `DoesTrapHitTarget`,
-`EffectDamageDecodeHitSound`, `PSTCanRestParty`, `IsSpriteInDark`, `SetGameFreeze`, `PlanescapeLeaveAreaName`,
-`AreaFirstAIUpdate`, `IsWorldMapTrigger`, `CacheNamelessFactionFlags`, `LetMorteBeCreepy`, `GetGraceRingJoke`,
-`SetNamelessClass`, `HandleTormentNPCs`.
-**Output:** `dev/parity/wp6_rules.md`. For each: what it does, where the original has it, what GemRB does
-(name the file), verdict.
-
-### WP7: rule tables and formulas
-
-Compare GemRB's PST tables (`gemrb/unhardcoded/pst/*.2da`) and hardcoded formulas with the original:
-XP per level, HP per level, THAC0 per level, saving throws per level, thief skill base values, weapon
-proficiency limits, ability modifiers (STR to-hit/damage, DEX AC/missile, CON HP, INT/WIS spell slots), lore,
-regeneration, rest healing, encumbrance, movement speed. Find each in the original (the 2DA it reads, or the
-constant in code). The tables EE moved out of the exe (`XPLIST`, `XPBONUS`, `HPCLASS`, `CLSWPBON`,
-`ABCLSMOD`, `SPLPROT`, `NUMWSLOT`, `ITEMEXCL`, `PSTCHAR`, `THIEFSKL`, `THIEFSCL`) are hints only.
-**Output:** `dev/parity/wp7_tables.md`, with a value-by-value diff where they differ.
-
-### WP8: GemRB's own PST hacks
-
-`grep -rn -i "pst" gemrb/core gemrb/plugins --include=*.cpp` plus `GFFlags::PST_` and `HasFeature`. Every
-PST-specific branch in GemRB is a claim about the original: check each against the exe.
-**Output:** `dev/parity/wp8_gemrb_pst_code.md`.
-
-### WP9: EE data changes (lowest priority)
-
-`.re/opmap.json` → `changed` lists 734 SPL/ITM files whose effects differ in EE. Sample 50, sort them into
-*bug fix*, *rebalance* and *EE engine change*, and estimate the totals. **Output:** `dev/parity/wp9_ee_data.md`.
+- **Original:** 32-bit MSVC, `__thiscall`. Check the declared type before reading an offset: on `int a1` or
+  `char *a1`, `a1 + 84` is **byte** 84; on `_DWORD *a1`, `a1[21]` is byte 84 (index × 4); on `_WORD *`, × 2.
+  Getting this wrong is the most common mistake.
+- **EE:** 64-bit GCC, different struct layouts. **Never carry an offset between the two binaries.** Match by
+  logic and constants.
+- Watch casts: `(char)`, `(__int16)`, `(unsigned __int8)` change signedness and the result. `rand() % 241 + 160`
+  is 160–400: write ranges.
+- `sub_89BC79("Name")` / `sub_463F03(&dword_96EDC8, …)` build a CString and look up a GLOBAL variable; `+40` on
+  the result is its value.
+- Ticks: 15 per second. Effect durations in data are **seconds**. A round is 75 ticks (5 s) in this fork.
+- A tiny ApplyEffect that only sets `this[17] = 1` does nothing *in slot 2*: check the other vtable slots before
+  writing "no-op".
+- Known struct offsets: `maps/README.md` (effect object, creature, projectile) and HANDOFF "Facts". Confirm any
+  new offset in two functions before relying on it, then add it to `maps/README.md`.
+- Creature action fields (original): current action id word `+962`, int0 `+1132`, int1 `+1136`, int2 `+1140`
+  (int2 unconfirmed). Strings and objects of the current action: find them by reading; write down where.
 
 ---
 
-## 4. Output formats
+## 4. The work: tracks and packages
 
-### 4.1 A finding (all WP files)
+Work **track A to completion first.** Within a package, go most-used first. Save the output file every 5–10
+items. Each package lists its *done* condition.
+
+### Track A: scripts and dialogue (top priority, must reach 100 %)
+
+**What is already known (round 6 check, 2026-11-18):** GemRB loads the original's 2,228 BCS, 814 DLG, 54 IDS,
+183 INI and 208 ARE files **byte-identical** (no override shadows them). So the risk is entirely in how GemRB
+*interprets* them, plus one file GemRB invented: `BALDUR.bcs` (64 blocks, `baldur.baf`), which stands in for
+logic the original keeps in its code. The dialogues hold 5,637 distinct trigger texts and 4,011 action texts,
+compiled from text at run time by both engines; every name in them exists in PST's `action.ids`/`trigger.ids`.
+
+**The ledger:** `dev/parity/script_ledger.tsv`, one row per action (147), trigger (75), event trigger (24) and
+BALDUR block (64) the game uses, with use counts. Every row ends with a `status` (P / V / S / ? as in section 5),
+the `finding` id or `-`, `by` = `sonnet`, and a `note` of ≤ 1 line. Track A is done when no row says `todo`
+and every `?` says what blocked it. Rerun `script_ledger.py` after adding rows by hand: it keeps verdicts.
+
+#### A1: actions (147, `wp4_actions.md`)
+Done so far: the Ex actions, RestParty, IncrementGlobalOnce, Enemy (ledger rows marked `by opus`). Do the rest
+by use count. For action id N:
+1. `python tools/parity/iesdp.py action pst N` (signature), `python tools/parity/case.py action N` (original
+   case). If the case calls a `sub_`, read it (decompile if missing). Follow it until you know every effect.
+2. GemRB: which function the **name** in PST's `action.ids` binds to (`actionnames[]` in `GameScript.cpp`; mind
+   aliases: `SetCorpseEnabled` → `AmbientActivate`, `SetAnimState` → `PlaySequence`, `GiveExperience` →
+   `AddXPObject`, `AddexperienceParty` lower-case `e`, `JoinPartyEX` in DLG text). Then read that function and
+   every helper it calls.
+3. Answer **every** question below, in the entry, with numbers:
+   - **Parameters:** which of int0/int1/int2, point, strings, objects each engine reads; defaults when absent.
+   - **Target resolution:** what if the object is missing, dead, not in the area, in the party, or several match?
+   - **Blocking:** instant or queued; when does it finish; can it be interrupted; what does it do on failure
+     (abort the queue, skip, retry forever)? A queued action that never finishes **hangs a cutscene**: sev 1.
+   - **State it changes:** variables (scope, created or not), items (stacking, charges, identified flag, where
+     created when inventory is full), gold, XP (who gets it, split or not, level-up), party membership,
+     journal, alignment/faction, area/door/container/trap state, dialogue file, script slots, death variables.
+   - **PST-only behaviour** in either engine.
+   - **Cutscene behaviour:** inside `StartCutSceneMode`/`CutSceneId`, does it behave differently?
+4. Verdict; ledger row; next.
+
+Priority hints (gameplay-breaking risk): anything that **gives or takes** items, gold or XP; party joins and
+leaves; `ChangeAIScript`/`ForceAIScript`/`SetDialog`/`ChangeDialog` (which slot, does it reset?);
+`CreateCreature*` (where it appears, what if blocked, the script name / death variable it gets);
+`TeleportParty`, `EscapeArea*`, `EnablePortalTravel`, `ActivatePortalCursor`, `LeaveAreaLUA`, `QuitGame`
+(game endings); `StartCutScene*`, `CutSceneId`, `EndCutSceneMode`; timers (`StartTimer`, `StartRandomTimer`,
+`SetGlobalTimer`: **units**, seconds vs game time vs ticks); `Kill`, `Damage`, `DestroySelf`; `SetNamelessClass`,
+`SetNamelessDisguise`, `PermanentStatChange`, `IncrementProficiency`, `IncrementExtraProficiency`,
+`ChangeAlignment`, `SetFaction`; `GenerateModronMaze`, `FixEngineRoom`, `GeneratePartyMember`.
+
+#### A2: triggers (75, `wp5_triggers.md`)
+`case.py trigger <id>`, then GemRB `GameScript::<Name>` in `Triggers.cpp`. Compare: parameter use, comparison
+direction and equality (`GT` strict?), which object is tested when the object is missing (false? true?),
+dead creatures (do `See`, `Range`, `Exists`, `InParty`, `NearbyDialog` count the dead or the unconscious?),
+range units (feet, search-map cells or pixels), `See` rules (invisibility, line of sight, fog, sleeping),
+`NearbyDialog` (4,761 uses: what "nearby" means, which party members, conscious only?), `NumTimesTalkedTo*`
+(who increments it, when: at dialogue start or end, for which speaker), `Global*` with missing variables,
+`PartyHasItem`/`HasItem` (containers inside inventory, equipped slots, stacks), `CheckStat*` (PST stat numbers:
+`stats.ids` → GemRB's stat), `Class`/`ClassLevel*` for the Nameless One's class changes, `Alignment` masks,
+`Faction`/`Team` (PST-only object fields).
+
+#### A3: event triggers (24, also `wp5_triggers.md`)
+Ids below 0x4000 (`AttackedBy`, `Help`, `Die`, `OnCreation`, `WasInDialog`, `HarmlessEntered`, `Entered`,
+`Trigger`, `Vacant`, `TimerExpired`, `Opened`, `Died`, `NamelessBitTheDust`…). **`maps/triggers.tsv` says
+"none (always false)" for them: that is wrong for events.** They are raised by engine code into the creature's
+trigger list and only *matched* in the dispatcher. For each: find where the original raises it (look for code
+writing the trigger id constant, e.g. `0x25`, into a trigger object: start from `sub_453258`'s handling of
+the trigger list, then `xrefs` on the function that adds a trigger), what object it carries, how long it
+stays set (one script pass? until handled?), and compare with GemRB (`AddTrigger(TriggerEntry(trigger_...))`
+in `gemrb/core`). Pay attention to `Die`/`Died` (death scripts and death variables), `OnCreation` (once per
+creature, also after load?), `TimerExpired`, `WasInDialog`, `NamelessBitTheDust` (Nameless One's death).
+
+#### A4: object selectors (`wp5_objects.md`, add ledger rows `kind=object`)
+Scripts name targets with `object.ids` functions (`Myself`, `Protagonist`, `LastTalkedToBy`, `NearestEnemyOf`,
+`LastAttackerOf`, `Gabber`, `Player1..6`, …) and IDS matching on object fields (PST has extra fields:
+faction, team). 1) Extend a tool under `tools/parity/` that decodes every object in every BCS (`OB` blocks;
+format: `iesdp.py format bcs`; PST's object layout differs from BG: check it) and every object in DLG text,
+and counts the functions and fields used. 2) For each used function: original (`CAIObjectType`, srcmap) vs
+GemRB `Objects.cpp`/`Matching.cpp`: what it returns when nothing matches, whether the dead/party/invisible
+count, nearest by what distance. 3) IDS field matching rules (0 = any? EA ranges like `GOODCUTOFF`, `ENEMY`,
+`EVILCUTOFF`; PST's `Specifics`, `Faction`, `Team`).
+
+#### A5: the script engine (`wp_script_engine.md`)
+Read the original's script runner and compare it with `GameScript.cpp`. Items: order of script slots (override,
+area, specifics, class, race, general, default; PST's names in `scrlev.ids`) and whether a block that runs in
+one slot stops the lower ones; how often each runs; `Continue()`; response selection by weight (`RESPONSE #n`:
+random formula); which actions are **instant** (run during evaluation) vs queued (the original's instant list:
+find it; GemRB marks them in `actionflags`); `ActionOverride`; interrupts (`SetInterrupt`); what clears the
+queue; cutscene mode (whose scripts run, `CutSceneId` lock); `OR(n)` counting; the `!` negation of event
+triggers; variable scopes (`GLOBAL`, `LOCALS`, area, **KAPUTZ**, missing-variable rules, A9); timers' units.
+
+#### A6: the dialogue engine (`wp_dialog.md`)
+Original `CGameDialog` (srcmap), EE `CGameDialog::`/`CMessage*Dialog*`; GemRB `DialogHandler.cpp`. Items:
+which state starts a dialogue (state triggers evaluated in which order: PST: last true wins or first?); which
+replies show (transition triggers, evaluated when); action timing (on reply click, before or after the next
+state?); `NumTimesTalkedTo` increment; dialogue with a hostile/dead/sleeping/far creature; `StartDialog*`,
+`Dialogue`, `NearbyDialog`/`InteractingWith`; journal entries (`CGameJournal`: types, how PST marks quests
+done); text tokens (`<CHARNAME>`, PST tokens like `<GABBER>`); "end dialogue" vs "continue"; dialogues with
+`ActionOverride` and `StartCutScene` inside; what happens to queued actions when the dialogue ends.
+
+#### A7: the text parser (`wp_dialog.md`, section "Parsing")
+Both engines compile the 9,648 dialogue strings at run time. Check that GemRB parses all of them as the
+original does. Plan: 1) dump all distinct trigger and action strings (DLG V1.0: state triggers at header
+`+0x18/+0x1C`, transition triggers `+0x20/+0x24`, actions `+0x28/+0x2C`, each an offset/length pair) to
+`.re/notes/dlg_strings.txt`; 2) find odd forms (missing quotes, extra spaces, `[x.y]` points, comments, numbers
+in hex, constants from IDS, empty arguments, `!` placement, trailing garbage) and count them; 3) read how the
+original's compiler (`sub_41D7BC`) and GemRB (`ParseText.cpp`, `GenerateAction`) handle each odd form.
+Each form GemRB rejects or reads differently is a sev-1 finding (the line silently does nothing).
+**A run-time check needs a small GemRB-side harness (parse every string, log failures). That is engine code:
+don't write it; write down what it should check, and tell the person it is needed.**
+
+#### A8: GemRB's BALDUR.bcs (64 blocks, ledger `kind=baldur`)
+Each block claims "the original engine does this in code": faction changes from `JOIN_*` globals, alignment
+from globals, game-over (`QuitGame`), movies, teleports. For each block find the original logic (strings:
+`JOIN_ANARCHISTS`, `Game_Over`, the movie names; EE `CPlanescape::CacheNamelessFactionFlags`,
+`HandleGameOverConditions`) and compare conditions, order and timing. Also list original rules that BALDUR
+*doesn't* cover (R2: `Game_Over` 3/4 are never set). Note that BALDUR uses non-PST actions (`ChangeFaction`,
+`GlobalSet`, `UsedExit` from `gemact.ids`): check that they do what the block intends.
+
+#### A9: area spawns and area scripts (`wp_spawns.md`)
+PST areas spawn creatures from `ARxxxx.INI`. Original: `CGameSpawning` (srcmap) and the INI key strings
+(`critters` `sub_7E7EFD`, `control_var` `sub_7E7F5E`, `spawn_point` `sub_7E8BE9`, `spawn_point_global`
+`sub_7E8F54`); GemRB: `IniSpawn.cpp`. Compare every key the 183 INIs use (count them first), when spawning
+runs (area load, every N seconds, once), conditions, death variables, facing, the Nameless One's respawn.
+A creature that doesn't spawn, or spawns twice, breaks quests: sev 1. Also area-entry scripts and
+`AreaFirstAIUpdate` (EE) vs GemRB.
+
+#### A10: things scripts observe indirectly (`wp_script_engine.md`, last section)
+Death variables (`Dead("name")`: which name, PST's `KILL_*`/`SPRITE_IS_DEAD*` style variables, set when),
+XP on kill (`CKillStats`, split rules), item usage limits that quests test (`PartyHasItem` after an item is used
+up), store transactions that scripts test (`StartStore`, `TakePartyGold`), rest (`RestParty`, `PSTCanRestParty`:
+when resting is forbidden, what resting runs).
+
+### Track B: combat rules (turn-based priority)
+
+Not covered by any earlier package because EE keeps these in generic, not PST-only, functions. Output
+`wp10_combat.md`. Entry points: EE `CGameSprite::Swing` (9D7DB0), `CGameSprite::Hit` (9A8270),
+`CRuleTables::GetTHAC0` (7F21B0), `CGameEffect::CheckSave` (6CFCF0), srcmap `ObjCreature`, `CRuleTables`;
+original roll helpers `sub_577BD4`/`sub_577E7C`, luck dice `sub_82015B`. GemRB: `Actor.cpp`. Questions: to-hit
+formula (THAC0, STR/DEX/proficiency/weapon bonuses, luck, natural 1 and 20), criticals (range, damage),
+attacks per round, damage (STR bonus, resistances: % or flat, rounding), death threshold (HP ≤ 0 vs −10,
+unconscious, the Nameless One, the immortal flag `+3342`), morale and panic thresholds, saving-throw roll
+(d20 + what vs which number, luck), magic resistance roll, spell disruption on damage, XP per kill.
+Then the generic **effect pipeline** (`wp11_effect_pipeline.md`): timing modes and delay units, probability
+bytes, when dice are rolled (E8), save bonus sign, MR checks, stacking and refresh, dispel, effects on death.
+Then **WP2 rest**: the 77 remaining used opcodes in `wp2_opcodes.md` (list: `maps/opcodes.tsv` by use). Most are
+stat modifiers: batch them by family (save modifiers 33–37, resistances 27–30/84–89/173, thief skills 59/90–92,
+abilities 6/10/15/19/44/49) and check per family: modes 0/1/2 (add/set/percent), caps, PST branches; give each
+opcode its own one-line verdict. Open items from round 5: Guardian Mantle save direction (E-012d), whether
+GemRB's Cloak of Warding / Guardian Mantle absorb effect damage, effect byte `+6` (255 = half damage?).
+
+### Track C: the rest (after A and B)
+
+WP6 rules (`pst_functions.md`: Nameless death R2, level-up bonuses, `SpellPST` casting path, `PSTCanRestParty`,
+`IsSpriteInDark`), WP7 tables (`CRuleTables` in the original vs `gemrb/unhardcoded/pst/*.2da`: XP, HP, THAC0,
+saves, thief skills, ability modifiers), items (`CItem`: usability, charges, recharge, PST slots), stores
+(`CStore`: prices, selling, identify, rent), plain projectiles (`maps/projectiles.tsv` rows without a
+`CPsSpell` class: speed, radius, enemies-only flags vs GemRB's `.pro`), WP8 GemRB's PST branches
+(`grep -rn "GFFlags::PST" gemrb/core gemrb/plugins`), WP9 EE data sample (lowest).
+
+---
+
+## 5. Evidence standard (what Opus will check)
+
+Every entry uses this template:
 
 ```
 ### <ID> <one-line title>
-- **Status:** V | S | P | ?      **Severity:** 1 | 2 | 3
-- **Original:** sub_XXXXXX (what it does, in words; numbers)
+- **Status:** V | S | P | ?      **Severity:** 1 | 2 | 3      **Uses:** <count>      **By:** sonnet
+- **Original:** sub_XXXXXX (.re/orig/dump/dec/XXXXXX.c:<lines>): what it does, in words, with numbers
 - **EE:** Class::Method (only if it adds something)
-- **GemRB:** path/to/file.cpp:123 `function` (what it does)
-- **Difference:** exactly what is wrong or missing, with an example ("STR 16 + roll 5 → GemRB 19, original 18")
-- **Data affected:** which spells/items/scripts, with use counts if known
-- **Check in game:** one sentence on how to see it (optional)
+- **GemRB:** path/file.cpp:<line> `Function` (what it does)
+- **Difference:** exactly what differs, with a concrete example ("SetGlobalTimer 10 → original 10 game seconds
+  = 150 ticks; GemRB 10 × AI_UPDATE_TIME …")
+- **Data affected:** which scripts/dialogs (names + counts; `grep` the decompiled BCS in `.re/` or count with pstres)
+- **Re-check:** the exact commands that show the evidence (`python tools/parity/case.py action 117`,
+  `sed -n 2640,2660p gemrb/core/GameScript/GSUtils.cpp`)
+- **Breaks:** for sev 1, the quest/dialogue/area that goes wrong, if you can name it
 ```
 
-IDs: WP1 `X-<SPLRES>` (e.g. `X-SPWI805`), WP2/3 `E-<opcode>`, WP4 `A-<id>`, WP5 `T-<hex id>`, WP6 `R-<short name>`,
-WP7 `D-<table>`, WP8 `G-<n>`, WP9 `EE-<n>`. Before adding one, check `findings.md` for an existing finding
-and refer to it instead of duplicating.
-
-**Status:** V = verified in the original *and* in GemRB's source; S = suspected (only EE, or the code is unclear);
-P = parity holds (GemRB matches, or it is a harmless difference); ? = could not determine (say why).
-**Severity:** 1 = gameplay wrong or a feature does nothing; 2 = wrong numbers or detail; 3 = presentation only.
-
-### 4.2 Spell expectation (dev/parity/spell_expect.md)
-
-```
-## SPWI805 Power Word, Blind
-- **Engine:** CPsSpellPowerWordBlind (EE) / orig sub_XXXXXX
-- **Targets:** all creatures within N of the point, not dead, HP between −9 and 99, sorted by current HP ascending;
-  stops once the summed HP would exceed 100
-- **Roll:** none
-- **Effects:** op 74 blindness, duration by pool: ≤25 → 160–400 ticks, 26–50 → 80–200, >50 → 16–40;
-  op 9 glow pulse, same duration; source set to SPWI805
-- **Timing:** effects land at tick T after cast; spell ends at tick U
-- **Side effects:** hit trigger per target; screen tint restored at the end
-- **Visuals/sounds:** PWBLI03, PWBLI05, …
-- **GemRB today:** pwblind.pro → PWB.spl (194, 74, 51): no HP pool, fixed duration X
-- **Differences:** 1) no HP pool  2) duration fixed  3) …
-```
-
-### 4.3 Spell expectation (dev/parity/spell_expect.json)
-
-One object per spell, keyed by SPL resref. Only facts the suite can check:
-
-```json
-{
-  "SPWI805": {
-    "targets": {"radius": 0, "hp_pool": 100, "sort": "hp_asc", "excludes": ["dead"]},
-    "roll": "none",
-    "effects": [
-      {"op": 74, "duration_ticks": [[0, 25, 160, 400], [26, 50, 80, 200], [51, 100, 16, 40]], "duration_by": "pool"},
-      {"op": 9}
-    ],
-    "damage": null,
-    "lands_after_ticks": null,
-    "notes": "durations depend on the HP pool used so far"
-  }
-}
-```
-
-Use `null` for unknown and say in `notes` why.
+- **V** = you read the behaviour in the original *and* in GemRB's source, and they differ.
+- **S** = suspected: EE only, or code you couldn't fully follow. Say what is missing.
+- **P** = parity: they match (or differ only in presentation). P entries can be one line, but still need the
+  original address and GemRB function.
+- **?** = couldn't determine; say what blocked you.
+- **Severity:** 1 = a quest, dialogue, cutscene or fight can go wrong or hang; 2 = wrong numbers or detail;
+  3 = looks or sounds only.
+- IDs: `A-<id>` actions, `T-<hexid>` triggers and events, `O-<name>` object selectors, `SE-<n>` script engine,
+  `D-<n>` dialogue, `SP-<n>` spawns, `B-<n>` BALDUR, `C-<n>` combat, `E-<op>` opcodes. Before adding one, search
+  `findings.md` and the `wp*.md` files; extend an existing entry instead of duplicating it.
+- **Be honest.** "I couldn't find it" is a good result. A wrong **V** costs far more than an honest **?**.
+  Before writing **V**, reopen both the original function and the GemRB line and confirm both say what you wrote.
 
 ---
 
-## 5. Working method (how not to get lost)
+## 6. Traps (each of these has already caught somebody)
 
-1. **One item at a time.** Finish the entry (even if the result is "?") before you move on.
-2. **Keep a progress line** at the top of each WP file: `Done: 12/39. Next: SPWI702.`
-3. **Show numbers, not adjectives.** "Duration 160–400 ticks", not "long duration".
-4. **When stuck for more than ~15 tool calls on one item,** write what you know with status "?" and what blocked
-   you, then move on.
-5. **Double-check every V.** Before you mark something V, reopen the original function and the GemRB line and
-   confirm both say what you wrote.
-6. **Don't trust the automated tables blindly.** Known false positives: `spells.md` "Code ops" (GemRB may do the
-   same through its own PST overlay types, e.g. Strength through `fx_overlay` case 17); `opcodes.md`
-   "GemRB note" (a keyword hint only); `scripting.md` "MISSING" on Ex names (GemRB binds one of the two names).
-7. **Common traps:**
-   - The same opcode number means different things in PST, BG2 and EE. Always use the PST meaning
-     (`gemrb/unhardcoded/pst/effects.ids` for GemRB's name, the original handler for the truth).
-   - EE renumbered PST's effects (186+ became 3xx in EE). `opcodes.md` lists both.
-   - Fixpack and UB changed the original data. "Original data" here always includes them, and
-     `WeiDU.log` in the game folder lists the components.
-   - Some `action.ids` lines were added by Fixpack, but the engine handled those actions all along (e.g. 313).
-   - A trigger with no handler is always false in the original. That is parity, not a bug.
-   - GemRB's turn-based combat changes timing and rounds deliberately. Compare logic and numbers, not
-     wall-clock timing.
-8. **When you finish a work package**, add one line to the "Progress" table in `PARITY_PLAN.md`
-   (date, package, counts, top three findings), and move important new findings into `findings.md` with the
-   next free ID in the right section.
+1. The same opcode/action/trigger number means different things in PST, BG2 and EE: use PST's ids files and
+   the original handler.
+2. GemRB binds by **name**: a PST name that GemRB aliases to a generic function may lose a PST detail.
+3. `scripting.md` "MISSING" on Ex names is often a false positive (GemRB binds one of the two names).
+4. `maps/triggers.tsv` "none (always false)" is right for status triggers with no case (A3: 0x4070, 0x4092,
+   0x40C0, 0x40FF) and **wrong for event triggers** (ids < 0x4000), see A3 above.
+5. Some `action.ids` lines were added by Fixpack, but the engine always had the action (313).
+6. Fixpack/UB changed data: "original data" always includes them (`WeiDU.log` lists the components).
+7. Turn-based combat changes timing on purpose. Compare logic, counts and units, not wall-clock time; but a
+   unit mismatch (seconds vs ticks vs rounds) is a real finding (S17 was 15× off).
+8. `spells.md` "code ops" and `opcodes.md` "GemRB note" are to-do hints, not verdicts.
+9. `opuses.py` and the use counts in `opcodes.tsv` skip SPL **casting** (global) effects. Those use ops 174, 187,
+   188, 195, 196, 205, 207 (S37 went wrong because of this). PST CREs carry no effects of their own.
+10. Two GemRB functions can do a job the original does in one place (and the reverse): follow helpers to the end.
+11. A GemRB comment saying "pst does X" is a claim: check it.
+12. Variables: a trigger that reads a missing variable and an action that creates it can disagree (A9).
 
 ---
 
-## 6. Worked example (the pattern to copy)
+## 7. Working method
 
-Question: "Does Litany of Curses (op 82) behave like the original?"
+1. **One item at a time.** Finish the entry (even as "?") and its ledger row before the next.
+2. **Progress line** at the top of each output file: `Done: 42/147. Next: action 140 GiveItemCreate.`
+3. **Numbers, not adjectives.**
+4. **Stuck for ~15 tool calls on one item?** Write what you know, status "?", what blocked you, move on.
+5. **Context:** your context fills up. Write findings to the file as you go; never keep results only in
+   your head. Before a long read, save.
+6. **When a package is done:** a line in `PARITY_PLAN.md` "Progress" (date, package, counts, top three
+   findings); copy every sev-1 and sev-2 V into `findings.md` (next free id in the right section, one table
+   row with a link to the detail); refresh `HANDOFF.md`; commit.
+7. **Ask the person** (stop and say so) when: the workspace is missing, a tool is broken in a way you'd need to
+   rewrite more than ~50 lines to fix, a check needs engine code (A7's harness), or you find a sev-1 issue you
+   think should be fixed before the investigation continues.
 
-1. `opcodes.md` row 82: GemRB `fx_set_ai_script`, EE `InciteRunningAttack (358)`, original apply `4C2218`.
-2. `ida.py show orig 4C2218`: on the first application it builds a script action with id 10, sets its target from
-   the creature and pushes it onto the target's action queue. `iesdp.py action pst 10` says id 10 is `Enemy()`.
-3. `iesdp.py opcode pst 82`: "incites a repeating RunningAttack … chosen target is always male/undead". That
-   agrees (Morte), so it supports the reading.
-4. GemRB `gemrb/plugins/FXOpcodes/FXOpcodes.cpp:3307`: sets the override script to `SPIN101` permanently.
-5. Finding: V, severity 1. The original makes the target hostile/attack for the effect's duration; GemRB
-   swaps a script and never restores it. Data: SPIN101.spl (1 use).
+---
 
-That is the level of detail and proof every entry needs.
+## 8. Handoff and audit
+
+At the end of every session update `HANDOFF.md`: what you finished (ledger counts), the next item, open
+questions, and a list **"For audit"** of your V findings since the last audit, sev 1 first. Opus will pick from
+that list and re-run the **Re-check** commands; a finding that doesn't reproduce gets status `?` and an
+`audited: failed` ledger note, so make the Re-check lines exact.
+
+---
+
+## 9. Worked example (copy this level of detail)
+
+Question: does `RestParty` (296) behave like the original?
+1. `iesdp.py action pst 296`: `RestParty(I:SuggestedDream, I:HP, I:Renting)`.
+2. `case.py action 296`: base case 296 calls `sub_5C68CC` → `sub_5C6A9E`. Reading it: each party member gets
+   op 17 with p1 = HP, mode 0 (add), **except the Nameless One, who gets mode 4 (full heal)**; a dream is chosen,
+   the `TIME` movie plays.
+3. GemRB: `action.ids` name `RestParty` → `GameScript::RestParty` (`Actions.cpp:5521`) → `Game::RestParty(…, hp)`
+   → `Heal(hp)` for everyone.
+4. Entry A-296: V, sev 2, 20 uses; Re-check `python tools/parity/case.py action 296`, `grep -n "RestParty"
+   gemrb/core/Game.cpp`; Difference: with an HP limit the Nameless One should wake fully healed, GemRB heals
+   him by the limit. Ledger row 296: `V A7 sonnet`.

@@ -1,6 +1,6 @@
-# Handoff: where the parity investigation stands (2026-11-18, round 5)
+# Handoff: where the parity investigation stands (2026-11-18, round 6)
 
-Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools) and `findings.md` (all findings, by round).
+Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the work packages) and `findings.md` (all findings, by round).
 
 ## Done
 - **WP1 hardcoded spells: complete.** All 39 classes read in the original: `spell_expect.md` / `spell_expect.json`,
@@ -11,21 +11,35 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools) and 
 - **WP4 actions: partial** (`wp4_actions.md`): the Ex actions, RestParty, IncrementGlobalOnce, Enemy. Findings A5–A9.
 - **Text maps** of both binaries: `maps/*.tsv` (`tools/parity/export_maps.py`), no IDA needed to look things up.
 
-## Next, in order
-1. **WP2 rest:** (13, 39, 45, 128, 73, 6, 42, 44, 98, 120, 129 done, E28-E32) the remaining opcodes by
-   `maps/opcodes.tsv` use count. Open in op 12: the Guardian Mantle save direction (E-012d) and whether GemRB's
-   Cloak of Warding / Guardian Mantle touch effect damage; the meaning of effect byte +6 (255 = half damage).
-2. **WP4 rest:** top actions by use (`maps/actions.tsv`): PermanentStatChange (230), AddPartyExperience/GiveExperience
-   (XP split), FloatRebus, SetInternal/IncInternal, PlaySequence/SetAnimState, SetCorpseEnabled, Morale* (GemRB's
-   Karach hook), StartSong, ReturnToSavedPlace, EnablePortalTravel. Then GemRB's other PST branches in `Actions.cpp`.
-3. **WP5 triggers** (`maps/triggers.tsv`, `case.py trigger <id>`).
-4. **WP6 rules:** `pst_functions.md` list (Nameless death/revival R2, level-up bonuses, SpellPST casting path,
-   resting PSTCanRestParty, IsSpriteInDark, game-over).
-5. **WP7 tables**, **WP8** GemRB PST branches (`grep pstflags|GFFlags::PST` = 266 hits; Actor.cpp 66, CharAnimations 54),
-   **WP9** EE data sample.
-6. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates: S14 Howl, S15 Globe, S16/S17 Power
-   Words, E7 Curse saves, A5 RunAwayFrom attacks, S4 attack rolls, E17 scroll caster level, E18 TransferHP, E19 Ball
-   Lightning / Adder's Kiss.
+## Round 6 (2026-11-18): scope check before handing over to Sonnet
+- GemRB loads the original's BCS (2,228), DLG (814), IDS, INI and ARE files **byte-identical**; the only script
+  GemRB adds is its own `BALDUR.bcs` (`gemrb/unhardcoded/pst/source/baldur.baf`, 64 blocks) standing in for logic
+  the original hardcodes. Script risk = GemRB's *interpretation* (binding, parameters, parsing, engine rules).
+- New: `script_ledger.tsv` (`tools/parity/script_ledger.py`): every action (147), trigger (75), event trigger (24)
+  and BALDUR block (64) the game uses, with a verdict column. 11 rows decided so far.
+- Areas no package covered before, now in `AGENT_GUIDE.md`: event triggers (`triggers.tsv` wrongly says "always
+  false" for them), object selectors, the script runner, the dialogue engine, the dialogue text parser, BALDUR.bcs,
+  INI spawns, combat rules (EE keeps them in generic functions, so `pst_functions.md` misses them), the effect
+  pipeline, items/stores/XP, plain projectiles. Big original areas not decompiled yet: `CGameDialog`,
+  `CGameSpawning`, `CAIObjectType`, `CVisibility`, `CKillStats`, `CStore`, `CItem`, `CSpell`, `CRuleTables`,
+  `CGameJournal` (function lists in `.re/orig/dump/srcmap.txt`).
+- Needs the person: a GemRB-side harness that parses all 9,648 dialogue strings and logs failures (engine code;
+  AGENT_GUIDE A7).
+
+## Next, in order (detail in AGENT_GUIDE section 4)
+1. **Track A, scripts and dialogue, to 100 % of `script_ledger.tsv`:** A1 actions (by use), A2 triggers, A3 event
+   triggers, A4 object selectors, A5 script engine, A6 dialogue engine, A7 parser, A8 BALDUR.bcs, A9 INI spawns,
+   A10 indirect state (death variables, XP, rest).
+2. **Track B, combat:** combat rules (`wp10_combat.md`), effect pipeline (`wp11_effect_pipeline.md`), WP2 rest (77
+   used opcodes, batched by family). Open from round 5: Guardian Mantle save direction (E-012d), GemRB's Cloak of
+   Warding / Guardian Mantle vs effect damage, effect byte +6.
+3. **Track C:** WP6 rules, WP7 tables, items, stores, plain projectiles, WP8 GemRB PST branches, WP9 EE data.
+4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: A1 EscapeAreaRunning, R2
+   Nameless death rules, A5 RunAwayFrom attacks, S14 Howl, S15 Globe, S16/S17 Power Words, E7 Curse saves, S4 attack
+   rolls, E17 scroll caster level, E18 TransferHP, E19 Ball Lightning / Adder's Kiss.
+
+## For audit (Opus spot-checks these; newest first)
+- (none yet)
 
 ## Fast tools (all in `tools/parity/`)
 - `opuses.py 147 148 [--full]` – every use of an opcode in the original SPL/ITM data (p1/p2/timing/res; header and

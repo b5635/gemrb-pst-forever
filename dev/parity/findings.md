@@ -219,7 +219,6 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | E25 | **Difficulty scaling** of effect damage applies to damage *taken by party members* in the original (and caps it at max HP − 1 when max HP < 14); GemRB scales damage *dealt by enemy-EA sources*. | V | 2 |
 | E26 | **Op 12 plane bonuses:** Carceri max dice for Chromatic Orb, Fist of Iron, Elysium's Tears; Deathbolt +1 (Carceri, Negative Material) / +6 (Baator). Extends R1. | V | 2 |
 | E27 | **Op 12 absorbers:** Guardian Mantle (source saves at −4) can cancel effect damage; Cloak of Warding / Infernal Shield pool absorbs it; the Armor pool doesn't. GemRB side not traced. | V/? | 2 |
-
 | E28 | **Aid gives a fixed 8 HP per p1** in the original (p2 = 8 × p1, first application); GemRB rolls p1d8 (avg 4.5). SPPR201, 23 lines. (E-129) | V | 2 |
 | E29 | **Op 13 Death ignores p1/p2** and has no level bands (Cloudkill's bands live in the spell); the companion rules in it are R2, corrected: the `Game_Over` 3 rule fires when **Annah** dies, not Pharod. (E-013) | V | 2 |
 | E30 | **Curse also costs p1 damage** in the original (byte `+3281` is the damage bonus, shared with ops 73 and 129); GemRB `fx_curse` leaves damage alone. Extends E7. (E-073) | V | 2 |

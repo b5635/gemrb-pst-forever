@@ -1,0 +1,312 @@
+# Script coverage ledger (tools/parity/script_ledger.py). Fill status/finding/by/note by hand; rerun keeps them.
+kind	id	name	uses	orig_handler	gemrb	status	finding	by	audited	note
+action	23	MoveToPoint(P:Point*)	3987	sprite case 19	GameScript::MoveToPoint	todo				
+action	63	Wait(I:Time*)	3531	sprite case 34	GameScript::Wait	todo				
+action	10	Enemy()	3165	sprite case 7	GameScript::Enemy	P	A-10	opus		round 2-5; recheck the parts marked S
+action	84	Face(I:Direction*)	3125	sprite case 36	GameScript::Face	todo				
+action	3	Attack(O:Target*)	2812	sprite case 2	GameScript::Attack	todo				
+action	30	SetGlobal(S:Name*,S:Area*,I:Value*)	2763	base sub_44B099	GameScript::SetGlobal	todo				
+action	7	CreateCreature(S:NewObject*,P:Location*)	2385	base sub_44B099	GameScript::CreateCreature	todo				
+action	36	Continue()	2112	sprite case 28	GameScript::Continue	todo				
+action	17	Help()	1843	sprite case 13	GameScript::Help	todo				
+action	202	IncrementGlobalOnce(S:Name1*,S:Area1*,S:Name2*,S:Area2*,I:Val*)	1693	base sub_44B099	GameScript::IncrementGlobalOnce	V	A9	opus		round 2-5; recheck the parts marked S
+action	210	FloatMessage(O:Object*,I:StrRef*)	1643	base sub_44B099	GameScript::DisplayStringHead	todo				
+action	219	WaitRandom(I:MinTime*,I:MaxTime*)	1398	sprite case 34	GameScript::WaitRandom	todo				
+action	109	IncrementGlobal(S:Name*,S:Area*,I:Value*)	1098	base sub_44B099	GameScript::IncrementGlobal	todo				
+action	218	PlaySequence(I:Anim*AnimStat)	1057	sprite case 91	GameScript::PlaySequence	todo				
+action	60	ChangeAIScript(S:ScriptFile*,I:Level*Scrlev)	887	base sub_44B099	GameScript::ChangeAIScript	todo				
+action	29	RunAwayFrom(O:Creature*,I:Time*AITime)	874	sprite case 24	GameScript::RunAwayFrom	V	A5	opus		round 2-5; recheck the parts marked S
+action	200	SetAnimState(O:Object*,I:Anim*AnimStat)	802	sprite case 84	GameScript::PlaySequence	todo				
+action	127	CutSceneId(O:Object*)	715	sprite case 63	GameScript::CutSceneID	todo				
+action	215	FaceObject(O:Object*)	701	sprite case 90	GameScript::FaceObject	todo				
+action	208	ReturnToSavedPlace()	593	sprite case 89	GameScript::ReturnToSavedLocation	todo				
+action	164	AddexperienceParty(I:XP*)	579	base sub_44B099	GameScript::AddExperienceParty	todo				
+action	270	ForceAttack(O:Object*,O:Target*)	531	base sub_44B099	GameScript::ForceAttack	todo				
+action	266	FloatRebus(O:Target*)	490	sprite case 104	GameScript::FloatRebus	todo				
+action	140	GiveItemCreate(S:ResRef*,O:Object*,I:Usage1*,I:Usage2*,I:Usage3*)	483	base sub_44B099	GameScript::CreateItem	todo				
+action	273	SetInternal(O:Object*,I:Index*Internal,I:Value*)	470	base sub_44B099	GameScript::SetInternal	todo				
+action	120	StartCutScene(S:CutScene*)	433	base sub_44B099	GameScript::StartCutScene	todo				
+action	274	IncInternal(O:Object*,I:Index*Internal,I:Value*)	386	base sub_44B099	GameScript::IncInternal	todo				
+action	204	FadeToBlack()	369	base sub_44B099	GameScript::FadeToColor	todo				
+action	205	FadeFromBlack()	364	base sub_44B099	GameScript::FadeFromColor	todo				
+action	117	TakePartyGold(I:Amount*)	363	base sub_44B099	GameScript::TakePartyGold	todo				
+action	61	StartTimer(I:ID*,I:Time*)	345	base sub_44B099	GameScript::StartTimer	todo				
+action	31	Spell(O:Target*,I:Spell*Spell)	308	sprite case 25	GameScript::Spell	todo				
+action	312	PlaySoundNotRanged(S:Sound*)	285	base sub_44B099	GameScript::PlaySoundNotRanged	todo				
+action	251	RunningAttack(O:Target*)	284	sprite case 95	GameScript::RunningAttack	todo				
+action	248	RunToPoint(P:Point*)	274	sprite case 93	GameScript::RunToPoint	todo				
+action	220	StartRandomTimer(I:ID*,I:MinTime*,I:MinTime*)	268	base sub_44B099	GameScript::StartRandomTimer	todo				
+action	121	StartCutSceneMode()	265	base sub_44B099	GameScript::StartCutSceneMode	todo				
+action	306	GiveExperience(O:Object*,I:Amount*)	246	base sub_44B099	GameScript::AddXPObject	todo				
+action	111	DestroySelf()	245	sprite case 59	GameScript::DestroySelf	todo				
+action	286	SetCorpseEnabled(S:Name*,I:State*)	238	base sub_44B099	GameScript::AmbientActivate	todo				
+action	217	PermanentStatChange(O:Object*,I:StadID*Stats,I:Delta*Delta,I:Modifier*)	230	base sub_44B099	GameScript::PermanentStatChange	todo				
+action	108	EscapeArea()	208	sprite case 57	GameScript::EscapeArea	todo				
+action	150	StartStore(S:Store*,O:Target*)	192	sprite case 76	GameScript::StartStore	todo				
+action	104	MoraleDec(O:Target*,I:Morale*)	189	sprite case 54	GameScript::MoraleDec	todo				
+action	214	KillFloatMessage(O:Object*)	186	base sub_44B099	GameScript::KillFloatMessage	todo				
+action	118	GivePartyGold(I:Amount*)	180	base sub_44B099	GameScript::GivePartyGold	todo				
+action	267	StartSong(I:Song*Songs,P:Where*,I:How*SongFlag)	180	base sub_44B099	GameScript::StartSong	todo				
+action	153	ChangeEnemyAlly(O:Object*,I:Value*EA)	157	base sub_44B099	GameScript::ChangeEnemyAlly	todo				
+action	157	ChangeSpecifics(O:Object*,I:Value*Specific)	156	base sub_44B099	GameScript::ChangeSpecifics	todo				
+action	131	Kill(O:Object*)	155	base sub_44B099	GameScript::Kill	todo				
+action	222	DestroyPartyItem(S:Object*,I:All*Boolean)	147	base sub_44B099	GameScript::DestroyPartyItem	todo				
+action	49	MoveViewPoint(P:Target*,I:ScrollSpeed*Scroll)	140	base sub_44B099	GameScript::MoveViewPoint	todo				
+action	8	Dialogue(O:Object*)	138	sprite case 5	GameScript::Dialogue	todo				
+action	116	TakePartyItem(S:Item*)	137	base sub_44B099	GameScript::TakePartyItem	todo				
+action	19	JoinParty()	136	sprite case 15		S	A2/section 9: JoinGroup flag ignored	opus		round 2-5; recheck the parts marked S
+action	269	SetTeam(O:Object*,I:Value*Team)	135	base sub_44B099	GameScript::SetTeam	todo				
+action	122	EndCutSceneMode()	133	base sub_44B099	GameScript::EndCutSceneMode	todo				
+action	244	BitSet(S:Name*,S:Area*,I:Bit*Bits)	132	base sub_44B099	GameScript::GlobalBOr	todo				
+action	303	TimedMoveToPoint(P:Point*,I:Time*)	128	sprite case 107	GameScript::TimedMoveToPoint	todo				
+action	279	EnablePortalTravel(O:Object*,I:Value*)	127	base sub_44B099	GameScript::EnablePortalTravel	todo				
+action	278	ActivatePortalCursor(O:Object*,I:Value*)	122	base sub_44B099	GameScript::ActivatePortalCursor	todo				
+action	22	MoveToObject(O:Target*)	113	sprite case 18		S	A2/section 9: timeout ignored	opus		round 2-5; recheck the parts marked S
+action	281	TeleportParty(S:Area*,P:Point*,I:Face*)	110	base sub_44B099	GameScript::TeleportParty	todo				
+action	291	SinisterPoof(S:BamResRef*,P:Location*,I:Itterations*)	107	base sub_44B099	GameScript::CreateVisualEffect	todo				
+action	143	OpenDoor(O:Object*)	105	base sub_44B099	GameScript::OpenDoor	todo				
+action	313	EscapeAreaRunning()	103	sprite case 57		V	A1	opus		round 2-5; recheck the parts marked S
+action	166	SetNumTimesTalkedTo(I:Num*)	101	sprite case 78	GameScript::SetNumTimesTalkedTo	todo				
+action	181	ReallyForceSpell(O:Target*,I:Spell*Spell)	92	base sub_44B099	GameScript::ReallyForceSpell	todo				
+action	246	ForceAIScript(S:ScriptFile*,O:Target*,I:Level*Scrlev)	89	base sub_44B099	GameScript::ForceAIScript	todo				
+action	62	SendTrigger(O:Target*,I:TriggerNum*)	86	base sub_44B099	GameScript::SendTrigger	todo				
+action	125	Deactivate(O:Object*)	82	base sub_44B099		V	A6	opus		round 2-5; recheck the parts marked S
+action	15	GiveItem(S:Object*,O:Target*)	78	sprite case 12	GameScript::GiveItem	todo				
+action	48	JumpToPoint(P:Target*)	78	sprite case 33	GameScript::JumpToPoint	todo				
+action	115	SetGlobalTimer(S:Name*,S:Area*,I:Time*GTimes)	78	base sub_44B099	GameScript::SetGlobalTimer	todo				
+action	259	Damage(O:Target*,I:Delta*Delta,I:Modifier*)	78	base sub_44B099	GameScript::Damage	todo				
+action	262	ChangeColor(I:Range*ClownRge,I:Color*ClownClr)	75	sprite case 101	GameScript::ChangeColor	todo				
+action	103	MoraleInc(O:Target*,I:Morale*)	73	sprite case 53	GameScript::MoraleInc	todo				
+action	276	SetDoorLocked(O:Object*,I:Locked*Boolean)	72	base sub_44B099	GameScript::SetDoorLocked	todo				
+action	292	StickySinisterPoof(S:BamResRef*,O:Object*,I:Itterations*)	72	base sub_44B099	GameScript::CreateVisualEffectObjectSticky	todo				
+action	263	PlaySequenceTimed(I:Anim*AnimStat,I:Seconds*)	70	sprite case 102	GameScript::PlaySequenceTimed	todo				
+action	85	RandomWalk()	69	sprite case 37	GameScript::RandomWalk	todo				
+action	126	Activate(O:Object*)	61	base sub_44B099	GameScript::Activate	todo				
+action	287	DebugOutput(S:Message*)	58	base sub_44B099	GameScript::Debug	todo				
+action	171	CreatePartyGold(I:Amount*)	57	base sub_44B099	GameScript::CreatePartyGold	todo				
+action	26	PlaySound(S:Sound*)	56	base sub_44B099	GameScript::PlaySound	todo				
+action	83	SmallWait(I:Time*)	54	base sub_44B099	GameScript::SmallWait	todo				
+action	50	MoveViewObject(O:Target*,I:ScrollSpeed*Scroll)	53	base sub_44B099	GameScript::MoveViewObject	todo				
+action	167	StartMovie(S:ResRef*)	50	base sub_44B099	GameScript::StartMovie	todo				
+action	224	TransformPartyItem(S:OldObject*,S:NewObject*,I:Charge1*,I:Charge2*,I:Charge3*)	48	base sub_44B099	GameScript::TransformPartyItem	todo				
+action	253	RunToObject(O:Target*)	48	sprite case 96	GameScript::RunToObject	todo				
+action	216	FullHeal(O:Object*)	47	base sub_44B099	GameScript::FullHeal	todo				
+action	144	CloseDoor(O:Object*)	43	base sub_44B099	GameScript::CloseDoor	todo				
+action	212	FloatMessageRnd(O:Object*,S:Pool*)	43	base sub_44B099	GameScript::FloatMessageRnd	todo				
+action	277	IncrementExtraProficiency(O:Target*,I:Modifier*)	43	base sub_44B099	GameScript::IncrementExtraProficiency	todo				
+action	82	CreateItem(S:ResRef*,I:Usage1*,I:Usage2*,I:Usage3*)	41	base sub_44B099	GameScript::CreateItem	todo				
+action	265	IncrementProficiency(O:Target*,I:SlotNum*WProf,I:Modifier*)	41	base sub_44B099	GameScript::IncrementProficiency	todo				
+action	293	SetNamelessClass(I:Value*Class)	39	base sub_44B099	GameScript::SetNamelessClass	todo				
+action	21	LeaveParty()	36	sprite case 17	GameScript::LeaveParty	todo				
+action	245	BitClear(S:Name*,S:Area*,I:Bit*Bits)	36	base sub_44B099	GameScript::BitClear	todo				
+action	113	ForceSpell(O:Target*,I:Spell*Spell)	35	base sub_44B099	GameScript::ForceSpell	todo				
+action	119	DropInventory()	33	sprite case 61	GameScript::DropInventory	todo				
+action	159	ChangeAlignment(O:Object*,I:Value*Align)	33	base sub_44B099	GameScript::ChangeAlignment	todo				
+action	247	ExploreMapChunk(P:Center*,I:Radius*,I:Mode*)	33	base sub_44B099	GameScript::ExploreMapChunk	todo				
+action	309	QuitGame(I:Value*MovVal,I:Value*MovVal,I:Value*MovVal)	33	base sub_44B099	GameScript::QuitGame	todo				
+action	160	ApplySpell(O:Target*,I:Spell*Spell)	26	base sub_44B099	GameScript::ApplySpell	todo				
+action	272	ChangeDialog(O:Object*,S:ResRef*)	25	base sub_44B099	GameScript::ChangeDialogue	todo				
+action	295	CreateCreatureAtFeet(S:ResRef*)	24	base sub_44B099	GameScript::CreateCreatureAtFeet	todo				
+action	132	VerbalConstant(O:Object*,I:Constant*soundOff)	23	base sub_44B099	GameScript::VerbalConstant	todo				
+action	138	SetDialog(S:DialogFile*)	23	sprite case 68	GameScript::SetDialogue	todo				
+action	146	Polymorph(I:AnimationType*Animate)	23	sprite case 72	GameScript::Polymorph	S	A2/section 9: RangeModes ignored	opus		round 2-5; recheck the parts marked S
+action	221	DestroyPartyGold(I:Amount*)	21	base sub_44B099	GameScript::DestroyPartyGold	todo				
+action	298	DisableSpriteDither()	21	base sub_44B099	GameScript::DisableSpriteDither	todo				
+action	299	EnableSpriteDither()	21	base sub_44B099	GameScript::EnableSpriteDither	todo				
+action	300	DisableFogDither()	21	base sub_44B099	GameScript::DisableFogDither	todo				
+action	301	EnableFogDither()	21	base sub_44B099	GameScript::EnableFogDither	todo				
+action	169	DestroyItem(S:Object*,O:Target*,I:All*Boolean)	20	base sub_44B099	GameScript::DestroyItem	todo				
+action	296	RestParty(I:SuggestedDream*,I:HP*,I:Renting*)	20	base sub_44B099	GameScript::RestParty	V	A7	opus		round 2-5; recheck the parts marked S
+action	123	ClearAllActions()	18	base sub_44B099	GameScript::ClearAllActions	todo				
+action	207	SavePlace()	15	sprite case 88	GameScript::SaveLocation	todo				
+action	226	GenerateModronMaze()	15	base sub_44B099	GameScript::GenerateMaze	todo				
+action	133	ClearActions()	13	base sub_44B099	GameScript::ClearActions	todo				
+action	65	Explore()	10	base sub_44B099	GameScript::Explore	todo				
+action	271	ForceFacing(O:Object*,I:Dir*)	10	base sub_44B099	GameScript::ForceFacing	todo				
+action	102	MoraleSet(O:Target*,I:Morale*)	8	sprite case 52	GameScript::MoraleSet	todo				
+action	137	StartDialog(S:DialogFile*,O:Target*)	8	sprite case 67	GameScript::StartDialogue	todo				
+action	87	ProtectObject(O:Target*,I:Range*)	7	sprite case 39	GameScript::ProtectObject	todo				
+action	311	GeneratePartyMember(P:Location*,I:Value*Specific)	7	base sub_44B099	GameScript::GeneratePartyMember	todo				
+action	86	SetInterrupt(I:State*Boolean)	6	sprite case 38	GameScript::SetInterrupt	todo				
+action	256	RunToSavedLocation()	6	sprite case 98	GameScript::RunToSavedLocation	todo				
+action	268	SetFaction(O:Object*,I:Value*Faction)	5	base sub_44B099	GameScript::SetFaction	todo				
+action	290	SetNamelessDisguise(I:DisguiseNum*Disguise)	5	base sub_44B099	GameScript::SetNamelessDisguise	todo				
+action	0	NoAction()	4	sprite case 0	GameScript::NoAction	todo				
+action	233	GlobalSetGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	4	base sub_44B099	GameScript::GlobalSetGlobal	todo				
+action	151	DisplayString(O:Object*,I:StrRef*)	3	base sub_44B099	GameScript::DisplayString	todo				
+action	211	FloatMessageFixed(P:Location*,I:StrRef*)	3	base sub_44B099	GameScript::FloatMessageFixed	todo				
+action	305	FullHealEx(O:Object*)	3	base sub_44B099	GameScript::FullHeal	?	A-305 (check Heal(0))	opus		round 2-5; recheck the parts marked S
+action	302	SetNoOneOnTrigger(O:Trigger*)	2	base sub_44B099	GameScript::SetNoOneOnTrigger	todo				
+action	310	StartCutSceneEx(S:CutScene*,I:Value*)	2	base sub_44B099	GameScript::StartCutScene	S	A8	opus		round 2-5; recheck the parts marked S
+action	34	UseItem(S:Object*,O:Target*)	1	sprite case 27	GameScript::UseItem	todo				
+action	39	Recoil()	1	sprite case 30	GameScript::Recoil	todo				
+action	40	PlayDead(I:Time*)	1	sprite case 31	GameScript::PlayDead	todo				
+action	95	SpellPoint(P:Target*,I:Spell*Spell)	1	sprite case 46	GameScript::SpellPoint	todo				
+action	110	LeaveAreaLUA(S:Area*,P:Point*,I:Face*)	1	sprite case 58	GameScript::LeaveAreaLUA	todo				
+action	149	EquipMostDamagingMelee()	1	sprite case 75	GameScript::EquipMostDamagingMelee	todo				
+action	225	FollowCreature(O:Target*)	1	sprite case 92	GameScript::FollowCreature	todo				
+action	285	FixEngineRoom()	1	base sub_44B099	GameScript::FixEngineRoom	todo				
+action	297	ResetFogOfWar()	1	base sub_44B099	GameScript::UndoExplore	todo				
+trigger	0x400F	Global(S:Name*,S:Area*,I:Value*)	17093	453258	GameScript::Global	todo				
+trigger	0x4093	NearbyDialog(S:DialogFile*)	4761	453258	GameScript::NearbyDialog	todo				
+trigger	0x4034	GlobalGT(S:Name*,S:Area*,I:Value*)	2415	453258	GameScript::GlobalGT	todo				
+trigger	0x4023	True()	2044	453258,778529	GameScript::True	todo				
+trigger	0x401C	See(O:Object*)	1532	453258,778529	GameScript::See	todo				
+trigger	0x4045	CheckStatGT(O:Object*,I:Value*,I:StatNum*Stats)	1502	453258	GameScript::CheckStatGT	todo				
+trigger	0x4046	CheckStatLT(O:Object*,I:Value*,I:StatNum*Stats)	1180	453258	GameScript::CheckStatLT	todo				
+trigger	0x4035	GlobalLT(S:Name*,S:Area*,I:Value*)	795	453258	GameScript::GlobalLT	todo				
+trigger	0x400B	Allegiance(O:Object*,I:Allegience*EA)	788	453258	GameScript::Allegiance	todo				
+trigger	0x4042	PartyHasItem(S:Item*)	747	453258	GameScript::PartyHasItem	todo				
+trigger	0x40A1	Internal(O:Object*,I:Index*Internal,I:Value*)	728	453258	GameScript::Internal	todo				
+trigger	0x4043	InParty(O:Object*)	705	453258	GameScript::InParty	todo				
+trigger	0x400D	Exists(O:Object*)	667	453258	GameScript::Exists	todo				
+trigger	0x4051	Dead(S:Name*)	588	453258	GameScript::Dead	todo				
+trigger	0x4039	NumTimesTalkedTo(I:Num*)	479	778529	GameScript::NumTimesTalkedTo	todo				
+trigger	0x407C	TimerActive(I:ID*)	401	453258	GameScript::TimerActive	todo				
+trigger	0x402D	HPPercentLT(O:Object*,I:HitPoints*)	379	453258	GameScript::HPPercentLT	todo				
+trigger	0x403A	NumTimesTalkedToGT(I:Num*)	342	778529	GameScript::NumTimesTalkedToGT	todo				
+trigger	0x404F	PartyGoldGT(I:Amount*)	341	453258	GameScript::PartyGoldGT	todo				
+trigger	0x4076	NearSavedLocation(I:Range*)	334	778529	GameScript::NearSavedLocation	todo				
+trigger	0x4075	NearLocation(O:Object*,P:Point*,I:Range*)	326	453258	GameScript::NearLocation	todo				
+trigger	0x4047	RandomNum(I:Range*,I:Value*)	198	453258	GameScript::RandomNum	todo				
+trigger	0x4061	HasItem(S:ResRef*,O:Object*)	190	453258	GameScript::HasItem	todo				
+trigger	0x4018	Range(O:Object*,I:Range*)	185	453258	GameScript::Range	todo				
+trigger	0x407F	BitCheck(S:Name*,S:Area*,I:Bit*Bits)	171	453258	GameScript::BitCheck	todo				
+trigger	0x407E	CreatureInArea(S:AreaName*)	163	453258	GameScript::AreaCheck	todo				
+trigger	0x400C	Class(O:Object*,I:Class*Class)	141	453258	GameScript::Class	todo				
+trigger	0x40B1	LastPersonTalkedTo(O:Object*)	100	453258	GameScript::LastPersonTalkedTo	todo				
+trigger	0x4030	False()	99	453258	GameScript::False	todo				
+trigger	0x4012	HPLT(O:Object*,I:HitPoints*)	94	453258	GameScript::HPLT	todo				
+trigger	0x4050	PartyGoldLT(I:Amount*)	71	453258	GameScript::PartyGoldLT	todo				
+trigger	0x4099	ProficiencyGT(O:Object*,I:Slot*WProf,I:Value*)	65	453258	GameScript::ProficiencyGT	todo				
+trigger	0x4031	HaveSpell(I:Spell*Spell)	55	778529	GameScript::HaveSpell	todo				
+trigger	0x4040	GlobalTimerExpired(S:Name*,S:Area*)	50	453258	GameScript::GlobalTimerExpired	todo				
+trigger	0x40A3	InternalGT(O:Object*,I:Index*Internal,I:Value*)	50	453258	GameScript::InternalGT	todo				
+trigger	0x4086	GlobalORGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	46	453258	GameScript::GlobalOrGlobal_Trigger	todo				
+trigger	0x401D	Specifics(O:Object*,I:Specifics*Specific)	45	453258	GameScript::Specifics	todo				
+trigger	0x400A	Alignment(O:Object*,I:Alignment*Align)	44	453258	GameScript::Alignment	todo				
+trigger	0x4098	ProficiencyLT(O:Object*,I:Slot*WProf,I:Value*)	40	453258	GameScript::ProficiencyLT	todo				
+trigger	0x408B	PartyCountGT(I:Count*)	38	453258	GameScript::PartyCountGT	todo				
+trigger	0x4013	LOS(O:Object*,I:Range*)	34	453258	GameScript::LOS	todo				
+trigger	0x40AA	ExtraProficiencyGT(O:Object*,I:Value*)	33	453258	GameScript::ExtraProficiencyGT	todo				
+trigger	0x401F	TimeOfDay(I:TimeOfDay*TimeODay)	31	453258	GameScript::TimeOfDay	todo				
+trigger	0x4016	MoraleLT(O:Object*,I:Morale*)	27	453258	GameScript::MoraleLT	todo				
+trigger	0x4089	PartyCountEQ(I:Count*)	27	453258	GameScript::PartyCountEQ	todo				
+trigger	0x4015	MoraleGT(O:Object*,I:Morale*)	26	453258	GameScript::MoraleGT	todo				
+trigger	0x4011	HPGT(O:Object*,I:HitPoints*)	23	453258	GameScript::HPGT	todo				
+trigger	0x4032	HaveAnySpells()	21	778529	GameScript::HaveAnySpells	todo				
+trigger	0x40A8	ExtraProficiency(O:Object*,I:Value*)	20	453258	GameScript::ExtraProficiency	todo				
+trigger	0x40AD	ClassLevelGT(O:Object*,I:Value*Class,I:Value*)	18	453258	GameScript::ClassLevelGT	todo				
+trigger	0x404E	PartyGold(I:Amount*)	16	453258	GameScript::PartyGold	todo				
+trigger	0x40AE	ClassLevelLT(O:Object*,I:Value*Class,I:Value*)	13	453258	GameScript::ClassLevelLT	todo				
+trigger	0x4017	Race(O:Object*,I:Race*Race)	12	453258	GameScript::Race	todo				
+trigger	0x4029	NumCreatureLT(O:Object*,I:Number*)	11	453258	GameScript::NumCreaturesLT	todo				
+trigger	0x4097	Proficiency(O:Object*,I:Slot*WProf,I:Value*)	10	453258	GameScript::Proficiency	todo				
+trigger	0x4091	PartyItemCountGT(S:Item*,I:Count)	9	453258	GameScript::NumItemsPartyGT	todo				
+trigger	0x409B	Team(O:Object*,I:Value*Team)	9	453258	GameScript::Team	todo				
+trigger	0x4038	NotStateCheck(O:Object*,I:State*State)	8	453258	GameScript::NotStateCheck	todo				
+trigger	0x402A	NumCreatureGT(O:Object*,I:Number*)	6	453258	GameScript::NumCreaturesGT	todo				
+trigger	0x4068	TimeGT(I:Time*Time)	6	453258	GameScript::TimeGT	todo				
+trigger	0x4069	TimeLT(I:Time*Time)	6	453258	GameScript::TimeLT	todo				
+trigger	0x4041	GlobalTimerNotExpired(S:Name*,S:Area*)	5	453258	GameScript::GlobalTimerNotExpired	todo				
+trigger	0x409A	Faction(O:Object*,I:Value*Faction)	5	453258	GameScript::Faction	todo				
+trigger	0x408A	PartyCountLT(I:Count*)	4	453258	GameScript::PartyCountLT	todo				
+trigger	0x409C	StuffGlobalRandom(S:Name*,S:Area*,I:Range*)	4	453258	GameScript::StuffGlobalRandom	todo				
+trigger	0x40A2	InternalLT(O:Object*,I:Index*Internal,I:Value*)	4	453258	GameScript::InternalLT	todo				
+trigger	0x402C	HPPercent(O:Object*,I:HitPoints*)	3	453258	GameScript::HPPercent	todo				
+trigger	0x40A6	IsLocked(O:Object*)	3	453258	GameScript::IsLocked	todo				
+trigger	0x4028	NumCreature(O:Object*,I:Number*)	2	453258	GameScript::NumCreatures	todo				
+trigger	0x402E	HPPercentGT(O:Object*,I:HitPoints*)	2	453258	GameScript::HPPercentGT	todo				
+trigger	0x4049	RandomNumLT(I:Range*,I:Value*)	2	453258	GameScript::RandomNumLT	todo				
+trigger	0x4090	PartyItemCountLT(S:Item*,I:Count)	2	453258	GameScript::NumItemsPartyLT	todo				
+trigger	0x403B	NumTimesTalkedToLT(I:Num*)	1	778529	GameScript::NumTimesTalkedToLT	todo				
+trigger	0x4062	InteractingWith(O:Object*)	1	778529	GameScript::InteractingWith	todo				
+trigger	0x40B2	IsInGuardianMantle(O:Object*)	1	453258	GameScript::IsInGuardianMantle	todo				
+event	0x0002	AttackedBy(O:Object*,I:Style*AStyles)	1280	raised elsewhere (find it)	GameScript::AttackedBy	todo				
+event	0x0003	Help(O:Object*)	1031	raised elsewhere (find it)	GameScript::Help_Trigger	todo				
+event	0x0025	Die()	407	raised elsewhere (find it)	GameScript::Die	todo				
+event	0x0036	OnCreation()	337	raised elsewhere (find it)	GameScript::OnCreation	todo				
+event	0x00A5	WasInDialog()	244	raised elsewhere (find it)	GameScript::WasInDialog	todo				
+event	0x009F	HarmlessEntered(O:Object*)	113	raised elsewhere (find it)	GameScript::HarmlessEntered	todo				
+event	0x004C	Entered(O:Object*)	70	raised elsewhere (find it)	GameScript::Entered	todo				
+event	0x0024	Trigger(I:TriggerNum*)	52	raised elsewhere (find it)	GameScript::TriggerTrigger	todo				
+event	0x0094	Vacant()	49	raised elsewhere (find it)	GameScript::Vacant	todo				
+event	0x0022	TimerExpired(I:ID*)	47	raised elsewhere (find it)	GameScript::TimerExpired	todo				
+event	0x0052	Opened(O:Object*)	18	raised elsewhere (find it)	GameScript::Opened	todo				
+event	0x009D	HarmlessOpened(O:Object*)	11	raised elsewhere (find it)	GameScript::HarmlessOpened	todo				
+event	0x005E	StealFailed(O:Object*)	9	raised elsewhere (find it)	GameScript::StealFailed	todo				
+event	0x005D	PickPocketFailed(O:Object*)	8	raised elsewhere (find it)	GameScript::PickpocketFailed	todo				
+event	0x0079	TriggerClick()	8	raised elsewhere (find it)	GameScript::Clicked	todo				
+event	0x00AF	FailedToOpen(O:Object*)	5	raised elsewhere (find it)	GameScript::OpenFailed	todo				
+event	0x0060	PickLockFailed(O:Object*)	4	raised elsewhere (find it)	GameScript::PickLockFailed	todo				
+event	0x0006	ReceivedOrder(O:Object*,I:OrderID*Order)	3	raised elsewhere (find it)	GameScript::ReceivedOrder	todo				
+event	0x0020	HitBy(O:Object*,I:DameType*Damages)	3	raised elsewhere (find it)	GameScript::HitBy	todo				
+event	0x004A	Died(O:Object*)	3	raised elsewhere (find it)	GameScript::Died	todo				
+event	0x00A4	NullDialog(O:Object*)	2	raised elsewhere (find it)	GameScript::NullDialog	todo				
+event	0x00AB	NamelessBitTheDust()	2	raised elsewhere (find it)	GameScript::NamelessBitTheDust	todo				
+event	0x0057	Unlocked(O:Object*)	1	raised elsewhere (find it)	GameScript::Unlocked	todo				
+event	0x009E	HarmlessClosed(O:Object*)	1	raised elsewhere (find it)	GameScript::HarmlessClosed	todo				
+baldur	block00	"!Faction(Protagonist,ANARCHIST) Global(""JOIN_ANARCHISTS"",""GLOBAL"",1) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block01	"!Faction(Protagonist,SENSATE) Global(""JOIN_SENSATES"",""GLOBAL"",1) !Global(""JOIN_ANARCHISTS"",""GLOBAL"",1)"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block02	"!Faction(Protagonist,DUSTMEN) Global(""JOIN_DUSTMEN"",""GLOBAL"",1) !Global(""JOIN_ANARCHISTS"",""GLOBAL"",1)"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block03	"!Faction(Protagonist,GODSMAN) Global(""JOIN_GODSMEN"",""GLOBAL"",6) !Global(""JOIN_ANARCHISTS"",""GLOBAL"",1)"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block04	"!Faction(Protagonist,XAOSITECT) Global(""JOIN_CHAOSMEN"",""GLOBAL"",1) !Global(""JOIN_ANARCHISTS"",""GLOBAL"",1)"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block05	"Global(""game_over"",""GLOBAL"",1) THEN RESPONSE #100"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block06	"Global(""game_over"",""GLOBAL"",2) THEN RESPONSE #100"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block07	"Global(""game_over"",""GLOBAL"",3) THEN RESPONSE #100"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block08	"Global(""game_over"",""GLOBAL"",4) THEN RESPONSE #100"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block09	"Global(""game_over"",""GLOBAL"",5) THEN RESPONSE #100"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block10	"Global(""game_over"",""GLOBAL"",6) THEN RESPONSE #100"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block11	"Global(""AR0200_Visited"",""GLOBAL"",1) Global(""Played_Shadow_Movie"",""GLOBAL"",0) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block12	"Global(""AR0206_Visited"",""GLOBAL"",1) Global(""Played_Shadow_Movie"",""GLOBAL"",0) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block13	"Global(""AR0200_Visited"",""GLOBAL"",1) Global(""Played_Sigil_Movie"",""GLOBAL"",0) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block14	"GlobalGT(""lady"",""GLOBAL"",49) Global(""ar1900_visited"",""GLOBAL"",0) UsedExit(""sigil"",Protagonist)"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block15	"GlobalGT(""lady"",""GLOBAL"",49) Global(""ar1900_visited"",""GLOBAL"",1) UsedExit(""sigil"",Protagonist)"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block16	"CreatureInArea(""ar1501"") UsedExit(""pcmaze"",Protagonist) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block17	"Global(""sabotage"",""GLOBAL"",5) CreatureInArea(""ar0512"") UsedExit(""foundry"",[PC])"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block18	"Global(""sabotage"",""GLOBAL"",7) CreatureInArea(""ar0512"") UsedExit(""foundry"",[PC])"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block19	"Alignment(Protagonist,LAWFUL_GOOD) GlobalLT(""good"",""GLOBAL"",15) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block20	"Alignment(Protagonist,NEUTRAL_GOOD) GlobalLT(""good"",""GLOBAL"",15) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block21	"Alignment(Protagonist,CHAOTIC_GOOD) GlobalLT(""good"",""GLOBAL"",15) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block22	"Alignment(Protagonist,LAWFUL_NEUTRAL) GlobalGT(""good"",""GLOBAL"",14) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block23	"Alignment(Protagonist,NEUTRAL) GlobalGT(""good"",""GLOBAL"",14) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block24	"Alignment(Protagonist,CHAOTIC_NEUTRAL) GlobalGT(""good"",""GLOBAL"",14) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block25	"Alignment(Protagonist,LAWFUL_NEUTRAL) GlobalLT(""good"",""GLOBAL"",-20) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block26	"Alignment(Protagonist,NEUTRAL) GlobalLT(""good"",""GLOBAL"",-20) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block27	"Alignment(Protagonist,CHAOTIC_NEUTRAL) GlobalLT(""good"",""GLOBAL"",-20) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block28	"Alignment(Protagonist,LAWFUL_EVIL) GlobalGT(""good"",""GLOBAL"",-21) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block29	"Alignment(Protagonist,NEUTRAL_EVIL) GlobalGT(""good"",""GLOBAL"",-21) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block30	"Alignment(Protagonist,CHAOTIC_EVIL) GlobalGT(""good"",""GLOBAL"",-21) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block31	"Alignment(Protagonist,LAWFUL_EVIL) GlobalLT(""law"",""GLOBAL"",15) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block32	"Alignment(Protagonist,LAWFUL_NEUTRAL) GlobalLT(""law"",""GLOBAL"",15) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block33	"Alignment(Protagonist,LAWFUL_GOOD) GlobalLT(""law"",""GLOBAL"",15) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block34	"Alignment(Protagonist,NEUTRAL_EVIL) GlobalGT(""law"",""GLOBAL"",14) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block35	"Alignment(Protagonist,NEUTRAL) GlobalGT(""law"",""GLOBAL"",14) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block36	"Alignment(Protagonist,NEUTRAL_GOOD) GlobalGT(""law"",""GLOBAL"",14) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block37	"Alignment(Protagonist,CHAOTIC_EVIL) GlobalGT(""law"",""GLOBAL"",-21) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block38	"Alignment(Protagonist,CHAOTIC_NEUTRAL) GlobalGT(""law"",""GLOBAL"",-21) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block39	"Alignment(Protagonist,CHAOTIC_GOOD) GlobalGT(""law"",""GLOBAL"",-21) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block40	"Alignment(Protagonist,NEUTRAL_EVIL) GlobalLT(""law"",""GLOBAL"",-20) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block41	"Alignment(Protagonist,NEUTRAL) GlobalLT(""law"",""GLOBAL"",-20) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block42	"Alignment(Protagonist,NEUTRAL_GOOD) GlobalLT(""law"",""GLOBAL"",-20) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block43	"Global(""Pharod_Quest"",""GLOBAL"",2) GlobalLT(""Strong_Arm_Vaxis"",""GLOBAL"",10) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block44	"Global(""Current_Area"",""GLOBAL"",202) Global(""Strong_Arm_Vaxis"",""GLOBAL"",10) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block45	"Global(""Strong_Arm_Vaxis"",""GLOBAL"",11) Global(""Current_Area"",""GLOBAL"",202) PartyHasItem(""BSPHERE"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block46	"Global(""Strong_Arm_Vaxis"",""GLOBAL"",11) Global(""Current_Area"",""GLOBAL"",202) PartyHasItem(""NTOKEN"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block47	"Global(""Strong_Arm_Vaxis"",""GLOBAL"",11) Global(""Current_Area"",""GLOBAL"",202) PartyHasItem(""BLADEIM"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block48	"Global(""Strong_Arm_Vaxis"",""GLOBAL"",11) Global(""Current_Area"",""GLOBAL"",202) PartyHasItem(""limlim"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block49	"Global(""Strong_Arm_Vaxis"",""GLOBAL"",11) Global(""Current_Area"",""GLOBAL"",202) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block50	"Global(""Fortress_Annah"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Annah"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block51	"Global(""Fortress_Annah"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Annah"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block52	"Global(""Fortress_Morte"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Morte"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block53	"Global(""Fortress_Morte"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Morte"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block54	"Global(""Fortress_Dakkon"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Dakkon"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block55	"Global(""Fortress_Dakkon"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Dakkon"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block56	"Global(""Fortress_Grace"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Grace"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block57	"Global(""Fortress_Grace"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Grace"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block58	"Global(""Fortress_Nordom"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Nordom"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block59	"Global(""Fortress_Nordom"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Nordom"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block60	"Global(""Fortress_Ignus"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Ignus"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block61	"Global(""Fortress_Ignus"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Ignus"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block62	"Global(""Fortress_Vhailor"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Vhailor"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
+baldur	block63	"Global(""Fortress_Vhailor"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Vhailor"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				

@@ -10,7 +10,8 @@ This folder compares GemRB's Planescape: Torment support with the real engine.
 - [pst_functions.md](pst_functions.md): every PST-only engine function in PST:EE, the rules checklist (generated).
 - The plan: [PARITY_PLAN.md](../../PARITY_PLAN.md).
 - [maps/](maps/README.md): where everything lives in both binaries (address maps, struct offsets), as text. No IDA needed to use them.
-- [AGENT_GUIDE.md](AGENT_GUIDE.md): step-by-step instructions for an agent that continues the investigation.
+- [AGENT_GUIDE.md](AGENT_GUIDE.md): step-by-step instructions for an agent that continues the investigation (tracks A–C).
+- [script_ledger.tsv](script_ledger.tsv): every action, trigger, event trigger and BALDUR.bcs block the game uses, with its verdict (track A).
 
 Tools added for that: `tools/parity/ida.py` (one-command decompile/xrefs/vtables/search), `tools/parity/iesdp.py`
 (IESDP lookups; the site is at `iesdp-gh-pages/`, git-ignored) and `tools/parity/strings.py` (EE string dump).
