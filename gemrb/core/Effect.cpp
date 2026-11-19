@@ -40,6 +40,7 @@ Effect& Effect::operator=(const Effect& rhs) noexcept
 		// skip unknown2
 		Resistance = rhs.Resistance;
 		Duration = rhs.Duration;
+		turnOnset = rhs.turnOnset;
 		ProbabilityRangeMax = rhs.ProbabilityRangeMax;
 		ProbabilityRangeMin = rhs.ProbabilityRangeMin;
 		DiceThrown = rhs.DiceThrown;

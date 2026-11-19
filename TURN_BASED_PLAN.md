@@ -446,11 +446,29 @@ Built, in `gemrb/core/TurnBasedCombat/CombatDirector.*` (TurnManager renamed and
   the start of each of its turns the director's upkeep runs its effects through one round tick
   by tick, so durations, regeneration (TNO's included), poison and other periodic effects
   follow its turns and happen at turn start. Handback rebases durations onto world time.
+  **Everything in rounds** (`CombatDirector::TimeNewEffect`, toggle `Turn Based Round Durations`),
+  BG3 style, in and out of a fight. PST rounds are 5 s = 75 ticks (GemRB's pst gametime.2da; BG is
+  6, IWD 7; PST's spells are written for 5: "every 5 seconds", "5 seconds per level"). A timed effect
+  of a round or more lasts whole rounds (nearest: Blessing's 30 s = 6, a 7 s freeze = 1). Round
+  ticks are world game time multiples of 75: out of a fight effects end just after a round tick
+  (`RoundGridExpiry`), in a fight on the target's turns (`TurnExpiry`: N rounds = its next N turns;
+  a 1-round hold costs exactly one turn, whether it acted before or after the caster). A combatant's
+  combat clock starts on the round grid and the handback shifts by whole rounds, so the rounds left
+  carry over exactly both ways. The hover panel's buff list shows the rounds left (`RoundsLeft`).
+  Under a round (flashes, sounds) stays as it is. Script timers are not effects and stay in seconds.
+  **Spell playout** (toggle `Turn Based Spell Playout`): PST delays damage, sounds and states to sync
+  them with the animation (Cone of Cold 100 ticks, Blacksphere 100, Desert Hell up to 150; the longest
+  in the data is 10 s, none is a rule). A delayed effect on a combatant gets a world time onset
+  (`Effect::turnOnset`, `CombatClockScope::WorldTime`), the director fires it in real time
+  (`PlayOutOnsets`) and the caster's turn holds until all have landed (`OnsetsPending`, cap 20 s).
+  Repeating areas (Cloudkill 10 pulses, Elysium's Fires 8; both "Duration: Instant") play all their
+  pulses within the caster's turn, every half second, each creature hit once per cast
+  (`Projectile::turnPlayout`).
   Banter/area comments off during a fight. Outsiders that attack a combatant join on the spot.
 - **Spells resolve in the caster's turn:** casting time is one play of the cast animation; the
   turn then holds until every projectile the caster fired has made its first hit or explosion
-  (`CombatDirector::SpellInFlight`, at most 10 s); End Turn mid-spell ends it once the spell has
-  landed. Lingering area effects (clouds, walls, repeating explosions) of a living combatant run on
+  (`CombatDirector::SpellInFlight`, at most 20 s); End Turn mid-spell ends it once the spell has
+  landed. Other lingering area effects (walls, clouds with a duration) of a living combatant run on
   its caster's combat clock (`Projectile::HeldByCombatClock`): they pulse at the start of the
   caster's turns and last that many of its turns; world time again after the fight. The casting
   glow ends on the caster's combat clock too (it used to loop for many turns: its end was set in

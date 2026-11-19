@@ -1,0 +1,3 @@
+{"resref": "SPWI101", "name": "Chromatic Orb", "number": 2101, "problems": ["change: nothing happened to anyone"], "notes": [], "realtime": true, "changes": {}}
+{"resref": "SPWI212", "name": "Swarm Curse", "number": 2212, "problems": [], "notes": [], "realtime": true, "changes": {"10002": {"hp": 1, "state": "", "new": [], "clock": 408387}}}
+{"resref": "SPWI805", "name": "Power Word, Blind", "number": 2805, "problems": ["change: nothing happened to anyone"], "notes": [], "realtime": true, "changes": {}}

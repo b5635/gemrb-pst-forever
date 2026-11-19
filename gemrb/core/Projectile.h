@@ -26,6 +26,7 @@
 #include "Audio/Playback.h"
 
 #include <list>
+#include <set>
 #include <map>
 
 namespace GemRB {
@@ -306,6 +307,10 @@ private:
 	// turn based combat: a lingering area effect counts its caster's combat clock
 	ieDword lingerClock = 0; // the caster's clock last seen, 0 while on world time
 	ieDword lingerTicks = 0; // clock ticks still to play out
+	// turn based combat: a repeating area (pst Cloudkill, Elysium's Fires) plays all its pulses out
+	// in its caster's turn, quickly, and hits each creature once per cast
+	bool turnPlayout = false;
+	std::set<ieDword> turnHit;
 
 public:
 	void SetCaster(ieDword t, int level);
@@ -335,6 +340,8 @@ public:
 	void SetupZPos();
 	inline Point GetDestination() const { return Destination; }
 	inline const ResRef& GetName() const { return projectileName; }
+	int GetStateCode() const { return int(state); } // test/debug helpers
+	int GetExtensionDelay() const { return extensionDelay; }
 	inline ieWord GetType() const { return type; }
 	//This assumes that the effect queue cannot be bigger than 65535
 	//which is a sane expectation

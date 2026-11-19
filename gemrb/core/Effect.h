@@ -143,6 +143,9 @@ struct GEM_EXPORT Effect {
 	ieDword RandomValue = 0;
 
 	ieDword SpellLevel = 0; // Power does not always contain the Source level, which is needed in iwd2; items will be left at 0
+	// turn based combat: the onset (Duration) is a world time tick, the effect plays out in real
+	// time while its caster's turn waits for it (not saved: the fight hands it back to world time)
+	bool turnOnset = false;
 
 public:
 	//don't modify position in case it was already set

@@ -4734,7 +4734,7 @@ void Actor::DisplayCombatFeedback(unsigned int damage, int resisted, int damaget
 		} else if (core->HasFeature(GFFlags::ONSCREEN_TEXT)) {
 			const Game* game = core->GetGame();
 			if (game && game->combat.IsActive() && core->GetDictionary().Get(StringView("Turn Based Floating Text"), 1)) {
-				CombatHud::NotifyFloater(GetGlobalID(), fmt::format(u"{}", damage));
+				CombatHud::NotifyFloater(GetGlobalID(), fmt::format(u"{}", damage), CombatHud::DamageColor(damagetype));
 			} else {
 				auto color = GUIColors::WHITE;
 				if (InParty) {
@@ -9676,7 +9676,11 @@ String Actor::GetSoundFolder(int full, const ResRef& overrideSet) const
 
 bool Actor::HasVVCCell(const ResRef& resource) const
 {
-	return GetVVCCells(resource).first != vfxDict.end();
+	// equal_range of a missing key is an empty range at its insertion point, not end(): this
+	// used to say yes whenever a vvc with a later name was attached (pst Guardian Mantle never
+	// got its vvc, and the overlay that needs it ended at once)
+	auto range = GetVVCCells(resource);
+	return range.first != range.second;
 }
 
 bool VVCSort(const std::unique_ptr<ScriptedAnimation>& lhs, const std::unique_ptr<ScriptedAnimation>& rhs)

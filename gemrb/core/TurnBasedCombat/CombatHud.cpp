@@ -4,6 +4,11 @@
 
 #include "TurnBasedCombat/CombatHud.h"
 
+#include "damages.h"
+
+#include "GameData.h"
+#include "Spell.h"
+
 #include "Game.h"
 #include "Interface.h"
 #include "Map.h"
@@ -649,6 +654,7 @@ struct CombatFloater {
 	int stack = 0;
 	float vx = 0;
 	float vy = 0;
+	Color color = ColorWhite;
 };
 std::vector<CombatFloater> floaters;
 constexpr tick_t FLOATER_SHOWN = 4000;
@@ -656,7 +662,32 @@ constexpr tick_t FLOATER_FADE = 500;
 constexpr int FLOATER_GAP = 4;
 }
 
-void CombatHud::NotifyFloater(ieDword actor, String text)
+Color CombatHud::DamageColor(int type)
+{
+	if (!core->GetDictionary().Get(StringView("Elemental Damage Colors"), 1)) return ColorWhite;
+	if (type & (DAMAGE_FIRE | DAMAGE_MAGICFIRE)) return Color(255, 138, 48, 255); // orange
+	if (type & (DAMAGE_COLD | DAMAGE_MAGICCOLD)) return Color(122, 204, 255, 255); // ice blue
+	if (type & DAMAGE_ELECTRICITY) return Color(250, 232, 88, 255); // yellow
+	if (type & DAMAGE_ACID) return Color(176, 232, 64, 255); // lime
+	if (type & DAMAGE_POISON) return Color(110, 196, 104, 255); // green
+	if (type & DAMAGE_MAGIC) return Color(232, 128, 236, 255); // magenta
+	return ColorWhite; // crushing, piercing, slashing, missile, stunning
+}
+
+void CombatHud::NotifySpellCast(ieDword actor, const ResRef& spell)
+{
+	if (spell.IsEmpty() || !core->GetDictionary().Get(StringView("Spell Cast Text"), 1)) return;
+	const Spell* spl = gamedata->GetSpell(spell, true);
+	if (!spl) return;
+	// pst leaves the identified name as an empty string (strref 9999999): fall back
+	String name = spl->SpellNameIdentified != ieStrRef::INVALID ? core->GetString(spl->SpellNameIdentified) : String();
+	if (name.empty() && spl->SpellName != ieStrRef::INVALID) name = core->GetString(spl->SpellName);
+	gamedata->FreeSpell(spl, spell, false);
+	// a soft violet, apart from the white numbers and words of the fight
+	if (!name.empty()) NotifyFloater(actor, std::move(name), Color(196, 170, 255, 255));
+}
+
+void CombatHud::NotifyFloater(ieDword actor, String text, const Color& color)
 {
 	if (text.empty() || !core->GetDictionary().Get(StringView("Turn Based Floating Text"), 1)) return;
 	const tick_t now = GetMilliseconds();
@@ -668,7 +699,7 @@ void CombatHud::NotifyFloater(ieDword actor, String text)
 	const float ang = float(RAND(0, 359)) * 3.14159265f / 180.0f;
 	const float spd = float(RAND(6, 14)) / 10.0f;
 	if (floaters.size() > 32) floaters.erase(floaters.begin());
-	floaters.push_back({ actor, std::move(text), now, stack, std::cos(ang) * spd, std::sin(ang) * spd });
+	floaters.push_back({ actor, std::move(text), now, stack, std::cos(ang) * spd, std::sin(ang) * spd, color });
 }
 
 // Same lift as the original save die / "Save failed" label: 95 map-px above the
@@ -783,7 +814,7 @@ void CombatHud::DrawWorldOverlays()
 		const Point at(head.x + int(f.vx * sec), head.y - f.stack * (line + FLOATER_GAP) + int(f.vy * sec));
 		const Size size = font->StringSize(f.text);
 		const int w = std::max(24, size.w + 8);
-		const Font::PrintColors colors { Faded(ColorWhite, alpha), Faded(ColorBlack, alpha) };
+		const Font::PrintColors colors { Faded(f.color, alpha), Faded(ColorBlack, alpha) };
 		WithDrawOffset(actor, [&]() {
 			font->Print(Region(at.x - w / 2, at.y, w, line + 4), f.text,
 				    IE_FONT_ALIGN_CENTER | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, colors);

@@ -1895,15 +1895,17 @@ int fx_set_panic_state(Scriptable* /*Owner*/, Actor* target, Effect* fx)
 		Holder<Action> action;
 		const Actor* caster = GetCasterObject();
 		if (caster) {
-			if (core->HasFeature(GFFlags::IWD_MAP_DIMENSIONS)) { // iwd troll scripts are incompatible with full panic
+			// iwd troll scripts are incompatible with full panic; pst has no RunAwayFromNoInterrupt
+			if (core->HasFeature(GFFlags::IWD_MAP_DIMENSIONS) || core->HasFeature(GFFlags::PST_STATE_FLAGS)) {
 				action = GenerateActionDirect("RunAwayFrom([-1],300)", caster);
 			} else {
 				action = GenerateActionDirect("RunAwayFromNoInterrupt([-1],300)", caster);
 			}
-		} else {
-			action = GenerateAction("RandomWalk()");
 		}
-		assert(action);
+		// never assert: a game without these actions (pst Horror, Ignus' Terror aborted here)
+		if (!action && caster) action = GenerateActionDirect("RunAwayFrom([-1],300)", caster);
+		if (!action) action = GenerateAction("RandomWalk()");
+		if (!action) return FX_APPLIED;
 		action->int0Parameter = core->Time.round_size;
 		action->int2Parameter = 1; // mark as our own
 		const Holder<Action> current = target->GetCurrentAction();

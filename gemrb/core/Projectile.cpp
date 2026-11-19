@@ -21,6 +21,8 @@
 #include "Sprite2D.h"
 #include "VEFObject.h"
 
+#include "TurnBasedCombat/CombatDirector.h"
+
 #include "Logging/Logging.h"
 #include "Scriptable/Actor.h"
 
@@ -1227,6 +1229,11 @@ void Projectile::SecondaryTarget()
 			continue;
 		}
 
+		// played out in a turn: each creature once per cast
+		if (turnPlayout && turnHit.count(targetID)) {
+			continue;
+		}
+
 		if (Extension->AFlags & PAF_CONE && !InCone(actor, cone)) {
 			continue;
 		}
@@ -1269,6 +1276,7 @@ void Projectile::SecondaryTarget()
 			pro->successSpell = successSpell;
 		}
 		pro->SetCaster(Caster, Level);
+		turnHit.insert(targetID);
 		//this is needed to apply the success spell on the center point
 		pro->MoveTo(area, Pos);
 		pro->SetTarget(Pos);
@@ -1719,7 +1727,8 @@ ProjectileState Projectile::GetNextExplosionState()
 	}
 
 	// turn based combat: between its caster's turns a lingering area effect stays as it is
-	bool combatClock = HeldByCombatClock();
+	// (unless it plays out within the caster's turn)
+	bool combatClock = !turnPlayout && HeldByCombatClock();
 	if (combatClock && !lingerTicks) {
 		return state;
 	}
@@ -1799,6 +1808,10 @@ ProjectileState Projectile::GetNextExplosionState()
 	if (state == ProjectileState::EXPLODING) {
 		if (!(ExtFlags & PEF_WALL)) InitExplodingPhase1(); // wall projectiles init it immediately
 		nextState = ProjectileState::EXPLODING_AGAIN;
+		if (!(ExtFlags & PEF_WALL) && extensionExplosionCount && area) {
+			const Actor* caster = area->GetActorByGlobalID(Caster);
+			turnPlayout = caster && CombatDirector::PlaysOutAreas(caster);
+		}
 	} else {
 		core->GetAudioPlayback().Play(Extension->AreaSound, AudioPreset::Spatial, SFXChannel::Missile, Pos);
 	}
@@ -1813,7 +1826,9 @@ ProjectileState Projectile::GetNextExplosionState()
 			nextState = ProjectileState::BURNING_DOWN;
 		}
 	} else if (extensionExplosionCount) {
-		extensionDelay = Extension->Delay;
+		// played out in a turn: a pulse every half second instead of the area's own pace (later
+		// pulses only catch creatures the first ones missed)
+		extensionDelay = turnPlayout ? std::min<int>(Extension->Delay, core->Time.defaultTicksPerSec / 2) : Extension->Delay;
 	} else {
 		nextState = ProjectileState::BURNING_DOWN;
 	}
@@ -2138,6 +2153,9 @@ bool Projectile::Resolving() const
 		case ProjectileState::EXPLODING:
 			// a revocable trap explosion (skull trap) waits on whoever walks in, not on the caster
 			return !(Extension && (Extension->AFlags & PAF_DELAYED));
+		case ProjectileState::EXPLODING_AGAIN:
+			// a repeating area played out in its caster's turn
+			return turnPlayout;
 		default:
 			return false;
 	}

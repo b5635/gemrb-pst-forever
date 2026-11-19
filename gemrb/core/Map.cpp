@@ -1135,8 +1135,9 @@ void Map::DrawMap(const Region& viewport, FogRenderer& fogRenderer, uint32_t dFl
 					} else {
 						pile->Draw(false, viewport, tint, flags);
 					}
-					pile = GetNextPile(pileIdx);
 				}
+				// always move on: a background override (pst Desert Hell) used to spin here forever
+				pile = GetNextPile(pileIdx);
 				break;
 			case AnimationObjectType::AREA:
 				a = DrawAreaAnimation(a);
@@ -1737,6 +1738,8 @@ BlitFlags Map::SetDrawingStencilForAreaAnimation(const AreaAnimation* anim, cons
 // test case: vvc played when summoning a creature (it's not attached to the actor as most spell vfx)
 BlitFlags Map::SetDrawingStencilForScriptedAnimation(const ScriptedAnimation* anim, const Region& viewPort, int height)
 {
+	// a VEF without a single animation (seen when a spell's movie redraws the map mid-update)
+	if (!anim) return BlitFlags::NONE;
 	const Region& bbox = anim->DrawingRegion();
 	if (bbox.IntersectsRegion(viewPort) == false) {
 		return BlitFlags::NONE;

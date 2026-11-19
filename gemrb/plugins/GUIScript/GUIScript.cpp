@@ -20,6 +20,7 @@
 #include "MusicMgr.h"
 #include "Palette.h"
 #include "PalettedImageMgr.h"
+#include "Projectile.h"
 #include "PythonCallbacks.h"
 #include "PythonConversions.h"
 #include "PythonErrors.h"
@@ -12188,6 +12189,93 @@ static PyObject* GemRB_GetEffects(PyObject* /*self*/, PyObject* args)
 	return effects;
 }
 
+PyDoc_STRVAR(GemRB_DebugEffects__doc,
+	     "===== DebugEffects =====\n\
+\n\
+**Prototype:** GemRB.DebugEffects (globalID)\n\
+\n\
+**Description:** Test helper: the whole effect queue of a creature with its timing.\n\
+\n\
+**Return value:** dict with 'Clock' (its turn based combat clock, 0 outside), 'GameTime', 'Round' \n\
+(ticks per round), 'X', 'Y' and 'Effects', a list of dicts with 'Opcode', 'Timing', 'Duration', 'Source', \n\
+'Param1', 'Param2', 'Resource', 'Caster', 'TurnOnset' (plays out in real time)");
+
+// resrefs in PST effects can carry junk bytes: keep what prints
+static PyObject* PrintableResRef(const ResRef& ref)
+{
+	std::string out;
+	for (const char* c = ref.begin(); c != ref.end(); ++c) {
+		if (!*c) break;
+		if (*c >= 32 && *c < 127) out += *c;
+	}
+	return PyUnicode_FromString(out.c_str());
+}
+
+static PyObject* GemRB_DebugEffects(PyObject* /*self*/, PyObject* args)
+{
+	int globalID;
+	PARSE_ARGS(args, "i", &globalID);
+	GET_GAME();
+	GET_ACTOR_GLOBAL();
+
+	PyObject* list = PyList_New(0);
+	auto f = actor->fxqueue.GetFirstEffect();
+	const Effect* fx = actor->fxqueue.GetNextEffect(f);
+	while (fx) {
+		PyObject* dict = PyDict_New();
+		PyDict_SetItemString(dict, "Opcode", DecRef(PyLong_FromLong, fx->Opcode));
+		PyDict_SetItemString(dict, "Timing", DecRef(PyLong_FromLong, fx->TimingMode));
+		PyDict_SetItemString(dict, "Duration", DecRef(PyLong_FromUnsignedLong, fx->Duration));
+		PyDict_SetItemString(dict, "Source", DecRef(PrintableResRef, fx->SourceRef));
+		PyDict_SetItemString(dict, "Param1", DecRef(PyLong_FromLong, fx->Parameter1));
+		PyDict_SetItemString(dict, "Param2", DecRef(PyLong_FromLong, fx->Parameter2));
+		PyDict_SetItemString(dict, "Resource", DecRef(PrintableResRef, fx->Resource));
+		PyDict_SetItemString(dict, "Caster", DecRef(PyLong_FromUnsignedLong, fx->CasterID));
+		PyDict_SetItemString(dict, "TurnOnset", DecRef(PyBool_FromLong, fx->turnOnset));
+		PyList_Append(list, dict);
+		Py_DECREF(dict);
+		fx = actor->fxqueue.GetNextEffect(f);
+	}
+	PyObject* result = PyDict_New();
+	PyDict_SetItemString(result, "Clock", DecRef(PyLong_FromUnsignedLong, game->combat.ClockOf(actor)));
+	PyDict_SetItemString(result, "GameTime", DecRef(PyLong_FromUnsignedLong, game->GameTime));
+	PyDict_SetItemString(result, "Round", DecRef(PyLong_FromUnsignedLong, core->Time.round_size));
+	PyDict_SetItemString(result, "Fading", DecRef(PyBool_FromLong, core->timer.IsFading()));
+	PyDict_SetItemString(result, "Shake", DecRef(PyLong_FromLong, core->timer.ShakeRemaining()));
+	PyDict_SetItemString(result, "X", DecRef(PyLong_FromLong, actor->Pos.x));
+	PyDict_SetItemString(result, "Y", DecRef(PyLong_FromLong, actor->Pos.y));
+	PyDict_SetItemString(result, "Effects", list);
+	Py_DECREF(list);
+	return result;
+}
+
+PyDoc_STRVAR(GemRB_DebugProjectiles__doc,
+	     "===== DebugProjectiles =====\n\n**Prototype:** GemRB.DebugProjectiles ()\n\n**Description:** Test helper: the current area's projectiles.\n\n**Return value:** list of dicts with 'Name', 'State', 'Caster', 'X', 'Y', 'Delay', 'Resolving'");
+
+static PyObject* GemRB_DebugProjectiles(PyObject* /*self*/, PyObject* /*args*/)
+{
+	GET_GAME();
+	GET_MAP();
+	PyObject* list = PyList_New(0);
+	proIterator iter;
+	size_t count = map->GetProjectileCount(iter);
+	for (size_t i = 0; i < count; ++i, ++iter) {
+		const Projectile* pro = iter->get();
+		if (!pro) continue;
+		PyObject* dict = PyDict_New();
+		PyDict_SetItemString(dict, "Name", DecRef(PrintableResRef, pro->GetName()));
+		PyDict_SetItemString(dict, "State", DecRef(PyLong_FromLong, pro->GetStateCode()));
+		PyDict_SetItemString(dict, "Caster", DecRef(PyLong_FromUnsignedLong, pro->GetCaster()));
+		PyDict_SetItemString(dict, "X", DecRef(PyLong_FromLong, pro->GetPos().x));
+		PyDict_SetItemString(dict, "Y", DecRef(PyLong_FromLong, pro->GetPos().y));
+		PyDict_SetItemString(dict, "Delay", DecRef(PyLong_FromLong, pro->GetExtensionDelay()));
+		PyDict_SetItemString(dict, "Resolving", DecRef(PyBool_FromLong, pro->Resolving()));
+		PyList_Append(list, dict);
+		Py_DECREF(dict);
+	}
+	return list;
+}
+
 PyDoc_STRVAR(GemRB_StealFailed__doc,
 	     "===== StealFailed =====\n\
 \n\
@@ -13574,6 +13662,8 @@ static PyMethodDef GemRBMethods[] = {
 	METHOD(GetCurrentArea, METH_NOARGS),
 	METHOD(GetDamageReduction, METH_VARARGS),
 	METHOD(GetEffects, METH_VARARGS),
+	METHOD(DebugEffects, METH_VARARGS),
+	METHOD(DebugProjectiles, METH_NOARGS),
 	METHOD(GetEquippedAmmunition, METH_VARARGS),
 	METHOD(GetEquippedQuickSlot, METH_VARARGS),
 	METHOD(GetGUIFlags, METH_VARARGS),

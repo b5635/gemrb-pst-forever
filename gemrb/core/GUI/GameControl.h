@@ -212,6 +212,7 @@ private:
 	void DrawCombatOverlays(const Region& screen);
 	void DrawHitPanel(const Region& screen) const;
 	void DrawHoverHP(const Region& screen) const;
+	void DrawPortraitStatus(const Region& screen) const;
 	void DrawTurnBanner(const Region& screen);
 	/** a map point in the control's screen coordinates */
 	Point MapToScreen(const Point& p, const Region& screen) const;

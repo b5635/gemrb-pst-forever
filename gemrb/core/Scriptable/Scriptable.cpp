@@ -15,6 +15,7 @@
 #include "Map.h"
 #include "Projectile.h"
 #include "Spell.h"
+#include "TurnBasedCombat/CombatHud.h"
 
 #include "GUI/GameControl.h"
 #include "GameScript/GSUtils.h"
@@ -1322,6 +1323,8 @@ int Scriptable::CastSpellPoint(const Point& target, bool deplete, bool instant, 
 	}
 
 	int duration = SpellCast(instant, nullptr, level);
+	// the spell\'s name floats over the caster (not for instant sub-casts like ball lightning\'s ball)
+	if (!instant && duration >= 0) CombatHud::NotifySpellCast(GetGlobalID(), SpellResRef);
 	if (!instant && duration) {
 		SpellcraftCheck(actor, SpellResRef);
 		if (actor) actor->CureInvisibility();
@@ -1372,6 +1375,8 @@ int Scriptable::CastSpell(Scriptable* target, bool deplete, bool instant, bool n
 	}
 
 	int duration = SpellCast(instant, target, level);
+	// the spell\'s name floats over the caster (not for instant sub-casts like ball lightning\'s ball)
+	if (!instant && duration >= 0) CombatHud::NotifySpellCast(GetGlobalID(), SpellResRef);
 	if (!instant && duration) {
 		SpellcraftCheck(actor, SpellResRef);
 		// self-targeted spells that are not hostile maintain invisibility

@@ -313,6 +313,12 @@ public:
 	/* returns the number of saved effects */
 	ieDword GetSavedEffectsCount() const;
 	size_t GetEffectsCount() const { return effects.size(); }
+	/** turn based combat: delayed effects still waiting for their world time onset */
+	bool HasTurnOnsets() const;
+	/** fires those whose world time onset has come; true if any did */
+	bool ApplyTurnOnsets(Actor* target);
+	/** the fight is over for it: its pending onsets stay in world time (undoes a ShiftDurations by delta) */
+	void ReleaseTurnOnsets(int delta);
 	unsigned int GetEffectOrder(EffectRef& effectReference, const Effect* fx2) const;
 	/* this method hacks the offhand weapon color effects */
 	static void HackColorEffects(const Actor* Owner, Effect* fx);

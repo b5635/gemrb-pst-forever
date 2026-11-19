@@ -6,6 +6,7 @@
 
 #include "EffectQueue.h"
 #include "Game.h"
+#include "TurnBasedCombat/CombatDirector.h"
 #include "GameData.h"
 #include "GlobalTimer.h"
 #include "Interface.h"
@@ -623,8 +624,17 @@ int fx_special_effect(Scriptable* Owner, Actor* target, Effect* fx)
 
 	ResRef OldSpellResRef = Owner->SpellResRef;
 
+	// ball lightning has this as a self-targeted casting feature: the ball goes to the spell's
+	// target, not back at the caster (it used to fizzle on the caster, doing nothing)
+	Scriptable* aim = target;
+	if (target == Owner && Owner->objects.LastSpellTarget) {
+		const Map* map = Owner->GetCurrentArea();
+		Actor* spellTarget = map ? map->GetActorByGlobalID(Owner->objects.LastSpellTarget) : nullptr;
+		if (spellTarget) aim = spellTarget;
+	}
+
 	// flags: no deplete, instant, no interrupt
-	Owner->DirectlyCastSpell(target, fx->Resource, fx->CasterLevel, true, false);
+	Owner->DirectlyCastSpell(aim, fx->Resource, fx->CasterLevel, true, false);
 	Owner->SetSpellResRef(OldSpellResRef);
 
 	return FX_NOT_APPLIED;
@@ -732,14 +742,19 @@ static inline int DamageLastHitter(Effect* fx, Actor* target, int param1, int pa
 	return FX_APPLIED;
 }
 
-static inline void ConvertTiming(Effect* fx, int Duration)
+// a duration in seconds, set once as an absolute end tick. This runs inside the opcode, after the
+// effect queue prepared the timing, so nothing converts it again. It used to leave a relative
+// tick count in FX_DURATION_INSTANT_LIMITED: delayed or permanent overlays (Guardian Mantle) then
+// expired at once, and the copies made from them (Shield's AC and saves) got their ticks
+// multiplied into ticks again: 15 times the described duration.
+static void ConvertTiming(const Actor* target, Effect* fx, int seconds)
 {
-	// GameTime will be added in by EffectQueue
-	fx->Duration = Duration ? Duration * core->Time.defaultTicksPerSec : 1;
-	if (fx->TimingMode == FX_DURATION_ABSOLUTE) {
-		fx->Duration += core->GetGame()->GameTime;
-	}
-	fx->TimingMode = FX_DURATION_INSTANT_LIMITED;
+	const Game* game = core->GetGame();
+	ieDword now = game->GameTime;
+	fx->Duration = (seconds ? seconds * core->Time.defaultTicksPerSec : 1) + now;
+	fx->TimingMode = FX_DURATION_ABSOLUTE;
+	// turn based combat: whole turns of the target
+	fx->Duration = game->combat.TimeNewEffect(target, fx->Duration, false, now);
 }
 
 int fx_overlay(Scriptable* Owner, Actor* target, Effect* fx)
@@ -761,11 +776,11 @@ int fx_overlay(Scriptable* Owner, Actor* target, Effect* fx)
 			default:
 				break;
 			case 0: //cloak of warding
-				ConvertTiming(fx, 5 * fx->CasterLevel);
+				ConvertTiming(target, fx, 5 * fx->CasterLevel);
 				fx->Parameter3 = RAND(3, 12) + fx->CasterLevel;
 				break;
 			case 1: //shield
-				ConvertTiming(fx, 25 * fx->CasterLevel);
+				ConvertTiming(target, fx, 25 * fx->CasterLevel);
 
 				target->ApplyEffectCopy(fx, fx_armor_ref, Owner, 3, 16);
 				target->ApplyEffectCopy(fx, fx_breath_ref, Owner, 1, 0);
@@ -782,17 +797,17 @@ int fx_overlay(Scriptable* Owner, Actor* target, Effect* fx)
 				target->fxqueue.RemoveAllEffectsWithProjectile(tmp);
 				fx->Projectile = tmp;
 
-				ConvertTiming(fx, RAND(10, 30));
+				ConvertTiming(target, fx, RAND(10, 30));
 				target->ApplyEffectCopy(fx, fx_armor_ref, Owner, 2, 0);
 				fx->Parameter3 = 0xffffffff;
 				break;
 			case 3: //pain mirror
 				fx->Parameter3 = 1;
-				ConvertTiming(fx, 5 * fx->CasterLevel);
+				ConvertTiming(target, fx, 5 * fx->CasterLevel);
 				target->ApplyEffectCopy(fx, fx_colorpulse_ref, Owner, 0xFAFF7000, 0x30000C);
 				break;
 			case 4: //guardian mantle
-				ConvertTiming(fx, 50 + 5 * fx->CasterLevel);
+				ConvertTiming(target, fx, 50 + 5 * fx->CasterLevel);
 				break;
 			case 5: //shroud of shadows
 				// should be 5d4 + 10 per level, but the original spell doesn't use the opcode
@@ -835,7 +850,7 @@ int fx_overlay(Scriptable* Owner, Actor* target, Effect* fx)
 			case 10: //unused
 				break;
 			case 11: //flame walk
-				ConvertTiming(fx, 10 + 10 * fx->CasterLevel);
+				ConvertTiming(target, fx, 10 + 10 * fx->CasterLevel);
 
 				target->ApplyEffectCopy(fx, fx_single_color_pulse_ref, Owner, 0xFF00, 0x400040);
 
@@ -848,7 +863,7 @@ int fx_overlay(Scriptable* Owner, Actor* target, Effect* fx)
 				target->ApplyEffectCopy(fx, fx_resistmfire_ref, Owner, 50, 1);
 				break;
 			case 12: //protection from evil
-				ConvertTiming(fx, 10 * fx->CasterLevel);
+				ConvertTiming(target, fx, 10 * fx->CasterLevel);
 
 				target->ApplyEffectCopy(fx, fx_armor_ref, Owner, 2, 0);
 				target->ApplyEffectCopy(fx, fx_breath_ref, Owner, 2, 0);
@@ -859,19 +874,19 @@ int fx_overlay(Scriptable* Owner, Actor* target, Effect* fx)
 				//terminate = FX_NOT_APPLIED;
 				break;
 			case 13: //conflagration
-				ConvertTiming(fx, 50); // NOTE: the description is conflicting with itself, stating both 50s and 5s/level
+				ConvertTiming(target, fx, 50); // NOTE: the description is conflicting with itself, stating both 50s and 5s/level
 				playonce = true;
 				break;
 			case 14: //infernal shield
 				tint = 0x5EC2FE;
-				ConvertTiming(fx, 5 * fx->CasterLevel);
+				ConvertTiming(target, fx, 5 * fx->CasterLevel);
 
 				target->ApplyEffectCopy(fx, fx_resistfire_ref, Owner, 150, 1);
 				target->ApplyEffectCopy(fx, fx_resistmfire_ref, Owner, 150, 1);
 				break;
 			case 15: //submerge the will
 				tint = 0x538D90;
-				ConvertTiming(fx, 12 * fx->CasterLevel);
+				ConvertTiming(target, fx, 12 * fx->CasterLevel);
 
 				target->ApplyEffectCopy(fx, fx_armor_ref, Owner, 2, 16);
 				target->ApplyEffectCopy(fx, fx_breath_ref, Owner, 1, 0);
@@ -883,7 +898,7 @@ int fx_overlay(Scriptable* Owner, Actor* target, Effect* fx)
 			case 16: //balance in all things
 				tint = 0x615AB4;
 				fx->Parameter3 = fx->CasterLevel / 4;
-				ConvertTiming(fx, 5 * fx->CasterLevel);
+				ConvertTiming(target, fx, 5 * fx->CasterLevel);
 
 				target->ApplyEffectCopy(fx, fx_colorpulse_ref, Owner, 0x615AB400, 0x30000C);
 				playonce = true;
@@ -926,7 +941,7 @@ int fx_overlay(Scriptable* Owner, Actor* target, Effect* fx)
 				Effect* efx = const_cast<Effect*>(target->fxqueue.HasEffectWithSource(fx_colorpulse_ref, fx->SourceRef)); // FIXME: const_cast
 				if (efx) {
 					efx->TimingMode = FX_DURATION_ABSOLUTE;
-					ConvertTiming(efx, duration);
+					ConvertTiming(target, efx, duration);
 				}
 
 				target->ApplyEffectCopy(fx, fx_str_ref, Owner, bonus, 0);
@@ -944,7 +959,10 @@ int fx_overlay(Scriptable* Owner, Actor* target, Effect* fx)
 				if (playonce) {
 					sca->PlayOnce();
 				} else {
-					sca->SetDefaultDuration(fx->Duration - core->GetGame()->Ticks);
+					// it lasts as long as this effect keeps it active (effect owned, see
+					// Actor::RefreshEffects); its own end used to mix clocks (Duration - Ticks)
+					// and could end first, and without its vvc the overlay ends too
+					sca->SetDefaultDuration(0xfffffffe);
 				}
 				sca->SetEffectOwned(true);
 				auto twin = sca->DetachTwin();
@@ -1178,7 +1196,7 @@ int fx_detect_evil(Scriptable* Owner, Actor* target, Effect* fx)
 {
 	if (fx->FirstApply) {
 		// fix duration, which was hardcoded in the original (50 + 25/level, max 5 min)
-		ConvertTiming(fx, std::min<int>(50 + 25 * fx->CasterLevel, 300));
+		ConvertTiming(target, fx, std::min<int>(50 + 25 * fx->CasterLevel, 300));
 	}
 	ieDword type = fx->Parameter2;
 	//default is alignment/evil/speed 30/range 10

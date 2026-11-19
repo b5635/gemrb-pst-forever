@@ -86,6 +86,7 @@ struct GEM_EXPORT Combatant {
 	// combat clock: the game time this combatant's effects live in while it is taken over;
 	// it moves one round per turn of its own (upkeep), the world's clock keeps running
 	ieDword clockTime = 0;
+	ieDword clockOrigin = 0; // its clock when taken over: its turns start at origin + n rounds
 	int upkeepRound = 0; // the round its effects last moved on in
 };
 
@@ -125,12 +126,16 @@ class GEM_EXPORT CombatClockScope {
 public:
 	explicit CombatClockScope(const Actor* actor);
 	~CombatClockScope();
+	/** The world's game time, also while a scope swaps in a combat clock */
+	static ieDword WorldTime();
 	CombatClockScope(const CombatClockScope&) = delete;
 	CombatClockScope& operator=(const CombatClockScope&) = delete;
 
 private:
 	bool swapped = false;
 	ieDword saved = 0;
+	static int depth;
+	static ieDword world;
 };
 
 class GEM_EXPORT CombatDirector {
@@ -168,6 +173,19 @@ public:
 	static bool Owns(const Actor* actor);
 	/** The combat clock of a taken over actor, 0 for everyone else */
 	ieDword ClockOf(const Actor* actor) const;
+	/**
+	 * Round based timing of a new effect on a taken over actor (called with the game clock reading
+	 * its combat clock): an onset under one round fires at once, a duration of a round or more
+	 * covers whole turns of the target. duration is the onset (delayed) or the end tick.
+	 * No-op for everyone else or with the toggle off.
+	 */
+	ieDword TimeNewEffect(const Actor* target, ieDword duration, bool delayed, ieDword now) const;
+	/** Delayed effects on this actor play out in real time while their caster's turn waits */
+	bool PlaysOutOnsets(const Actor* target) const;
+	/** Longest onset delay that is animation sync (pst data: 10 s); longer ones are scheduled events */
+	static constexpr ieDword PLAYOUT_MAX_TICKS = 10 * 15;
+	/** A repeating area of this caster plays all its pulses out within the caster's turn */
+	static bool PlaysOutAreas(const Actor* caster);
 
 	void StartCombat(Map* map);
 	void EndCombat();
@@ -207,6 +225,10 @@ public:
 	bool IsBusy(const Actor* actor) const;
 	/** Is it still casting, or is a spell (or missile) it fired still on its way to its first hit or explosion? */
 	bool SpellInFlight(const Actor* actor) const;
+	/** some combatant still has a delayed effect playing out in real time */
+	bool OnsetsPending() const;
+	/** fires the real time delayed effects whose moment has come */
+	void PlayOutOnsets();
 	static bool Casting(const Actor* actor);
 	bool ProjectileInFlight(const Actor* actor) const;
 
@@ -280,6 +302,24 @@ public:
 	static void ResetBudget(Combatant& combatant, int movePx);
 	/** the part of the path a budget of movement covers, ending exactly where the budget runs out */
 	static Path ClipPath(const Point& start, const Path& path, int budget);
+	/** An onset delay shorter than a round fires now; longer ones keep their tick */
+	static ieDword TurnOnset(ieDword now, ieDword onset, ieDword roundSize);
+	/**
+	 * AD&D rounds: an effect of N rounds (ticks rounded to the nearest whole round) lasts through the
+	 * target's next N turns, whether it already acted this round or not, plus the rest of the
+	 * current turn when it is its own. Its turns start at origin + k * roundSize; the end lands
+	 * one tick past such a start so the effect is gone from that turn on. Under a round: as is.
+	 */
+	static ieDword TurnExpiry(ieDword now, ieDword end, ieDword origin, ieDword roundSize);
+	/** the round tick at or before a time (round ticks are game time multiples of roundSize) */
+	static ieDword RoundGridFloor(ieDword time, ieDword roundSize);
+	/**
+	 * Out of a fight: an effect of a round or more lasts N whole rounds (nearest), counted from the
+	 * nearest round tick and ending just after a round tick, like in a fight. Under a round: as is.
+	 */
+	static ieDword RoundGridExpiry(ieDword now, ieDword end, ieDword roundSize);
+	/** rounds an effect ending at end still has (what the buff list shows) */
+	static int RoundsLeft(ieDword now, ieDword end, ieDword roundSize);
 
 private:
 	/** Where the active combatant's turn stands. */

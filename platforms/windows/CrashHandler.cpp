@@ -6,10 +6,14 @@
 // std::terminate, CRT invalid parameter, pure virtual call) a symbolized stack trace is written to
 // crashes\crash-<time>.txt (and crashes\last_crash.txt) plus a minidump next to it.
 // Symbols come from the PDBs the Release build now produces (see /Zi in the top CMakeLists.txt).
+// A watchdog thread also reports hangs: when the game window stops answering for a few seconds,
+// the main thread's stack goes to crashes\hang-<time>.txt (and crashes\last_hang.txt); the game
+// is left running.
 
 #include "CrashHandler.h"
 
-#include "win32def.h"
+// the full windows.h: the hang watchdog needs user32 (win32def.h leaves it out)
+#include <windows.h>
 
 #include <cstdarg>
 #include <cstdio>
@@ -21,10 +25,12 @@
 #include <atomic>
 
 #pragma comment(lib, "dbghelp.lib")
+#pragma comment(lib, "user32.lib")
 
 namespace {
 
 char crashDir[MAX_PATH] = {};
+HANDLE mainThread = nullptr;
 
 void Out(FILE* f, const char* fmt, ...)
 {
@@ -84,8 +90,8 @@ void WriteFrame(FILE* f, int i, DWORD64 addr)
 	}
 }
 
-// the crashing context (from an exception)
-void WriteStack(FILE* f, CONTEXT ctx)
+// the crashing context (from an exception), or a suspended thread's
+void WriteStack(FILE* f, CONTEXT ctx, HANDLE thread = GetCurrentThread())
 {
 	InitSymbols();
 	STACKFRAME64 frame {};
@@ -96,7 +102,7 @@ void WriteStack(FILE* f, CONTEXT ctx)
 	frame.AddrStack.Offset = ctx.Rsp;
 	frame.AddrStack.Mode = AddrModeFlat;
 	for (int i = 0; i < 64; ++i) {
-		if (!StackWalk64(IMAGE_FILE_MACHINE_AMD64, GetCurrentProcess(), GetCurrentThread(), &frame, &ctx, nullptr, SymFunctionTableAccess64, SymGetModuleBase64, nullptr)) {
+		if (!StackWalk64(IMAGE_FILE_MACHINE_AMD64, GetCurrentProcess(), thread, &frame, &ctx, nullptr, SymFunctionTableAccess64, SymGetModuleBase64, nullptr)) {
 			break;
 		}
 		if (frame.AddrPC.Offset == 0) break;
@@ -218,6 +224,70 @@ void OnPureCall()
 
 }
 
+// --- hang watchdog ---
+
+BOOL CALLBACK FindOwnWindow(HWND hwnd, LPARAM lp)
+{
+	DWORD pid = 0;
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (pid == GetCurrentProcessId() && IsWindowVisible(hwnd)) {
+		*reinterpret_cast<HWND*>(lp) = hwnd;
+		return FALSE;
+	}
+	return TRUE;
+}
+
+void ReportHang(int seconds)
+{
+	if (SuspendThread(mainThread) == DWORD(-1)) return;
+	CONTEXT ctx {};
+	ctx.ContextFlags = CONTEXT_FULL;
+	bool haveCtx = GetThreadContext(mainThread, &ctx);
+
+	char stamp[32];
+	time_t now = time(nullptr);
+	tm lt {};
+	localtime_s(&lt, &now);
+	strftime(stamp, sizeof(stamp), "%Y%m%d-%H%M%S", &lt);
+	char txtPath[MAX_PATH], lastPath[MAX_PATH];
+	CreateDirectoryA(crashDir, nullptr);
+	snprintf(txtPath, MAX_PATH, "%s\\hang-%s.txt", crashDir, stamp);
+	snprintf(lastPath, MAX_PATH, "%s\\last_hang.txt", crashDir);
+	FILE* f = nullptr;
+	fopen_s(&f, txtPath, "w");
+	Out(f, "\n=== GemRB hang: the window hasn't answered for %d s ===\nmain thread stack:\n", seconds);
+	if (haveCtx) WriteStack(f, ctx, mainThread);
+	if (f) fclose(f);
+	ResumeThread(mainThread);
+	CopyFileA(txtPath, lastPath, FALSE);
+}
+
+DWORD WINAPI Watchdog(LPVOID)
+{
+	constexpr int CHECK_MS = 2000;
+	constexpr int HANG_AFTER = 30; // seconds without an answer (first use of upscaled spell art blocks ~10 s)
+	int silent = 0;
+	bool reported = false;
+	while (true) {
+		Sleep(CHECK_MS);
+		HWND hwnd = nullptr;
+		EnumWindows(FindOwnWindow, reinterpret_cast<LPARAM>(&hwnd));
+		if (!hwnd) continue; // not up yet (or a fullscreen switch)
+		DWORD_PTR result = 0;
+		if (SendMessageTimeoutA(hwnd, WM_NULL, 0, 0, SMTO_ABORTIFHUNG | SMTO_BLOCK, CHECK_MS, &result)) {
+			silent = 0;
+			reported = false;
+			continue;
+		}
+		silent += CHECK_MS * 2 / 1000;
+		if (silent >= HANG_AFTER && !reported) {
+			ReportHang(silent);
+			reported = true;
+		}
+	}
+	return 0;
+}
+
 void InstallCrashHandler()
 {
 	GetCurrentDirectoryA(MAX_PATH, crashDir);
@@ -232,4 +302,8 @@ void InstallCrashHandler()
 	// keep a little stack around so a stack overflow can still be reported
 	ULONG guarantee = 64 * 1024;
 	SetThreadStackGuarantee(&guarantee);
+
+	DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &mainThread,
+			THREAD_SUSPEND_RESUME | THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION, FALSE, 0);
+	if (mainThread) CreateThread(nullptr, 0, Watchdog, nullptr, 0, nullptr);
 }

@@ -1173,16 +1173,22 @@ Point GameControl::MapToScreen(const Point& p, const Region& screen) const
 	return screen.origin + local;
 }
 
+namespace {
+void DrawStatusTip(const Region& screen);
+}
+
 void GameControl::DrawCombatOverlays(const Region& screen)
 {
 	const Game* game = core->GetGame();
 	if (!game) return;
 	DrawHoverHP(screen);
+	DrawPortraitStatus(screen);
 	if (game->combat.IsActive()) {
 		DrawHitPanel(screen);
 		game->combat.GetHud().Draw(screen);
 	}
 	DrawTurnBanner(screen);
+	DrawStatusTip(screen);
 }
 
 static String Signed(int v)
@@ -1304,8 +1310,9 @@ const EffectInfo& SpellEffectInfo(const ResRef& ref)
 	EffectInfo info;
 	const Spell* spl = gamedata->GetSpell(ref, true);
 	if (spl) {
-		ieStrRef name = spl->SpellNameIdentified != ieStrRef::INVALID ? spl->SpellNameIdentified : spl->SpellName;
-		if (name != ieStrRef::INVALID) info.name = core->GetString(name);
+		// pst leaves the identified name as an empty string (strref 9999999): fall back
+		if (spl->SpellNameIdentified != ieStrRef::INVALID) info.name = core->GetString(spl->SpellNameIdentified);
+		if (info.name.empty() && spl->SpellName != ieStrRef::INVALID) info.name = core->GetString(spl->SpellName);
 		info.icon = spl->SpellbookIcon;
 		info.hostile = (spl->Flags & SF_HOSTILE) != 0;
 		info.valid = !info.name.empty();
@@ -1329,6 +1336,173 @@ String TitleCase(const std::string& s)
 	}
 	return out;
 }
+
+// ------------------------------------------------------------------------------------------
+// status icons (BG3 style): a spell icon per timed spell effect, a ring around it that drains
+// counterclockwise as the effect runs out, the rounds left in the corner, and a tooltip on hover.
+// Shown under the hover HP bar and next to the party portraits.
+
+struct StatusIcon {
+	const EffectInfo* info = nullptr;
+	bool debuff = false;
+	int rounds = 0; // left
+	float left = 1.0f; // share of its duration still to run
+};
+
+// the end and length each spell's effects had when first seen on a creature (a recast restarts it)
+struct StatusSpan {
+	ieDword end = 0;
+	ieDword length = 1;
+};
+std::map<std::pair<ieDword, std::string>, StatusSpan> statusSpans;
+
+std::vector<StatusIcon> CollectStatus(const Actor* actor, size_t maxIcons)
+{
+	std::vector<StatusIcon> out;
+	if (!actor) return out;
+	// its effects live on its combat clock in a fight
+	CombatClockScope clock(actor);
+	const ieDword now = core->GetGame()->GameTime;
+	const ieDword roundSize = core->Time.round_size;
+	const Map* map = actor->GetCurrentArea();
+
+	struct Source {
+		ieDword end = 0;
+		ieDword caster = 0;
+	};
+	std::vector<std::pair<std::string, Source>> sources;
+	for (auto it = actor->fxqueue.GetFirstEffect(); const Effect* fx = actor->fxqueue.GetNextEffect(it);) {
+		if (fx->SourceType != 2 || fx->SourceRef.IsEmpty() || fx->TimingMode != FX_DURATION_ABSOLUTE) continue;
+		// under a round: flashes, sounds, not a buff
+		if (CombatDirector::RoundsLeft(now, fx->Duration, roundSize) <= 0) continue;
+		std::string key = fx->SourceRef.c_str();
+		auto found = std::find_if(sources.begin(), sources.end(), [&key](const auto& s) { return s.first == key; });
+		if (found == sources.end()) {
+			sources.push_back({ key, { fx->Duration, fx->CasterID } });
+		} else if (fx->Duration > found->second.end) {
+			found->second.end = fx->Duration;
+		}
+	}
+
+	for (const auto& entry : sources) {
+		const std::string& key = entry.first;
+		const Source& src = entry.second;
+		const EffectInfo& info = SpellEffectInfo(ResRef(key));
+		if (!info.valid) continue;
+		StatusIcon icon;
+		icon.info = &info;
+		icon.rounds = CombatDirector::RoundsLeft(now, src.end, roundSize);
+		StatusSpan& span = statusSpans[{ actor->GetGlobalID(), key }];
+		if (span.end != src.end) {
+			span.end = src.end;
+			span.length = std::max<ieDword>(1, src.end - now);
+		}
+		icon.left = Clamp(float(src.end - now) / float(span.length), 0.0f, 1.0f);
+		const Actor* caster = map ? map->GetActorByGlobalID(src.caster) : nullptr;
+		icon.debuff = info.hostile || (caster && CombatDirector::AreEnemies(caster->GetStat(IE_EA), actor->GetStat(IE_EA)));
+		out.push_back(icon);
+	}
+	// debuffs first, then the ones running out soonest
+	std::stable_sort(out.begin(), out.end(), [](const StatusIcon& a, const StatusIcon& b) {
+		if (a.debuff != b.debuff) return a.debuff;
+		return a.rounds < b.rounds;
+	});
+	if (out.size() > maxIcons) out.resize(maxIcons);
+	return out;
+}
+
+// a filled disc, row by row
+void FillDisc(const Point& c, int r, const Color& color)
+{
+	for (int dy = -r; dy <= r; ++dy) {
+		const int half = int(std::sqrt(float(r * r - dy * dy)) + 0.5f);
+		VideoDriver->DrawRect(Region(c.x - half, c.y + dy, 2 * half + 1, 1), color, true, BlitFlags::BLENDED);
+	}
+}
+
+// an arc of a ring: from the top, counterclockwise, the given share of the circle, a few px thick
+void DrawRingShare(const Point& c, float r, float share, const Color& color, int thick)
+{
+	if (share <= 0.0f) return;
+	const int steps = std::max(8, int(64 * share));
+	for (int t = 0; t < thick; ++t) {
+		const float rad = r - float(t) * 0.75f;
+		std::vector<Point> pts;
+		for (int i = 0; i <= steps; ++i) {
+			// screen y grows down: -90 degrees is the top, decreasing angles go left (counterclockwise)
+			const float a = -1.5707963f - share * 6.2831853f * float(i) / float(steps);
+			pts.emplace_back(c.x + int(std::lround(std::cos(a) * rad)), c.y + int(std::lround(std::sin(a) * rad)));
+		}
+		VideoDriver->DrawLines(pts, color, BlitFlags::BLENDED);
+	}
+}
+
+void DrawStatusIcon(const Region& r, const StatusIcon& s)
+{
+	const Point c(r.x + r.w / 2, r.y + r.h / 2);
+	const int radius = r.w / 2;
+	// dark disc, the spell icon on it, a thin gold rim, then the time left as a ring over the rim
+	FillDisc(c, radius, Color(14, 11, 8, 235));
+	const int inner = radius - 3;
+	const Region iconArea(c.x - inner, c.y - inner, 2 * inner, 2 * inner);
+	Holder<Sprite2D> sprite = s.info->icon.IsEmpty() ? nullptr : gamedata->GetBAMSprite(s.info->icon, 0, 0, true);
+	if (sprite) {
+		VideoDriver->BlitSprite(sprite, Region(Point(), sprite->Frame.size), iconArea, BlitFlags::BLENDED);
+	} else {
+		FillDisc(c, inner - 3, s.debuff ? CombatHud::Theme::miss : CombatHud::Theme::hit);
+	}
+	DrawRingShare(c, float(radius), 1.0f, Color(70, 56, 34, 255), 2);
+	const Color fill = s.debuff ? Color(226, 84, 60, 255) : Color(232, 192, 96, 255);
+	DrawRingShare(c, float(radius), s.left, fill, 3);
+}
+
+// the tooltip of the icon under the mouse, drawn last, over everything else
+struct StatusTip {
+	bool show = false;
+	Point at;
+	StatusIcon icon;
+};
+StatusTip statusTip;
+
+// a row (or a block of rows) of icons; notes the tooltip if the mouse is on one
+void DrawStatusIcons(const std::vector<StatusIcon>& icons, Point origin, int size, int gap, int perRow, const Point& mouse)
+{
+	for (size_t i = 0; i < icons.size(); ++i) {
+		const int col = int(i) % perRow;
+		const int row = int(i) / perRow;
+		const Region r(origin.x + col * (size + gap), origin.y + row * (size + gap), size, size);
+		DrawStatusIcon(r, icons[i]);
+		if (r.PointInside(mouse)) {
+			statusTip.show = true;
+			statusTip.at = Point(r.x, r.y + r.h + 4);
+			statusTip.icon = icons[i];
+		}
+	}
+}
+
+void DrawStatusTip(const Region& screen)
+{
+	if (!statusTip.show) return;
+	statusTip.show = false;
+	Holder<Font> font = CombatHud::HudFont();
+	if (!font || !statusTip.icon.info) return;
+	const StatusIcon& s = statusTip.icon;
+	const String& name = s.info->name;
+	const int rounds = s.rounds;
+	const String detail = fmt::format(u"{}  {} {} left", s.debuff ? u"Debuff" : u"Buff", rounds, rounds == 1 ? u"round" : u"rounds");
+	const int line = font->LineHeight + 2;
+	const int w = std::max(font->StringSize(name).w, font->StringSize(detail).w) + 20;
+	const int h = 2 * line + 10;
+	Point at = statusTip.at;
+	at.x = std::min(at.x, screen.x + screen.w - w - 4);
+	at.y = std::min(at.y, screen.y + screen.h - h - 4);
+	const Region panel(at.x, at.y, w, h);
+	CombatHud::DrawPanel(panel);
+	const Font::PrintColors nameColors { s.debuff ? Color(236, 120, 100, 255) : Color(176, 226, 156, 255), ColorBlack };
+	const Font::PrintColors dim { CombatHud::Theme::textDim, ColorBlack };
+	font->Print(Region(panel.x + 10, panel.y + 5, w - 20, line), name, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, nameColors);
+	font->Print(Region(panel.x + 10, panel.y + 5 + line, w - 20, line), detail, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, dim);
+}
 }
 
 void GameControl::DrawHoverHP(const Region& screen) const
@@ -1344,20 +1518,14 @@ void GameControl::DrawHoverHP(const Region& screen) const
 	const int maxHP = std::max(1, int(actor->GetStat(IE_MAXHITPOINTS)));
 	const int line = font->LineHeight + 2;
 
-	// buffs and debuffs: the spells with timed effects on it, once each
-	std::vector<const EffectInfo*> effects;
-	for (auto it = actor->fxqueue.GetFirstEffect(); const Effect* fx = actor->fxqueue.GetNextEffect(it);) {
-		if (fx->SourceType != 2 || fx->SourceRef.IsEmpty() || fx->TimingMode != FX_DURATION_INSTANT_LIMITED) continue;
-		const EffectInfo& info = SpellEffectInfo(fx->SourceRef);
-		if (!info.valid || std::find(effects.begin(), effects.end(), &info) != effects.end()) continue;
-		effects.push_back(&info);
-		if (effects.size() >= 4) break;
-	}
+	// buffs and debuffs: status icons under the bar
+	constexpr int ICON = 30;
+	const std::vector<StatusIcon> effects = CollectStatus(actor, 10);
 
 	const String className = TitleCase(actor->GetClassName(actor->GetActiveClass()));
 	const bool hasClass = !className.empty();
 	const int w = 380;
-	const int h = 10 + line + (hasClass ? line : 0) + 18 + 8 + (effects.empty() ? 0 : 26) + 6;
+	const int h = 10 + line + (hasClass ? line : 0) + 18 + 8 + (effects.empty() ? 0 : ICON + 4) + 6;
 	const Game* game = core->GetGame();
 	// under the turn order bar in a fight
 	const int top = game && game->combat.IsRunning() ? 138 : 12;
@@ -1401,24 +1569,31 @@ void GameControl::DrawHoverHP(const Region& screen) const
 	cy += bar.h + 8;
 
 	if (effects.empty()) return;
-	// icon + name for each, centred as a row
-	constexpr int ICON = 20;
-	int total = 0;
-	for (const EffectInfo* e : effects) total += ICON + 4 + font->StringSize(e->name).w + 14;
-	int ex = panel.x + std::max(8, (w - total) / 2);
-	for (const EffectInfo* e : effects) {
-		Holder<Sprite2D> icon = e->icon.IsEmpty() ? nullptr : gamedata->GetBAMSprite(e->icon, 0, 0, true);
-		if (icon) {
-			VideoDriver->BlitSprite(icon, Region(Point(), icon->Frame.size), Region(ex, cy, ICON, ICON), BlitFlags::BLENDED);
-		} else {
-			VideoDriver->DrawRect(Region(ex + 4, cy + 4, ICON - 8, ICON - 8), e->hostile ? Theme::miss : Theme::hit, true);
-		}
-		ex += ICON + 4;
-		const Font::PrintColors ec { e->hostile ? Color(232, 120, 100, 255) : Color(170, 220, 150, 255), ColorBlack };
-		const int tw = font->StringSize(e->name).w;
-		font->Print(Region(ex, cy + (ICON - line) / 2 + 1, tw + 4, line), e->name, IE_FONT_ALIGN_LEFT | IE_FONT_ALIGN_TOP | IE_FONT_SINGLE_LINE, ec);
-		ex += tw + 14;
-		if (ex > panel.x + w - 20) break;
+	const int gap = 4;
+	const int rowW = int(effects.size()) * (ICON + gap) - gap;
+	DrawStatusIcons(effects, Point(panel.x + (w - rowW) / 2, cy), ICON, gap, int(effects.size()), screenMousePos);
+}
+
+void GameControl::DrawPortraitStatus(const Region& screen) const
+{
+	// next to the party portraits (EE HUD column; the GUI scripts publish where it is)
+	const auto& vars = core->GetDictionary();
+	if (!vars.Get("Status Icons", 1) || !vars.Get("Status Portrait Column", 0)) return;
+	const Game* game = core->GetGame();
+	if (!game) return;
+	const int slot = vars.Get("Status Portrait Slot", 80);
+	const Point column(screen.x + vars.Get("Status Portrait X", 0), screen.y + vars.Get("Status Portrait Y", 8));
+	constexpr int ICON = 26;
+	constexpr int GAP = 3;
+	constexpr int PER_ROW = 8;
+	const int count = game->GetPartySize(false);
+	for (int i = 0; i < count; ++i) {
+		const Actor* pc = game->FindPC(unsigned(i + 1));
+		if (!pc || (pc->GetStat(IE_STATE_ID) & STATE_DEAD)) continue;
+		const std::vector<StatusIcon> icons = CollectStatus(pc, 2 * PER_ROW);
+		if (icons.empty()) continue;
+		// a row along the top of the portrait, like bg3
+		DrawStatusIcons(icons, Point(column.x + slot + 4, column.y + i * slot + 4), ICON, GAP, PER_ROW, screenMousePos);
 	}
 }
 

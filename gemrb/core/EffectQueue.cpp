@@ -19,6 +19,7 @@
 #include "Map.h"
 #include "Region.h"
 #include "Spell.h" //needs for the source flags bitfield
+#include "TurnBasedCombat/CombatDirector.h"
 #include "SymbolMgr.h"
 #include "TableMgr.h"
 
@@ -1124,6 +1125,36 @@ static int CheckResistances(Effect* fx, Actor* target)
 // returns FX_ABORT if the whole spell this effect is in should be aborted
 // it will disable all future effects of same source (only on first apply)
 
+bool EffectQueue::HasTurnOnsets() const
+{
+	for (const Effect& fx : effects) {
+		if (fx.turnOnset && fx.TimingMode != FX_DURATION_JUST_EXPIRED) return true;
+	}
+	return false;
+}
+
+bool EffectQueue::ApplyTurnOnsets(Actor* target)
+{
+	bool fired = false;
+	for (Effect& fx : effects) {
+		if (!fx.turnOnset || fx.TimingMode == FX_DURATION_JUST_EXPIRED) continue;
+		ApplyEffect(target, &fx, 0);
+		if (!fx.turnOnset) fired = true;
+	}
+	if (fired) Cleanup();
+	return fired;
+}
+
+void EffectQueue::ReleaseTurnOnsets(int delta)
+{
+	for (Effect& fx : effects) {
+		if (!fx.turnOnset) continue;
+		fx.turnOnset = false;
+		int64_t undone = int64_t(fx.Duration) - delta;
+		fx.Duration = ieDword(std::max<int64_t>(undone, 0));
+	}
+}
+
 void EffectQueue::ShiftDurations(int delta)
 {
 	if (!delta) return;
@@ -1209,20 +1240,37 @@ int EffectQueue::ApplyEffect(Actor* target, Effect* fx, ieDword first_apply, ieD
 			} else {
 				fx->PrepareDuration(GameTime);
 			}
+			// turn based combat: onsets play out in real time in the caster's turn (or, with that
+			// off, sub-round ones fire now); durations cover whole turns
+			TimingType type = DelayType(fx->TimingMode & 0xff);
+			const CombatDirector& combat = core->GetGame()->combat;
+			ieDword delay = fx->Duration > GameTime ? fx->Duration - GameTime : 0;
+			if (target && type == TimingType::Delayed && delay <= CombatDirector::PLAYOUT_MAX_TICKS && combat.PlaysOutOnsets(target)) {
+				fx->Duration = CombatClockScope::WorldTime() + delay;
+				fx->turnOnset = true;
+			} else if (target && type == TimingType::Delayed && delay > CombatDirector::PLAYOUT_MAX_TICKS) {
+				// a scheduled event, not animation sync (Globe's fade-out when it expires): whole turns,
+				// rounded like the durations it goes with
+				fx->Duration = combat.TimeNewEffect(target, fx->Duration, false, GameTime);
+			} else if (target && type != TimingType::Permanent) {
+				fx->Duration = combat.TimeNewEffect(target, fx->Duration, type == TimingType::Delayed, GameTime);
+			}
 		}
 	}
 	//check if the effect has triggered or expired
 	switch (DelayType(fx->TimingMode & 0xff)) {
 		case TimingType::Delayed:
-			if (fx->Duration > GameTime) {
+			if (fx->Duration > (fx->turnOnset ? CombatClockScope::WorldTime() : GameTime)) {
 				return FX_NOT_APPLIED;
 			}
+			fx->turnOnset = false;
 			//effect triggered
 			//delayed duration (3)
 			if (NeedPrepare(fx->TimingMode)) {
 				//prepare for delayed duration effects
 				fx->Duration = fx->SecondaryDelay;
 				fx->PrepareDuration(GameTime);
+				if (target) fx->Duration = core->GetGame()->combat.TimeNewEffect(target, fx->Duration, false, GameTime);
 			}
 			fx->TimingMode = TriggeredEffect(fx->TimingMode);
 			break;

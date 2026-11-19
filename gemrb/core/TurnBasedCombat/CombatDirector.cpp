@@ -40,7 +40,7 @@ static constexpr unsigned int GUI_REFRESH_TICKS = 8;
 // safety net: actions that neither walk, swing nor finish for this long end an AI turn
 static constexpr unsigned int STALL_TICKS = 4 * 15;
 // longest wait for a spell to land before the turn moves on anyway
-static constexpr unsigned int FLIGHT_MAX_TICKS = 10 * 15;
+static constexpr unsigned int FLIGHT_MAX_TICKS = 20 * 15; // pst Desert Hell plays ~11 s from cast to its last burn
 // safety net: an attack animation that never reports its end
 static constexpr unsigned int SWING_MAX_TICKS = 4 * 15;
 // a player character that has nothing left to do ends its turn after this many idle ticks
@@ -174,6 +174,92 @@ ieDword CombatDirector::ClockOf(const Actor* actor) const
 	return combatant ? combatant->clockTime : 0;
 }
 
+ieDword CombatDirector::TurnOnset(ieDword now, ieDword onset, ieDword roundSize)
+{
+	if (onset > now && onset - now < roundSize) return now;
+	return onset;
+}
+
+ieDword CombatDirector::TurnExpiry(ieDword now, ieDword end, ieDword origin, ieDword roundSize)
+{
+	if (!roundSize || end <= now || end - now < roundSize || now < origin) return end;
+	// counted from the start of the turn it belongs to (an effect added during the upkeep
+	// belongs to the turn that is starting); nearest whole round: 7 seconds (1.4 rounds) is one
+	// turn, 8 seconds (1.6) two
+	ieDword base = origin + ((now - origin + roundSize - 1) / roundSize) * roundSize;
+	ieDword rounds = (end - now + roundSize / 2) / roundSize;
+	return base + rounds * roundSize + 1;
+}
+
+bool CombatDirector::PlaysOutOnsets(const Actor* target) const
+{
+	if (!Owns(target) || !Setting("Turn Based Spell Playout", 1)) return false;
+	const Combatant* combatant = FindCombatant(target->GetGlobalID());
+	return combatant && combatant->clockTime;
+}
+
+bool CombatDirector::PlaysOutAreas(const Actor* caster)
+{
+	return Owns(caster) && Setting("Turn Based Spell Playout", 1);
+}
+
+bool CombatDirector::OnsetsPending() const
+{
+	if (!combatMap) return false;
+	for (const Combatant& combatant : order) {
+		const Actor* actor = combatMap->GetActorByGlobalID(combatant.globalID);
+		if (actor && Owns(actor) && actor->fxqueue.HasTurnOnsets()) return true;
+	}
+	return false;
+}
+
+void CombatDirector::PlayOutOnsets()
+{
+	if (!combatMap) return;
+	for (const Combatant& combatant : order) {
+		Actor* actor = combatMap->GetActorByGlobalID(combatant.globalID);
+		if (!actor || !Owns(actor) || !actor->fxqueue.HasTurnOnsets()) continue;
+		CombatClockScope clock(actor);
+		actor->fxqueue.ApplyTurnOnsets(actor);
+	}
+}
+
+ieDword CombatDirector::TimeNewEffect(const Actor* target, ieDword duration, bool delayed, ieDword now) const
+{
+	if (!target || !Setting("Turn Based Round Durations", 1)) return duration;
+	ieDword roundSize = core->Time.round_size;
+	const Combatant* combatant = Owns(target) ? FindCombatant(target->GetGlobalID()) : nullptr;
+	if (!combatant || !combatant->clockTime) {
+		// out of a fight: whole rounds too, counted down on the world's round ticks
+		return delayed ? duration : RoundGridExpiry(now, duration, roundSize);
+	}
+	if (delayed) return TurnOnset(now, duration, roundSize);
+	return TurnExpiry(now, duration, combatant->clockOrigin, roundSize);
+}
+
+ieDword CombatDirector::RoundGridFloor(ieDword time, ieDword roundSize)
+{
+	return roundSize ? time - time % roundSize : time;
+}
+
+ieDword CombatDirector::RoundGridExpiry(ieDword now, ieDword end, ieDword roundSize)
+{
+	if (!roundSize || end <= now || end - now < roundSize) return end;
+	ieDword rounds = (end - now + roundSize / 2) / roundSize;
+	// counted from the nearest round tick: N rounds is N ticks of the round clock, +- half a round
+	ieDword base = RoundGridFloor(now + roundSize / 2, roundSize);
+	return base + rounds * roundSize + 1;
+}
+
+int CombatDirector::RoundsLeft(ieDword now, ieDword end, ieDword roundSize)
+{
+	if (!roundSize || end <= now + 1) return 0;
+	return int((end - 1 - now + roundSize - 1) / roundSize);
+}
+
+int CombatClockScope::depth = 0;
+ieDword CombatClockScope::world = 0;
+
 CombatClockScope::CombatClockScope(const Actor* actor)
 {
 	Game* game = core->GetGame();
@@ -181,13 +267,25 @@ CombatClockScope::CombatClockScope(const Actor* actor)
 	ieDword clock = game->combat.ClockOf(actor);
 	if (!clock) return;
 	saved = game->GameTime;
+	if (depth++ == 0) world = saved;
 	game->GameTime = clock;
 	swapped = true;
 }
 
 CombatClockScope::~CombatClockScope()
 {
-	if (swapped) core->GetGame()->GameTime = saved;
+	if (!swapped) return;
+	core->GetGame()->GameTime = saved;
+	--depth;
+}
+
+ieDword CombatClockScope::WorldTime()
+{
+	if (depth > 0) return world;
+	const Game* game = core->GetGame();
+	if (!game) return 0;
+	ieDword now = game->GameTime;
+	return now;
 }
 
 bool CombatDirector::ActsBefore(const Combatant& a, const Combatant& b)
@@ -502,7 +600,7 @@ bool CombatDirector::IsBusy(const Actor* actor) const
 
 bool CombatDirector::SpellInFlight(const Actor* actor) const
 {
-	return Casting(actor) || (flightTicks <= FLIGHT_MAX_TICKS && ProjectileInFlight(actor));
+	return Casting(actor) || (flightTicks <= FLIGHT_MAX_TICKS && (ProjectileInFlight(actor) || OnsetsPending()));
 }
 
 bool CombatDirector::Casting(const Actor* actor)
@@ -633,7 +731,10 @@ void CombatDirector::TakeOver(Actor* actor, Combatant& combatant)
 	const Actor* enemy = NearestEnemy(actor, combatMap, order);
 	if (enemy) actor->FaceTarget(enemy);
 	combatant.attacking = false;
-	combatant.clockTime = core->GetGame()->GameTime;
+	// the combat clock starts on the world's round grid: turns start on round ticks, effects end
+	// on them in and out of the fight, and the handback shifts by whole rounds
+	combatant.clockTime = RoundGridFloor(core->GetGame()->GameTime, core->Time.round_size);
+	combatant.clockOrigin = combatant.clockTime;
 	combatant.upkeepRound = round;
 }
 
@@ -643,7 +744,11 @@ void CombatDirector::HandBack(Actor* actor, Combatant* combatant)
 	// its effects lived on the combat clock; the world's clock went further meanwhile
 	if (combatant && combatant->clockTime) {
 		ieDword now = core->GetGame()->GameTime;
-		if (now > combatant->clockTime) actor->fxqueue.ShiftDurations(int(now - combatant->clockTime));
+		// whole rounds (the combat clock may also have run ahead of the world: turns go quickly)
+		int delta = int(RoundGridFloor(now, core->Time.round_size)) - int(combatant->clockTime);
+		actor->fxqueue.ShiftDurations(delta);
+		// onsets playing out in real time already count in world time
+		actor->fxqueue.ReleaseTurnOnsets(delta);
 		combatant->clockTime = 0;
 	}
 	actor->SetInternalFlag(IF_COMBAT_OWNED, BitOp::NAND);
@@ -1147,6 +1252,8 @@ void CombatDirector::Update()
 		NotifyGUI();
 	}
 
+	// delayed spell effects play out in real time (their caster's turn waits for them)
+	PlayOutOnsets();
 	RefreshDeaths();
 	// creatures that act on the fight join it right away, so they never act in real time on it
 	AddJoiners(true);
@@ -1339,7 +1446,7 @@ void CombatDirector::ActStep(Actor* actor, Combatant& combatant)
 
 	// the whole spell resolves in its caster's turn: nothing else happens until it has landed
 	const bool casting = Casting(actor);
-	if (!casting && flightTicks <= FLIGHT_MAX_TICKS && ProjectileInFlight(actor)) {
+	if (!casting && flightTicks <= FLIGHT_MAX_TICKS && (ProjectileInFlight(actor) || OnsetsPending())) {
 		if (++flightTicks > FLIGHT_MAX_TICKS) {
 			Log(COMBAT, "CombatDirector", "{}: its spell doesn't land, going on", fmt::WideToChar { Name(actor) });
 		}

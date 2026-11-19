@@ -149,6 +149,11 @@ def LayoutPortraits (win=None, count=None):
 	else:
 		win.SetPos (0, PORTRAIT_TOP)
 		oy = 0
+	# status icons sit next to the portrait column (GameControl::DrawPortraitStatus)
+	GemRB.SetVar ("Status Portrait Column", 0 if row else 1)
+	GemRB.SetVar ("Status Portrait X", 0)
+	GemRB.SetVar ("Status Portrait Y", PORTRAIT_TOP)
+	GemRB.SetVar ("Status Portrait Slot", S)
 	for i in range (MAX_PARTY_SIZE):
 		x, y = (i * S, oy) if row else (0, i * S)
 		pb = win.GetControl (PortraitWindow.PortraitID (i))

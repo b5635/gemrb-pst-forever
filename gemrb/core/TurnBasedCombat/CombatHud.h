@@ -60,7 +60,11 @@ public:
 	/** A saving throw was rolled: a little die spins over the creature, then a sound for the result */
 	static void NotifySave(ieDword actor, int roll, bool success);
 	/** Combat text over a creature: stays a few seconds, white, slight random drift, stacked so they don't overlap. */
-	static void NotifyFloater(ieDword actor, String text);
+	static void NotifyFloater(ieDword actor, String text, const Color& color = ColorWhite);
+	/** the spell's name over its caster as the cast starts (toggle "Spell Cast Text") */
+	static void NotifySpellCast(ieDword actor, const ResRef& spell);
+	/** damage numbers by damage type (damages.h): physical stays white */
+	static Color DamageColor(int damageType);
 	/** Save dice and combat text, in map space with overhead text (just above the head). */
 	static void DrawWorldOverlays();
 

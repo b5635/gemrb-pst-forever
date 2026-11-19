@@ -395,4 +395,68 @@ TEST(TurnMovementTest, ReachAgreesWithThePath)
 	EXPECT_GT(checked, 20);
 }
 
+TEST(CombatDirectorTest, SubRoundOnsetFiresNow)
+{
+	EXPECT_EQ(CombatDirector::TurnOnset(1000, 1001, 75), 1000u);
+	EXPECT_EQ(CombatDirector::TurnOnset(1000, 1074, 75), 1000u);
+	EXPECT_EQ(CombatDirector::TurnOnset(1000, 1075, 75), 1075u);
+	EXPECT_EQ(CombatDirector::TurnOnset(1000, 1300, 75), 1300u);
+	EXPECT_EQ(CombatDirector::TurnOnset(1000, 1000, 75), 1000u);
+}
+
+// turns the effect is up for: the target's upkeep moves its clock a round, tick by tick
+static int TurnsCovered(ieDword now, ieDword end, ieDword origin, ieDword roundSize)
+{
+	ieDword expiry = CombatDirector::TurnExpiry(now, end, origin, roundSize);
+	ieDword clock = origin + ((now - origin) / roundSize) * roundSize;
+	int turns = 0;
+	while (true) {
+		clock += roundSize; // its next turn
+		if (expiry <= clock) break;
+		++turns;
+	}
+	return turns;
+}
+
+TEST(CombatDirectorTest, DurationsCoverWholeTurns)
+{
+	// on its turn start clock (it acted already, or it is its own turn): N rounds = its next N turns
+	EXPECT_EQ(TurnsCovered(1000, 1075, 1000, 75), 1);
+	EXPECT_EQ(TurnsCovered(1000, 1375, 1000, 75), 5);
+	// partial rounds go to the nearest: 120 ticks (1.6) = 2 rounds, 105 ticks (1.4) = 1
+	EXPECT_EQ(TurnsCovered(1000, 1120, 1000, 75), 2);
+	EXPECT_EQ(TurnsCovered(1000, 1105, 1000, 75), 1);
+	// added in the middle of its upkeep (the turn at 1075 is starting): that turn plus N more
+	EXPECT_EQ(TurnsCovered(1030, 1105, 1000, 75), 2);
+	EXPECT_EQ(TurnsCovered(1030, 1405, 1000, 75), 6);
+	// under a round: untouched, gone by its next turn
+	EXPECT_EQ(CombatDirector::TurnExpiry(1000, 1010, 1000, 75), 1010u);
+	EXPECT_EQ(TurnsCovered(1000, 1010, 1000, 75), 0);
+}
+
+TEST(CombatDirectorTest, OutOfCombatDurationsAreWholeRounds)
+{
+	// world round ticks every 75; applied on a tick: 6 rounds end just after the 6th tick
+	EXPECT_EQ(CombatDirector::RoundGridExpiry(1500, 1500 + 450, 75), 1500u + 450 + 1);
+	// 7 s (105 ticks) is one round, 8 s (120) two
+	EXPECT_EQ(CombatDirector::RoundGridExpiry(1500, 1605, 75), 1500u + 75 + 1);
+	EXPECT_EQ(CombatDirector::RoundGridExpiry(1500, 1620, 75), 1500u + 150 + 1);
+	// applied mid-round: counted from the nearest tick
+	EXPECT_EQ(CombatDirector::RoundGridExpiry(1510, 1510 + 150, 75), 1500u + 150 + 1);
+	EXPECT_EQ(CombatDirector::RoundGridExpiry(1560, 1560 + 150, 75), 1575u + 150 + 1);
+	// under a round: untouched
+	EXPECT_EQ(CombatDirector::RoundGridExpiry(1500, 1530, 75), 1530u);
+	EXPECT_EQ(CombatDirector::RoundGridFloor(1574, 75), 1500u);
+}
+
+TEST(CombatDirectorTest, RoundsLeftCountsDownOnRoundTicks)
+{
+	ieDword end = 1500 + 3 * 75 + 1; // 3 rounds from the tick at 1500
+	EXPECT_EQ(CombatDirector::RoundsLeft(1500, end, 75), 3);
+	EXPECT_EQ(CombatDirector::RoundsLeft(1540, end, 75), 3);
+	EXPECT_EQ(CombatDirector::RoundsLeft(1575, end, 75), 2);
+	EXPECT_EQ(CombatDirector::RoundsLeft(1650, end, 75), 1);
+	EXPECT_EQ(CombatDirector::RoundsLeft(1725, end, 75), 0);
+}
+
 }

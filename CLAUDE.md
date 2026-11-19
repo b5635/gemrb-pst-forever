@@ -24,5 +24,10 @@
 - `tools\tb_autotest.ps1`: turn-based regression run (party AI on, staged fights, exit 1 on
   crash or stall). `tools\tb_fight.ps1`, `tools\tb_flee_cast.ps1`: single staged fights.
 - `tools\tb_analyze.ps1`: combat profile of every PST script (`dev\combat_profiles.md`).
+- Spells: `python tools\tb_spell_audit.py` (data audit, `dev\spell_audit.md`, no game) and
+  `python tools\tb_spell_suite.py [SPWI502 ...]` (casts every spell in a staged fight, checks
+  playout, rounding, clock, hold; `dev\spell_report.md`). By hand: `tools\tb_spell_lab.py` (dev
+  console helpers, `GemRB.DebugEffects`), `tools\tb_lab_step.ps1`, `tools\tb_lab_seq.ps1`.
+- Hangs: a watchdog writes the main thread's stack to `crashes\last_hang.txt` (30 s unanswered).
 - Aim script actions at a creature by global ID with
   `GemRB.ExecuteActionAt(actor, "Attack([-1])", target)`; PST spells go by spell.ids number.
