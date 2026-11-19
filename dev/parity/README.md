@@ -8,6 +8,10 @@ This folder compares GemRB's Planescape: Torment support with the real engine.
 - [scripting.md](scripting.md): actions and triggers used by scripts/dialogs, GemRB status, original handler (generated).
 - [pst_functions.md](pst_functions.md): every PST-only engine function in PST:EE, the rules checklist (generated).
 - The plan: [PARITY_PLAN.md](../../PARITY_PLAN.md).
+- [AGENT_GUIDE.md](AGENT_GUIDE.md): step-by-step instructions for an agent that continues the investigation.
+
+Tools added for that: `tools/parity/ida.py` (one-command decompile/xrefs/vtables/search), `tools/parity/iesdp.py`
+(IESDP lookups; the site is at `iesdp-gh-pages/`, git-ignored) and `tools/parity/strings.py` (EE string dump).
 
 ## Sources
 
