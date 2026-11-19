@@ -49,10 +49,10 @@ version for `tools/tb_spell_suite.py` is `spell_expect.json`. Durations in effec
   trigger).
 - **Roll:** none. No saving throw, no magic-resistance roll.
 - **Visuals/sounds:** `PWBLI03` (cast), `PWBLI05` (hit); screen flash.
-- **GemRB today:** `pwblind.pro` → `PWB.spl`: op 194 FlashScreen, op 74 blindness with **timing 0, duration 0**, op 51 with
+- **GemRB today:** `pwblind.pro` → `PWB.spl`: op 194 FlashScreen, op 74 blindness through GemRB's p2 = 1 hook (duration in ticks from each target's HP), op 51 with
   duration 15. The pool, the HP-sorted order, the 100-HP limit and the random durations are missing.
 - **Differences:** 1) no HP pool and no lowest-HP-first order: creatures over 100 HP are blinded too (finding S3)
-  2) blindness has duration 0, so it lasts no time at all (the suite: "nothing happened")
+  2) blindness lasts ticks instead of seconds (GemRB's p2 = 1 hook in `fx_set_blind_state`: 151–390 ticks ≈ 10–26 s instead of 160–400 s), and is chosen per target HP, not from the pool
   3) DarkenRGB lasts 15 s instead of matching the blindness 4) search radius should be 180.
 
 ## SPWI909 Power Word, Kill

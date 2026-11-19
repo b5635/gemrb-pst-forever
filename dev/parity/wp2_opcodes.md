@@ -145,3 +145,25 @@ Progress: 82, 100, 138, 146, 186, 193, 194, 201, 203–211 done. Next: 147, 148,
 - **Difference:** in the original the target is the caster of the sub-spell, which changes enemy filters, caster-level
   scaling and kill credit for 98 uses of op 146 in PST data. The level floor (first header level) is also missing.
   Needs one in-game check (which creature shows the casting) before calling it V.
+
+### E-074 Blindness
+- **Status:** P (penalties) / V (PW Blind duration, see below)   **Severity:** 1
+- **Original:** `sub_4C1656`: state 0x40000, **THAC0 +4 and AC +4** (both worse), base fields too when permanent.
+- **GemRB:** `fx_set_blind_state` with PST's `ReverseToHit = 1`: AC −4, to-hit −4 (same thing). **But** GemRB's own
+  PW Blind hook (p2 == 1, used by `PWB.spl`): duration from the *target's* HP, `< 25 → 151–390`, `< 50 → 71–190`,
+  `< 100 → 16–45` **ticks** added to GameTime. The original's are **seconds** (160–400 s etc.) and chosen from the
+  **pool**. GemRB's blindness is ~15× too short (10–26 s instead of 160–400 s).
+
+### E-054 THAC0 modifier
+- **Status:** P?   Original `sub_4BE69D`: p2 0 = bonus (THAC0 − p1), 1 = set THAC0 to p1, 2 = percent of base; the result is
+  clamped to **1–25** in every mode. GemRB `fx_to_hit_modifier` has the three modes; the 1–25 clamp isn't visible there
+  (check `ToHit` limits).
+
+### E-000 AC vs damage type
+- **Status:** P?   Original `sub_4AF5A2`: per-type AC modifiers clamped to **±20** when permanent. GemRB
+  `fx_ac_vs_damage_type_modifier`: check the clamp.
+
+### E-109 Hold creature (by IDS)
+- **Status:** P   Original `sub_4C61EB`: skips dead targets; holds (helpless flag + state 0x20) only if the target matches
+  p1 in the IDS field chosen by p2 (2 EA … 8 alignment; p1 0 = anyone; class uses the active class of dual-classes).
+  GemRB `fx_hold_creature_no_icon` does the same IDS match.
