@@ -574,3 +574,79 @@ trigger handler +148); the base AI-object vtable at `8DC1B0` (`sub_44B099` at +1
 - **Status:** P   **Uses:** 58 / 56 / 50. DebugOutput: original base case 287 does nothing (GemRB logs). PlaySound
   (`sub_463C80`): the sound at the caller's position, channel 5, done at once (GemRB: spatial at the caller). StartMovie
   (`sub_46D56B`): fails when the movie resource is missing, else plays it; done. GemRB `PlayMovie`, released.
+
+### A-21 LeaveParty() (finding A17)
+- **Status:** V   **Severity:** 2   **Uses:** 36 (28 DLG, 3 BCS cutscenes `1001CUT1/2`, `STLMRT3`)
+- **Original:** creature case 17 → `sub_7A12F0` (440 lines): a leaver at 0 … −9 HP (not flagged dead) first drops its
+  inventory (`sub_7A68DD`) and is placed on a free spot next to the protagonist; removed from the party
+  (`sub_5C3169`); EA = 0x80 (NEUTRAL) in all three copies; then **script slots AREA (1), SPECIFICS (2), CLASS (4), RACE (5)
+  and GENERAL (6) are set to an empty script** (vfunc +156 with the CString globals `dword_971690`-`9716A0`, which nothing
+  writes: `grep -n 9716A0 .re/orig/Torment.exe.asm`), OVERRIDE and DEFAULT kept; every remaining party member gets the
+  trigger `Leaves` (5) naming it.
+- **EE:** `CGameSprite::LeaveParty` resets the same slots, but to the locale default / `WTASIGHT` (BG's DPLAYER rule).
+- **GemRB:** `Game::LeaveParty`: EA NEUTRAL, `trigger_leaves` on the game; the script reset only runs with `HasDPLAYER`,
+  which PST has **off**: all seven script slots stay.
+- **Difference:** a companion who leaves keeps running its party-time area/specifics/class/race/general scripts in
+  GemRB (follow, banter, combat AI); in the original only override and default remain. Which companion CREs fill those
+  slots was not checked.
+- **Re-check:** `python tools/parity/dumps.py lines orig sub_7A12F0 209 305`; `grep -n "int Game::LeaveParty" -A45
+  gemrb/core/Game.cpp`; `grep -n HasDPLAYER gemrb/unhardcoded/pst/gemrb.ini`.
+
+### A-247 ExploreMapChunk(P:Center, I:Radius, I:Mode)
+- **Status:** V   **Severity:** 3   **Uses:** 33 (BCS: Fortress of Regrets `1201C*`, `0405CS10`/`CUT5/6`)
+- **Original:** base case 247 → `sub_5987F2(x, y, int1, int2)` on the current area's explored map (32 px cells): radius
+  int1 in **pixels**; **mode int2 = 1 clears the explored bit** (un-explores), 0 sets it.
+- **GemRB:** `ExploreMapChunk(SearchmapPoint(point), int1, 0)`: radius in **search-map cells** (16 px each), mode ignored.
+- **Difference:** `(…,600,1)` (8 uses in `1201CI*`) hides map in the original, reveals ~9,600 px around the point in
+  GemRB; `(…,600,0)` reveals ~600 px vs most of the area.
+
+### A-277 IncrementExtraProficiency(O:Target, I:Modifier), A-265 IncrementProficiency(O:Target, I:Slot, I:Modifier)
+- **Status:** P (sev 3)   **Uses:** 43 / 41 (all DLG)
+- **Original:** base case 277: creature target; free proficiency points (`sub_7B2CBE`/`sub_7B2CD6`) + int0, clamped
+  0-255; when int0 > 0 a float text (font `TRMTFONT`, strref from `sub_5CF086`) and a sound. Case 265: proficiency slot
+  int0 + int1, clamped −128…127, then stats recomputed (`sub_77C225`, `sub_7616CC`).
+- **GemRB:** `IncrementExtraProficiency`: `IE_FREESLOTS += int0`, no clamp, no feedback. `IncrementProficiency`:
+  `NewBase(IE_PROFICIENCYBASTARDSWORD + slot, int1, add)` for slot ≤ 31.
+- **Difference:** the float text / sound is missing in GemRB (presentation). Slot mapping to PST's `wprof.ids` not compared.
+
+### A-82 CreateItem(S:Item, I:Usage1-3)
+- **Status:** P   **Uses:** 41. Original base case 82 → `sub_46B02E`: missing ITM → fail; a party caller puts it in the first
+  free of 20 inventory slots, other creatures the first of 26, **no stacking**; full → dropped (`sub_46AF90`) and fail;
+  a container caller → into the container. GemRB `CreateItem` → `AddSlotItem` (stacks onto a matching stack; full →
+  dropped). Same outcome except stacking.
+
+### A-293 SetNamelessClass(I:Class)
+- **Status:** P / S   **Uses:** 39. Original base case 293 → `sub_46ED2F`: the protagonist's class in all three object-type
+  copies, sync message, record screen refresh. GemRB: `SetBase(IE_CLASS)` + `EnforceUsability` (unusable equipped items
+  moved to the backpack or the ground, PST strings `UnusableDroppedBag/Ground`). The original's item check was not seen
+  in this path (S: it may live in the stat refresh).
+
+### A-245 BitClear(S:Name, S:Area, I:Bits)
+- **Status:** P   **Uses:** 36. Original base case 245: existing variable only (`sub_463E49`), value &= ~int0. GemRB same.
+
+### A-113 ForceSpell(O:Target, I:Spell)
+- **Status:** S   **Uses:** 35. Original base case 113 is **the same code as ReallyForceSpell** (181, `sub_46692D`).
+  GemRB: ForceSpell `SC_NOINTERRUPT|SC_SETLEVEL` (casting time), ReallyForceSpell adds `SC_INSTANT`. If the shared
+  original path is instant, ForceSpell takes longer in GemRB (casting path: track B).
+
+### A-119 DropInventory()
+- **Status:** P (S: flags)   **Uses:** 33 (death scripts `0101MF`, `0400RC`…). Original creature case 61 → `sub_7A68DD(0)`:
+  **the protagonist never drops**; skips the fist slot; only droppable items (flag 4); a party member keeps critical
+  items (flag 1); into the area's ground pile. GemRB `DropItem("",0)`. No data calls it on the protagonist.
+
+### A-159 ChangeAlignment(O:Object, I:Align)
+- **Status:** P   **Uses:** 33. Original base case 159: creature target; alignment int0 into all three object-type
+  copies, sync message for party members. GemRB `SetBase(IE_ALIGNMENT)`.
+
+### A-309 QuitGame(I:Movie1, I:Movie2, I:Movie3)
+- **Status:** S (A8)   **Severity:** 2   **Uses:** 33
+- **Original:** base case 309: GLOBAL `Game_Over` = 6, `EndMovie1/2/3` = int0/int1/int2; done. The ending runs from the
+  engine's game-over check (EE `CPlanescape::HandleGameOverConditions`, case 6 sets a screen flag).
+- **GemRB:** `QuitGame`: clears the caller's actions, stores QuitGame1-3, runs `QuitGame.py` at once (movies
+  `["", T1DEATH, T1ABSORB, FINALE, CREDITS]`, QuitGame3 = death strref).
+- **Open (A8):** the original's movie table for EndMovie values; GemRB never sets `Game_Over`/`EndMovie*`.
+
+### A-160 ApplySpell(O:Target, I:Spell)
+- **Status:** P (S: details)   **Uses:** 26. Original base case 160 → `sub_469917`: creature target (missing → the
+  action's spell-id object fallback), spell applied directly without casting; wizard spells scale by the caller's level
+  byte. GemRB `ApplySpell` → `core->ApplySpell(…, int1 level)`. Level rule not compared.
