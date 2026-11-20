@@ -291,3 +291,10 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | B8 | Original rules BALDUR doesn't cover: companions leave at `AR1800`→`FR1700` and `AR3017`→`FR0502`, `Pregnant_Quest` > 2 world map on Sigil exits, `AR1203` slab facing. | S | 2 |
 | B3 | Shadow movie on first AR0200/AR0206 visit, not on arrival at `FR0201`. | V | 3 |
 | B6 | Foundry redirect after AR0512 loads instead of straight to AR0513. | V | 3 |
+
+## 16. Object findings, round 12 (detail in [wp5_objects.md](wp5_objects.md); judged against PST:EE from here on)
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| O-range | **Visual range is (Nameless One's fighter level + 14) × 32 px** for every creature in EE and the original, recomputed on stat change; GemRB fixes it at the level-3 value (544 px). Every `See` and range-limited object (NearestEnemyOf 2,325 uses): enemies notice and engage from the wrong distance once he levels as a fighter. | V | 2 |
+| O-self | GroupOf, Nearest and LastHitter have no case in EE or the original: they resolve to the caller. GemRB computes a real nearest (Nearest: 4 uses, unread). | S | 3 |

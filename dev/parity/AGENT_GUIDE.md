@@ -30,13 +30,17 @@ known: don't re-report it, extend it) and `README.md` (tools, file layout).
    `*.tsv`), describe behaviour in your own words: conditions, numbers, order of operations, plus short
    identifiers (addresses, offsets, constants, resrefs, variable names) and line references into the
    workspace (`.re/orig/dump/dec_all/4B245B.c:432`). No pasted C blocks.
-3. **The original exe is the truth.** Ranking, highest first:
-   1. Original `Torment.exe` 1.1 + Fixpack 4.13 + UB 4.12, decompiled in `.re/orig/`.
-   2. PST:EE `Torment64` (`.re/ee/`): real C++ names, read it first to understand a feature, but Beamdog
-      changed things. A difference seen only in EE is status **S**, never **V**.
+3. **PST:EE is the truth (owner's decision, 2026-11-19).** Ranking, highest first:
+   1. PST:EE `Torment64` (`.re/ee/`, `dec_all_named`): real C++ names, easiest to read. What EE does is the
+      target behaviour, Beamdog's fixes and changes included. A difference read in EE and GemRB is **V**.
+   2. Original `Torment.exe` 1.1 + Fixpack 4.13 + UB 4.12 (`.re/orig/`): read it only when EE is unclear,
+      missing the feature, or a finding needs a tie-break. When the two differ, follow EE and note the
+      original's behaviour in one line ("orig: …") so the difference stays on record.
    3. IESDP (`tools/parity/iesdp.py`): hints, often wrong for PST (e.g. op 186 "0 = clear": the original clears
       on −1). Never proof.
    4. GemRB comments ("pst does X") are claims to check, not proof.
+   Findings written before 2026-11-19 (rounds 1-11) were judged against the original; they stay valid unless
+   EE differs. Re-check against EE only when you touch one (fix, audit), and mark it "EE: same" or "EE: differs".
 4. **No IDA unless the dumps lack it.** Every function of both games is already decompiled (`dumps.py`,
    section 2). `ida.py dec/xrefs/vt` is for vtables, data xrefs and the few functions in `errors.tsv`; then one
    at a time (the `.i64` is locked while IDA runs), never in parallel, never from parallel sub-agents.
@@ -115,8 +119,8 @@ address in `maps/opcodes.tsv`, an event/case number, a resref, a message vtable)
 in 2-3 reads. Example (A11): EE op 13 sends sound event 13 → original `4B5DCF` sends a message with 13 →
 its vtable's Run → `sub_73DEEF`, the original voice player. Read data before code when the question is "what is
 in slot N": the CRE/2DA text answers in one call what the code only implies.
-Work EE-first: understand the feature in `dec_all_named`, then confirm only the deciding condition and numbers
-in the original with one targeted grep (same constant, same resref, same case number). Batch: answer 10
+Work EE-first: EE decides. Read the feature in `dec_all_named` and compare with GemRB; open the original
+only if EE is unclear, with one targeted grep (same constant, same resref, same case number). Batch: answer 10
 ledger rows from one read of a dispatcher instead of re-opening it per row.
 
 **Maps first.** The older partial folders `.re/*/dump/dec/` still feed `export_maps.py`, `derive.py` and the
@@ -348,8 +352,8 @@ Every entry uses this template:
 ```
 ### <ID> <one-line title>
 - **Status:** V | S | P | ?      **Severity:** 1 | 2 | 3      **Uses:** <count>      **By:** sonnet
-- **Original:** sub_XXXXXX (.re/orig/dump/dec_all/XXXXXX.c:<lines>): what it does, in words, with numbers
-- **EE:** Class::Method (only if it adds something)
+- **EE:** Class::Method (.re/ee/dump/dec_all_named/...:<lines>): what it does, in words, with numbers
+- **Original:** sub_XXXXXX (only if read: when EE was unclear, or to note that it differs)
 - **GemRB:** path/file.cpp:<line> `Function` (what it does)
 - **Difference:** exactly what differs, with a concrete example ("SetGlobalTimer 10 → original 10 game seconds
   = 150 ticks; GemRB 10 × AI_UPDATE_TIME …")
@@ -359,8 +363,8 @@ Every entry uses this template:
 - **Breaks:** for sev 1, the quest/dialogue/area that goes wrong, if you can name it
 ```
 
-- **V** = you read the behaviour in the original *and* in GemRB's source, and they differ.
-- **S** = suspected: EE only, or code you couldn't fully follow. Say what is missing.
+- **V** = you read the behaviour in EE (or the original, where EE lacks it) *and* in GemRB's source, and they differ.
+- **S** = suspected: code you couldn't fully follow. Say what is missing.
 - **P** = parity: they match (or differ only in presentation). P entries can be one line, but still need the
   original address and GemRB function.
 - **?** = couldn't determine; say what blocked you.

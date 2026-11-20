@@ -20,8 +20,8 @@ Tools added for that: `tools/parity/ida.py` (one-command decompile/xrefs/vtables
 
 | Source | Where | Used for |
 |---|---|---|
-| Original Torment.exe 1.1 (+Fixpack 4.13, UB 4.12) | `C:\Program Files (x86)\Black Isle\Torment` | **Ground truth.** Not packed; MSVC asserts name the source file of many functions (`F:\Torment\Source\baldur\CGameEffect.cpp`, …), see `.re/orig/dump/srcmap.txt`. |
-| PST:EE Linux binary `Torment64` | `D:\GOG Games\Planescape Torment - Enhanced Edition` | **Map with names.** It keeps full C++ symbols (21,704 functions, e.g. `CPsSpellIceKnife::AIUpdate`) and Hex-Rays decompiles it. Use it to find and understand code, then confirm in the original, because EE changed things. |
+| Original Torment.exe 1.1 (+Fixpack 4.13, UB 4.12) | `C:\Program Files (x86)\Black Isle\Torment` | Reference: read when PST:EE is unclear (PST:EE is the truth since 2026-11-19). Not packed; MSVC asserts name the source file of many functions (`F:\Torment\Source\baldur\CGameEffect.cpp`, …), see `.re/orig/dump/srcmap.txt`. |
+| PST:EE Linux binary `Torment64` | `D:\GOG Games\Planescape Torment - Enhanced Edition` | **Map with names.** It keeps full C++ symbols (21,704 functions, e.g. `CPsSpellIceKnife::AIUpdate`) and Hex-Rays decompiles it. **The truth since 2026-11-19:** what EE does is the target behaviour; open the original only when EE is unclear. |
 | PST:EE data | same | `.pro` files and tables Beamdog moved out of the exe; data fixes. |
 | GemRB | `gemrb/unhardcoded/pst`, `gemrb/plugins/*Opcodes`, `gemrb/core/GameScript` | What we do today. |
 | Spell suite | `dev/spell_report.md`, `dev/spell_suite.jsonl` | What actually happens in game. |

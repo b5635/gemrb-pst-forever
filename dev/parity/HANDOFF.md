@@ -1,4 +1,4 @@
-# Handoff: where the parity investigation stands (2026-11-19, round 11)
+# Handoff: where the parity investigation stands (2026-11-19, round 12)
 
 Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the work packages) and `findings.md` (all findings, by round).
 
@@ -103,9 +103,22 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
   non-empty stops the lower slots, `Continue()` only chains blocks inside one script (`sub_414E96` checks action 36);
   in the restricted state (`sub_45F538:48`) only the override slot runs.
 
+## Round 12 (2026-11-19): EE is now the source of truth; A4 decoder read
+- **Owner's decision: PST:EE is the truth** (AGENT_GUIDE rule 3, PARITY_PLAN section 1, README). Read EE first and
+  judge GemRB against it, Beamdog's changes included; open the original only when EE is unclear or lacks the
+  feature, and note in one line when it differs. Rounds 1-11 findings stay valid unless EE differs: re-check one
+  against EE when you fix or audit it ("EE: same/differs").
+- **A4 (`wp5_objects.md` "Round 12")**: decoder, resolver and IDS matcher read in EE (`CAIObjectType::Decode`,
+  `sub_ADDA10`, `CGameArea::GetNearest`) and the original (`sub_40F77C`, `sub_411B7C`, `sub_474047`, `sub_40F297`).
+  **O-range (V, sev 2):** visual range = (Nameless One's fighter level + 14) × 32 px for everyone
+  (`CPlanescape::SetNamelessExploreRange`), GemRB frozen at level 3. NearestEnemyOf and name lookup: P.
+  O-self (S): GroupOf/Nearest/LastHitter resolve to the caller.
+- Left in A4: Player1-6/Protagonist slot order in GemRB, LastAttackerOf/LastHelp/LastTrigger storage, MostDamagedOf,
+  faction/team fields in GemRB, ledger rows `kind=object` (`script_ledger.py` source).
+
 ## Next, in order (detail in AGENT_GUIDE section 4)
 1. **Track A:** ~~A1 actions~~ (round 9), ~~A2 triggers~~ (round 10), ~~A3 event triggers~~, ~~A8 BALDUR.bcs~~ (round 11),
-   A4 object selectors (started: confirm in the original, then the remaining functions and IDS fields), A5 script engine, A6 dialogue engine, A7 parser, A9 INI spawns,
+   A4 object selectors (decoder done round 12; remaining functions, faction/team, ledger rows), A5 script engine, A6 dialogue engine, A7 parser, A9 INI spawns,
    A10 indirect state (death variables, XP, rest), A11 voice lines and sound slots (never investigated).
 2. **Track B, combat:** combat rules (`wp10_combat.md`), effect pipeline (`wp11_effect_pipeline.md`), WP2 rest (77
    used opcodes, batched by family). Open from round 5: Guardian Mantle save direction (E-012d), GemRB's Cloak of
@@ -116,6 +129,7 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
    rolls, E17 scroll caster level, E18 TransferHP, E19 Ball Lightning / Adder's Kiss.
 
 ## For audit (Opus spot-checks these; newest first)
+- Round 12: O-range.
 - Round 11: T16, B2 (sev 1) first, then T11, T14, T12, B7.
 - (none yet; rounds 7-9 were written by Opus). If a Sonnet session re-checks: A18, A14 first (Re-check lines in `wp4_actions.md`).
 

@@ -1,9 +1,12 @@
 # A4: object selectors (round 11, 2026-11-19) — partial
 
-Progress: usage counted, name lookup and `NearestEnemyOf` compared (EE + GemRB), original not yet confirmed.
-Next: confirm in the original (`CAIObjectType` = `sub_412C7F`, `sub_412994`, `sub_4139BA`; the decoder is the
-original of EE `CAIObjectType::Decode`), then `LastAttackerOf`, `LastHelp`, `Protagonist`/`Player1-6`,
-`MostDamagedOf`, `Nearest`, `LastTrigger`, and IDS field matching (EA cut-offs, `specific`, `team`, `faction`).
+Progress (round 12): decoder, resolver, visual range and IDS matcher read (EE + original); NearestEnemyOf and
+name lookup decided. **EE is the truth from round 12** (AGENT_GUIDE rule 3).
+Next: compare GemRB for `Player1-6`/`Protagonist` (party slot order), `LastAttackerOf`/`LastHelp`/`LastTrigger`
+(which stored object, cleared when), `MostDamagedOf` (EE `CInfGame::GetCharacterCriteria` case for
+GROUP_MOSTDAMAGED), the ids that fall back to `Myself` (below), and the PST fields `faction`/`team` in GemRB.
+Note: `sub_412C7F`/`sub_412994`/`sub_4139BA` (the srcmap's `CAIObjectType` list) are only the class-matching
+helpers (multi-class pairs), not the decoder.
 Ledger: object rows are not in `script_ledger.tsv` yet (`script_ledger.py` only builds the four known kinds; add a
 `kind=object` source to it rather than hand rows, which a rebuild would drop).
 
@@ -43,3 +46,58 @@ No other `object.ids` function is used anywhere (no `LastTalkedToBy`, `LastSeenB
   anything **outside the caller's visual range**, and unscheduled actors.
 - **Open:** confirm in the original whether `NearestEnemyOf` is limited to visual range / line of sight (2,325 uses:
   `Attack(NearestEnemyOf(Myself))`, mostly after `See(NearestEnemyOf(Myself))`, which has its own range).
+
+## Round 12 (2026-11-19): the decoder, read in EE and the original
+
+**Where:** EE `CAIObjectType::Decode` (switch on the object id) → `sub_ADDA10` (resolve) → `CGameArea::GetNearest`,
+fallback `CGameArea::GetAllInRangeBack`. Original: `sub_40F77C` (decoder; its switch is on id − 1), `sub_411AA0`
+→ `sub_411B7C` (resolve) → `sub_474047` (nearest), fallback `sub_476C01`; IDS match `sub_40F297`. Trigger
+objects go through creature vtable slot +172 (`sub_460148`): decode, resolve with type mask 0x31.
+
+**Object id map (original `sub_40F77C:326-792`):** functions nest up to 5 deep (object bytes +18…+22), applied
+innermost first. Party slots: Player1-6 = party array slots 0-5 (`+8364 + 4·i` of the game object), Protagonist =
+slot 0 too, LeaderOf = slot 0; Weakest/Strongest/MostDamaged/LeastDamaged/StrongestOfMale = party criteria
+(`sub_5C468B(1…5)`); ProtectedBy/ProtectorOf/LastAttackerOf/LastTargetedBy/LastCommandedBy/LastHelp/LastTrigger/
+LastSeenBy/LastTalkedToBy/LastHeardBy/Marked = an object stored on the caller, re-resolved; SelectedCharacter
+= the selection. **GroupOf (3), Nearest (14), LastHitter (15) have no case: they resolve to the caller itself**
+(EE's switch has no case 3 or 0xE either). PST uses Nearest 4 times; GemRB resolves it as a real nearest: check
+those 4 scripts before calling it a finding.
+
+### O-range Visual range grows with the Nameless One's fighter level (V, sev 2)
+- **EE:** `CGameSprite::GetVisualRange` = 32 px × the sprite's range byte; in PST mode `CGameSprite::CheckVisualRange`
+  sets it, on every stat change, to `CPlanescape::SetNamelessExploreRange` = **party slot 0's fighter level + 14**
+  (`EXPLORED_RANGE_3`), the same for every creature. Original: same rule, `sub_5940BF` (level of class slot 2 + 14,
+  stored in the area's visibility map word `+2068`, read ×32 by `sub_462B30`).
+- **GemRB:** `Scriptable::GetVisualRange` returns the fixed `VOODOO_VISUAL_RANGE` = 34 for PST (`Interface.cpp`,
+  `voodooconst.h` comment knows the formula and freezes it at fighter level 3); `WithinRange` scales 34 × 16 px
+  horizontally, × 12 vertically: the same ellipse as EE (y × 4/3) at level 3.
+- **Difference:** at fighter level 3 identical (544 px). Each extra fighter level adds 32 px in EE; a level-12
+  fighter Nameless One sees (and is seen) at 26 × 32 = 832 px, GemRB still 544. Also applies to the fog of war
+  reveal radius in EE (same field).
+- **Data affected:** every `See(...)` and every range-limited object (NearestEnemyOf 2,325 uses), i.e. when
+  enemies notice and engage the party. Turn-based: decides who joins a fight.
+- **Re-check:** `python tools/parity/dumps.py show ee "CPlanescape::SetNamelessExploreRange"`,
+  `... show ee "CGameSprite::CheckVisualRange(void)"`, `... show orig sub_5940BF`; GemRB
+  `grep -n VOODOO_VISUAL_RANGE gemrb/core/Interface.cpp gemrb/core/Scriptable/Scriptable.cpp`.
+
+### O-NearestEnemyOf (P apart from O-range)
+- EE/original: caller EA ≤ 30 → look for EA ≥ 200, EA ≥ 200 → EA ≤ 30, otherwise nobody (orig returns the
+  "nothing" object at once). Nearest within the visual range with line of sight, PST-invisible targets
+  (`STATE_PST_INVIS` 0x2000000) skipped; if none, the first match within the same range and line of sight from the
+  area's list (EE `GetAllInRangeBack`, orig `sub_476C01`, which also skips the dead).
+- GemRB `XthNearestEnemyOf` + `DoObjectChecks`: same EA rule, visual range, LOS, invisibility. The fallback can
+  only pick something the nearest pass rejected for its distance metric, so in practice the same result. P.
+
+### O-name Name lookup (P)
+- Original `sub_40F77C:218-294`: the caller's area table, then the game's global table, then the 6 party members
+  by name, case-insensitive; not found, or the id no longer resolves → nothing. EE: area table then global table.
+- GemRB: `Map::GetActor(name)` then `Game::FindPC`/`FindNPC`. Same set; which of two same-named creatures wins is
+  still open (hash vs most recent), no PST script seen relying on it.
+
+### O-IDS field matching (original `sub_40F297`; EE `CAIObjectType::IsEqual` not yet compared)
+- EA: 0 = any; 30 = ≤ 30, 200 = ≥ 200, 31 = ≥ 31, 199 = ≤ 199, else exact. General, race, class, specific,
+  gender, PST bytes +11/+12 (faction/team): 0 = any, else exact. Alignment: exact, or 1/2/3 match the low nibble,
+  16/32/48 the high nibble. **Fields are only compared when one side has no name**; a named object matches by
+  name (or global id).
+- GemRB `ID_Allegiance` (`Objects.cpp`): same cut-offs (plus EA_NOTNEUTRAL, unused by PST); `ID_Alignment`:
+  masks per nibble, same. Faction/team: not compared yet.

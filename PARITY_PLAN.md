@@ -9,9 +9,10 @@ Method and tools: [dev/parity/README.md](dev/parity/README.md).
 
 ## 1. Ground rules
 
-- **The original Torment.exe is the reference.** PST:EE's symbol-rich binary is the map: read the EE function to
-  understand a feature, then check the matching original code (same asserts, same constants) before
-  changing GemRB. Where EE deliberately differs, follow the original unless we decide otherwise and write that down.
+- **PST:EE is the reference (decided 2026-11-19).** Its symbol-rich binary is easier to read and its behaviour,
+  Beamdog's fixes included, is the target. Read the original Torment.exe only when EE is unclear or lacks the
+  feature; when the two differ, follow EE and note the original's behaviour in the finding. Findings from
+  rounds 1-11 were checked against the original and stay valid unless EE differs (re-check when fixing).
 - **Never commit decompiled code.** Port behaviour, not text: write GemRB code in GemRB's style from our
   description of what the original does.
 - **Every fix gets a check:** a unit test where the logic is isolated (opcodes, formulas), or a staged
@@ -81,7 +82,7 @@ opcodes.md (a hand-written column) and add a unit test for every behaviour chang
 Use [pst_functions.md](dev/parity/pst_functions.md) as the checklist: Nameless One death and revival,
 level-up bonuses and proficiencies, the casting path (`SpellPST`), damage hit sounds, resting, darkness and
 stealth, game-over conditions. Then the number tables EE moved out of the exe (XP, HP, THAC0, thief skills,
-weapon slots); confirm each against the original exe before changing any GemRB table.
+weapon slots); confirm each against PST:EE (data or exe) before changing any GemRB table.
 
 ### Phase 7: EE data fixes (optional)
 Sort EE's 734 changed SPL/ITM files into real bug fixes and redesigns. Offer the real fixes as an optional
@@ -96,3 +97,4 @@ data pack, off by default (Fixpack and UB already cover part of them).
 | 2026-11-18 | WP1 done: all 39 hardcoded spell classes read in the original (`spell_expect.md/.json`), findings S14–S38. Top: Howl applies no stun/confusion, Globe lasts 3 s, PW Kill has no HP limit. Text maps of both binaries in `dev/parity/maps/` (`export_maps.py`). |
 | 2026-11-18 | WP2/WP4 partial: PST opcodes and Ex actions vs original, findings E7–E16, A5–A9 (Curse improves saves, RunAwayFrom never attacks, RestParty heals TNO fully, Heal % mode). Handoff: `dev/parity/HANDOFF.md`. |
 | 2026-11-19 | Track A round 11: A3 event triggers 24/24 (T11-T16) and A8 BALDUR.bcs 64/64 (B1-B8); ledger 310/310. Top: NullDialog always true in GemRB (AR0403 thugs attack at once), `Game_Over` 7 ignored (AR0500 game over), TimerExpired eaten by the first block. A4 objects started (`wp5_objects.md`). |
+| 2026-11-19 | Round 12: PST:EE made the source of truth (docs updated). A4 decoder read in EE and the original: O-range (visual range grows with the Nameless One's fighter level, GemRB fixed at level 3), NearestEnemyOf and name lookup P. |
