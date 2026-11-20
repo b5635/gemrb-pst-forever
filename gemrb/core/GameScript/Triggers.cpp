@@ -258,7 +258,25 @@ int GameScript::IsTeamBitOn(Scriptable* Sender, const Trigger* parameters)
 
 int GameScript::NearbyDialog(Scriptable* Sender, const Trigger* parameters)
 {
-	const Scriptable* target = Sender->GetCurrentArea()->GetScriptableByDialog(parameters->resref0Parameter);
+	Map* map = Sender->GetCurrentArea();
+	if (core->HasFeature(GFFlags::PST_STATE_FLAGS)) {
+		// PST: any creature using that dialog within 700 px (y counted 4/3, isometric) of the caller,
+		// no line of sight (parity, trigger 0x4093)
+		auto isNearby = [Sender](const Point& pos) {
+			long dx = pos.x - Sender->Pos.x;
+			long dy = (pos.y - Sender->Pos.y) * 4 / 3;
+			return dx * dx + dy * dy < 700 * 700 + 1;
+		};
+		for (const Actor* actor : map->GetAllActors()) {
+			if (actor->GetDialog(GD_NORMAL) != parameters->resref0Parameter) continue;
+			if (!actor->ValidTarget(GA_NO_DEAD | GA_NO_HIDDEN | GA_NO_UNSCHEDULED)) continue;
+			if (isNearby(actor->Pos)) return 1;
+		}
+		// talking infopoints, doors and containers
+		const Scriptable* other = map->GetScriptableByDialog(parameters->resref0Parameter);
+		return other && other->Type != ST_ACTOR && isNearby(other->Pos);
+	}
+	const Scriptable* target = map->GetScriptableByDialog(parameters->resref0Parameter);
 	if (!target) {
 		return 0;
 	}
@@ -1679,7 +1697,10 @@ int GameScript::NearSavedLocation(Scriptable* Sender, const Trigger* parameters)
 		p.y = actor->GetStat(IE_SAVEDYPOS);
 	}
 
-	// pst had a bug and actually checked non-isometric range
+	// pst had a bug and actually checked non-isometric range: plain pixels (parity, trigger 0x4076)
+	if (core->HasFeature(GFFlags::PST_STATE_FLAGS)) {
+		return SquaredDistance(Sender->Pos, p) <= parameters->int0Parameter * parameters->int0Parameter;
+	}
 	if (WithinRange(Sender, p, parameters->int0Parameter)) {
 		return 1;
 	}
@@ -2522,7 +2543,9 @@ int GameScript::MoraleGT(Scriptable* Sender, const Trigger* parameters)
 		return 0;
 	}
 
-	bool matched = (signed) actor->GetStat(IE_MORALEBREAK) > parameters->int0Parameter;
+	// PST compares current morale (parity, triggers 0x4015/0x4016); MORALEBREAK is the flee threshold
+	ieDword stat = core->HasFeature(GFFlags::PST_STATE_FLAGS) ? IE_MORALE : IE_MORALEBREAK;
+	bool matched = (signed) actor->GetStat(stat) > parameters->int0Parameter;
 	if (matched) {
 		Sender->SetLastTrigger(trigger_morale, actor->GetGlobalID());
 	}
@@ -2537,7 +2560,9 @@ int GameScript::MoraleLT(Scriptable* Sender, const Trigger* parameters)
 		return 0;
 	}
 
-	bool matched = (signed) actor->GetStat(IE_MORALEBREAK) < parameters->int0Parameter;
+	// PST compares current morale (parity, triggers 0x4015/0x4016); MORALEBREAK is the flee threshold
+	ieDword stat = core->HasFeature(GFFlags::PST_STATE_FLAGS) ? IE_MORALE : IE_MORALEBREAK;
+	bool matched = (signed) actor->GetStat(stat) < parameters->int0Parameter;
 	if (matched) {
 		Sender->SetLastTrigger(trigger_morale, actor->GetGlobalID());
 	}
@@ -2601,7 +2626,9 @@ int GameScript::NotStateCheck(Scriptable* Sender, const Trigger* parameters)
 		return 0;
 	}
 
-	if (actor->GetStat(IE_STATE_ID) & ~parameters->int0Parameter) {
+	// PST: true when none of the given state bits is set (parity, trigger 0x4038)
+	bool matched = core->HasFeature(GFFlags::PST_STATE_FLAGS) ? !(actor->GetStat(IE_STATE_ID) & parameters->int0Parameter) : (actor->GetStat(IE_STATE_ID) & ~parameters->int0Parameter);
+	if (matched) {
 		Sender->SetLastTrigger(trigger_statecheck, tar->GetGlobalID());
 		return 1;
 	}
@@ -2610,6 +2637,9 @@ int GameScript::NotStateCheck(Scriptable* Sender, const Trigger* parameters)
 
 int GameScript::RandomNum(Scriptable* /*Sender*/, const Trigger* parameters)
 {
+	if (core->HasFeature(GFFlags::PST_STATE_FLAGS)) { // PST: roll 0..Range, so RandomNum(2,0) can be true (parity, trigger 0x4047)
+		return RandomNumValue % std::max(parameters->int0Parameter + 1, 1) == parameters->int1Parameter;
+	}
 	if (parameters->int0Parameter <= 0 || parameters->int1Parameter <= 0) {
 		return 0;
 	}
@@ -2626,6 +2656,9 @@ int GameScript::RandomNumGT(Scriptable* /*Sender*/, const Trigger* parameters)
 
 int GameScript::RandomNumLT(Scriptable* /*Sender*/, const Trigger* parameters)
 {
+	if (core->HasFeature(GFFlags::PST_STATE_FLAGS)) { // PST: roll 0..Range (parity, trigger 0x4049)
+		return RandomNumValue % std::max(parameters->int0Parameter + 1, 1) < parameters->int1Parameter;
+	}
 	if (parameters->int0Parameter <= 0 || parameters->int1Parameter <= 0) {
 		return 0;
 	}
@@ -3284,6 +3317,9 @@ int GameScript::Time(Scriptable* /*Sender*/, const Trigger* parameters)
 //this trigger uses hours
 int GameScript::TimeGT(Scriptable* /*Sender*/, const Trigger* parameters)
 {
+	if (core->HasFeature(GFFlags::PST_STATE_FLAGS)) { // PST: the current hour, compared directly (parity, trigger 0x4068)
+		return int(core->Time.GetHour(core->GetGame()->GameTime)) > parameters->int0Parameter;
+	}
 	if (parameters->int0Parameter < 0 || parameters->int0Parameter > 22) return 0;
 
 	return Schedule((0xFFFFFFu << parameters->int0Parameter) & 0x7FFFFFu, core->GetGame()->GameTime);
@@ -3292,6 +3328,9 @@ int GameScript::TimeGT(Scriptable* /*Sender*/, const Trigger* parameters)
 //this trigger uses hours
 int GameScript::TimeLT(Scriptable* /*Sender*/, const Trigger* parameters)
 {
+	if (core->HasFeature(GFFlags::PST_STATE_FLAGS)) { // PST: the current hour, compared directly (parity, trigger 0x4069)
+		return int(core->Time.GetHour(core->GetGame()->GameTime)) < parameters->int0Parameter;
+	}
 	if (parameters->int0Parameter < 1 || parameters->int0Parameter > 23) return 0;
 
 	return Schedule((0xFFFFFFu >> (25 - parameters->int0Parameter)) | 1 << 23, core->GetGame()->GameTime);

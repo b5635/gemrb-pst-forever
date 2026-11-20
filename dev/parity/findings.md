@@ -236,13 +236,13 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | A9 | ~~IncrementGlobalOnce creates missing variables in GemRB~~: wrong, PST's `NoNewVariables = 1` stops creation in GemRB too, and all 1,693 calls use declared variables (round 8). | P | — |
 | A10 | **PlaySequence / SetAnimState block in PST until the animation ends**; GemRB's PST path (`OneByteAnimationID`) returns before its wait, so the next action starts at once. 1,859 uses (cutscenes, dialogue mime animations). | V | 2 |
 | A11 | **StartRandomTimer rolls outside its range**: GemRB `Roll(1, max−min, max−1)` gives max … 2·max−min−1 (5-10 → 10-14 s); the original rolls min … max. 268 uses (ambient loops 1.5-2× slower). Same family: **WaitRandom** never rolls its max (sev 3, 1,398 uses). | V | 2 |
-| A12 | **TakePartyItem takes the whole stack in GemRB**; the original takes one unit. Cranium-rat `Tail` (stack 99) is sold one at a time to four NPCs (DBARKING, DKNFGHL, DPHINEAS, DRATBONE): GemRB's first buyer takes them all. Also `PsCharm`, `Embalm`, `Needle`. | V | 1 |
+| A12 | **TakePartyItem takes the whole stack in GemRB**; the original takes one unit. Cranium-rat `Tail` (stack 99) is sold one at a time to four NPCs (DBARKING, DKNFGHL, DPHINEAS, DRATBONE): GemRB's first buyer takes them all. Also `PsCharm`, `Embalm`, `Needle`. **Fixed in 97267f33d.** | F | 1 |
 | A13 | **Dak'kon's Karach changes on MoraleDec/Inc/Set in GemRB** (`CheckKarachUpgrade`); with no morale threshold crossed it falls to the **bad** blade. The original swaps the blade only at level-up (levels 4/7/10, variant by current morale; `sub_5E6187` → `sub_5E985F`). 48+ Dakkon morale lines. | V | 2 |
 | A14 | **Damage misreads every amount ≥ 16 and can kill.** GemRB decodes int1 as a dice code always (`Damage(Protagonist,Lower,25)` → 9, `20` → 4, `50` → 2) and routes it through `Actor::Damage` (resistances, luck, death). The original treats int1 as dice only with bits 0xF000 and edits current HP directly, clamped to ≥ 1: dialogue damage never kills. 78 uses (74 DLG). | V | 1 |
 | A15 | **ForceAttack doesn't interrupt the attacker in GemRB.** Original clears the attacker's action queue, then queues `Attack`; GemRB appends the attack behind whatever it was doing. 531 uses. | V | 2 |
 | A16 | **PlaySequenceTimed waits ticks instead of seconds.** Original loops the animation for int1 **seconds** and blocks; GemRB `SetWait(int1)` = int1 ticks, no loop: `PlaySequenceTimed(25,4)` lasts 0.27 s instead of 4 s. 70 uses (Mortuary skeleton workers `0208SK*`). | V | 2 |
 | A17 | **LeaveParty keeps the companion's party scripts in GemRB.** The original sets script slots AREA, SPECIFICS, CLASS, RACE and GENERAL to empty and sends `Leaves` to each party member; GemRB resets scripts only under `HasDPLAYER` (off for PST). 36 uses (companions leaving). | V | 2 |
-| A18 | **DestroyItem takes the item from the wrong creature.** All 20 PST uses are dialogue lines `DestroyItem("X", Protagonist, n)`; the original removes from the named object, GemRB from the caller (the dialogue NPC), ignoring the object and All. Nothing is removed: FalseCon (Copper, Mortai), loandoc (Deran), Cheese/Pcheese (Mantuok, 11 lines), Sohmien, Legclub (Ulthera). | V | 1 |
+| A18 | **DestroyItem takes the item from the wrong creature.** All 20 PST uses are dialogue lines `DestroyItem("X", Protagonist, n)`; the original removes from the named object, GemRB from the caller (the dialogue NPC), ignoring the object and All. Nothing is removed: FalseCon (Copper, Mortai), loandoc (Deran), Cheese/Pcheese (Mantuok, 11 lines), Sohmien, Legclub (Ulthera). **Fixed in 97267f33d.** | F | 1 |
 | A19 | **SavePlace does nothing in GemRB.** Bound to `SaveLocation` (a point variable named by a string it doesn't have); the creature's saved position/facing is never set, so `ReturnToSavedPlace` goes to the old spot. 15 uses (`0600AELN`, `0600NEME`, `0602FTDP`…). | V | 2 |
 | A20 | **GlobalSetGlobal copies the wrong way.** Original: Name1 ← Name2 (`Previous_Area` takes `Current_Area`); GemRB: Name2 ← Name1. 4 uses (AR0201-0203 area scripts). Same batch: **FollowCreature** is a no-op in PST but blocks the queue forever in GemRB (1 use, `0600THUG`). | V | 2 |
 
@@ -256,3 +256,18 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | V4 | Sound frequency sliders: level 3 = 40 % (GemRB 50 %), action level 2 = 20 % (GemRB once per selection). (A11-4) | V | 3 |
 | V5 | Being hit plays slot 14 or 18 at 50/50; GemRB only 18. (A11-2) | V | 3 |
 
+
+## 14. Trigger findings, round 10 (detail in [wp5_triggers.md](wp5_triggers.md))
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| T1 | **NearbyDialog needed sight.** Original: any object with that dialog within 700 px (y ×4/3), no line of sight, no visual range; GemRB: the first actor with the dialog, then `CanSee` (visual range + LOS). Companion interjections went missing behind walls. 4,761 uses. **Fixed (PST).** | F | 2 |
+| T2 | **MoraleLT/GT read the flee threshold.** Original: current morale (+1831, what MoraleInc/Dec change); GemRB `IE_MORALEBREAK`. All 51 dialogue uses gate Dak'kon/Annah/Morte/Grace lines on morale. **Fixed (PST).** | F | 2 |
+| T3 | **NotStateCheck inverted.** Original: true when none of the bits is set; GemRB: true when another bit is set (false for a normal creature). Trias, Ravel. **Fixed (PST).** | F | 2 |
+| T4 | **RandomNum/RandomNumLT roll 1…Range in GemRB, 0…Range in the original.** `RandomNum(2,0)` (dialogue) never fired; every other value had 1/R instead of 1/(R+1). 200 uses. **Fixed (PST).** | F | 2 |
+| T5 | **GlobalTimerExpired: a timer at 0 is expired in the original** (`value < now`); PST's `ZeroTimerIsValid = 0` made it never expire. VAR.VAR starts `No_Gamble`, `Able_Timer_*`, `Bedai_Timer`, `Kiina_Return` at 0. **Fixed (ini).** | F | 2 |
+| T6 | TimeGT/TimeLT used schedule masks half an hour early (`TimeGT(21)` 21:30-23:30 vs 22-24). **Fixed (PST).** | F | 3 |
+| T7 | NearSavedLocation range is plain pixels in the original, search cells in GemRB (15 of 334 uses have a range). **Fixed (PST).** | F | 3 |
+| T8 | NearLocation: GemRB subtracts the personal radius and doesn't use range + 1. | V | 3 |
+| T9 | NumCreature(LT/GT) count only creatures the caller sees in the original, the whole area in GemRB (area scripts `AR1601`, `AR1401`). | S | 3 |
+| T10 | LOS: GemRB adds visual range and hidden/invisible checks to the original's range + line-of-sight test. | V | 3 |

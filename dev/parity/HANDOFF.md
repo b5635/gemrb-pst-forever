@@ -74,15 +74,25 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
   (original loads CRE snapshots from `layout.ini`, GemRB moves and kills the live NPC); QuitGame (`Game_Over` = 6 path,
   A8); ForceSpell = ReallyForceSpell path in the original; Continue with an empty response (A5).
 
+## Round 10 (2026-11-19): fixes A12 A18, A2 triggers complete
+- **Fixed** (commit after `97267f33d`): A12 TakePartyItem takes one unit of a stack; A18 DestroyItem uses its object and
+  All. Both tested in game (4 Tails → 3; Morte's DestroyItem removes the Nameless One's item).
+- **A2 triggers: 75/75** (`wp5_triggers.md`, findings T1-T10). Fixed and tested in game (PST only): T1 NearbyDialog
+  (700 px, no LOS), T2 MoraleLT/GT (current morale), T3 NotStateCheck, T4 RandomNum 0…Range, T5 zero timers expired
+  (`ZeroTimerIsValid = 1`), T6 TimeGT/LT, T7 NearSavedLocation pixels. Open sev 3: T8 NearLocation, T9 NumCreature
+  (visible only), T10 LOS.
+- Tools: `trigargs.py 0x40xx [--dlg] [--where]` (trigger parameter use in BCS and DLG);
+  `GemRB.EvaluateString(trigger, quiet, who)` takes a caller (party slot or global ID) for in-game trigger tests.
+
 ## Next, in order (detail in AGENT_GUIDE section 4)
-1. **Track A, scripts and dialogue, to 100 % of `script_ledger.tsv`:** ~~A1 actions~~ (done round 9), A2 triggers, A3 event
+1. **Track A, scripts and dialogue, to 100 % of `script_ledger.tsv`:** ~~A1 actions~~ (done round 9), ~~A2 triggers~~ (done round 10), A3 event
    triggers, A4 object selectors, A5 script engine, A6 dialogue engine, A7 parser, A8 BALDUR.bcs, A9 INI spawns,
    A10 indirect state (death variables, XP, rest), A11 voice lines and sound slots (never investigated).
 2. **Track B, combat:** combat rules (`wp10_combat.md`), effect pipeline (`wp11_effect_pipeline.md`), WP2 rest (77
    used opcodes, batched by family). Open from round 5: Guardian Mantle save direction (E-012d), GemRB's Cloak of
    Warding / Guardian Mantle vs effect damage, effect byte +6.
 3. **Track C:** WP6 rules, WP7 tables, items, stores, plain projectiles, WP8 GemRB PST branches, WP9 EE data.
-4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **A18 DestroyItem target (sev 1)**, **A14 Damage amount/death (sev 1)**, **A12 TakePartyItem stacks (sev 1)**, A19 SavePlace, A20 GlobalSetGlobal, A17 LeaveParty scripts, A16 PlaySequenceTimed, A15 ForceAttack, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
+4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **A14 Damage amount/death (sev 1)** (A12, A18 fixed round 10), A19 SavePlace, A20 GlobalSetGlobal, A17 LeaveParty scripts, A16 PlaySequenceTimed, A15 ForceAttack, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
    Nameless death rules, A5 RunAwayFrom attacks, S14 Howl, S15 Globe, S16/S17 Power Words, E7 Curse saves, S4 attack
    rolls, E17 scroll caster level, E18 TransferHP, E19 Ball Lightning / Adder's Kiss.
 

@@ -8031,7 +8031,7 @@ static PyObject* GemRB_ExecuteString(PyObject* /*self*/, PyObject* args)
 PyDoc_STRVAR(GemRB_EvaluateString__doc,
 	     "===== EvaluateString =====\n\
 \n\
-**Prototype:** GemRB.EvaluateString (String[, quiet=False])\n\
+**Prototype:** GemRB.EvaluateString (String[, quiet=False, globalID=0])\n\
 \n\
 **Description:** Evaluates an ingame script trigger in the current area \n\
 script context. It prints the result. The command is more useful from the \n\
@@ -8040,6 +8040,7 @@ ingame debug console than from scripts.\n\
 **Parameters:**\n\
   * String - a gamescript trigger\n\
   * quiet - set to True to skip printing the result\n\
+  * globalID - optional caller: a party slot (1-6) or an actor global ID; default the current area\n\
 \n\
 **Return value:** the trigger's return value\n\
 \n\
@@ -8054,10 +8055,17 @@ static PyObject* GemRB_EvaluateString(PyObject* /*self*/, PyObject* args)
 {
 	const char* String;
 	int quiet = 0;
-	PARSE_ARGS(args, "s|p", &String, &quiet);
+	int globalID = 0;
+	PARSE_ARGS(args, "s|pi", &String, &quiet, &globalID);
 	GET_GAME();
 
-	if (GameScript::EvaluateString(game->GetCurrentArea(), String)) {
+	// optional caller: a party slot or a global ID (default: the current area)
+	Scriptable* sender = game->GetCurrentArea();
+	if (globalID) {
+		GET_ACTOR_GLOBAL();
+		sender = actor;
+	}
+	if (GameScript::EvaluateString(sender, String)) {
 		if (!quiet) Log(DEBUG, "GUIScript", "{} returned True", String);
 		Py_RETURN_TRUE;
 	} else {

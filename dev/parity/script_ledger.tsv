@@ -147,81 +147,81 @@ action	149	EquipMostDamagingMelee()	1	sprite case 75	GameScript::EquipMostDamagi
 action	225	FollowCreature(O:Target*)	1	sprite case 92	GameScript::FollowCreature	V	-	opus		orig no-op; GemRB blocks forever following; sev 2
 action	285	FixEngineRoom()	1	base sub_44B099	GameScript::FixEngineRoom	S	-	opus		maze (track C)
 action	297	ResetFogOfWar()	1	base sub_44B099	GameScript::UndoExplore	P	-	opus		unexplore all
-trigger	0x400F	Global(S:Name*,S:Area*,I:Value*)	17093	453258	GameScript::Global	todo				
-trigger	0x4093	NearbyDialog(S:DialogFile*)	4761	453258	GameScript::NearbyDialog	todo				
-trigger	0x4034	GlobalGT(S:Name*,S:Area*,I:Value*)	2415	453258	GameScript::GlobalGT	todo				
-trigger	0x4023	True()	2044	453258,778529	GameScript::True	todo				
-trigger	0x401C	See(O:Object*)	1532	453258,778529	GameScript::See	todo				
-trigger	0x4045	CheckStatGT(O:Object*,I:Value*,I:StatNum*Stats)	1502	453258	GameScript::CheckStatGT	todo				
-trigger	0x4046	CheckStatLT(O:Object*,I:Value*,I:StatNum*Stats)	1180	453258	GameScript::CheckStatLT	todo				
-trigger	0x4035	GlobalLT(S:Name*,S:Area*,I:Value*)	795	453258	GameScript::GlobalLT	todo				
-trigger	0x400B	Allegiance(O:Object*,I:Allegience*EA)	788	453258	GameScript::Allegiance	todo				
-trigger	0x4042	PartyHasItem(S:Item*)	747	453258	GameScript::PartyHasItem	todo				
-trigger	0x40A1	Internal(O:Object*,I:Index*Internal,I:Value*)	728	453258	GameScript::Internal	todo				
-trigger	0x4043	InParty(O:Object*)	705	453258	GameScript::InParty	todo				
-trigger	0x400D	Exists(O:Object*)	667	453258	GameScript::Exists	todo				
-trigger	0x4051	Dead(S:Name*)	588	453258	GameScript::Dead	todo				
-trigger	0x4039	NumTimesTalkedTo(I:Num*)	479	778529	GameScript::NumTimesTalkedTo	todo				
-trigger	0x407C	TimerActive(I:ID*)	401	453258	GameScript::TimerActive	todo				
-trigger	0x402D	HPPercentLT(O:Object*,I:HitPoints*)	379	453258	GameScript::HPPercentLT	todo				
-trigger	0x403A	NumTimesTalkedToGT(I:Num*)	342	778529	GameScript::NumTimesTalkedToGT	todo				
-trigger	0x404F	PartyGoldGT(I:Amount*)	341	453258	GameScript::PartyGoldGT	todo				
-trigger	0x4076	NearSavedLocation(I:Range*)	334	778529	GameScript::NearSavedLocation	todo				
-trigger	0x4075	NearLocation(O:Object*,P:Point*,I:Range*)	326	453258	GameScript::NearLocation	todo				
-trigger	0x4047	RandomNum(I:Range*,I:Value*)	198	453258	GameScript::RandomNum	todo				
-trigger	0x4061	HasItem(S:ResRef*,O:Object*)	190	453258	GameScript::HasItem	todo				
-trigger	0x4018	Range(O:Object*,I:Range*)	185	453258	GameScript::Range	todo				
-trigger	0x407F	BitCheck(S:Name*,S:Area*,I:Bit*Bits)	171	453258	GameScript::BitCheck	todo				
-trigger	0x407E	CreatureInArea(S:AreaName*)	163	453258	GameScript::AreaCheck	todo				
-trigger	0x400C	Class(O:Object*,I:Class*Class)	141	453258	GameScript::Class	todo				
-trigger	0x40B1	LastPersonTalkedTo(O:Object*)	100	453258	GameScript::LastPersonTalkedTo	todo				
-trigger	0x4030	False()	99	453258	GameScript::False	todo				
-trigger	0x4012	HPLT(O:Object*,I:HitPoints*)	94	453258	GameScript::HPLT	todo				
-trigger	0x4050	PartyGoldLT(I:Amount*)	71	453258	GameScript::PartyGoldLT	todo				
-trigger	0x4099	ProficiencyGT(O:Object*,I:Slot*WProf,I:Value*)	65	453258	GameScript::ProficiencyGT	todo				
-trigger	0x4031	HaveSpell(I:Spell*Spell)	55	778529	GameScript::HaveSpell	todo				
-trigger	0x4040	GlobalTimerExpired(S:Name*,S:Area*)	50	453258	GameScript::GlobalTimerExpired	todo				
-trigger	0x40A3	InternalGT(O:Object*,I:Index*Internal,I:Value*)	50	453258	GameScript::InternalGT	todo				
-trigger	0x4086	GlobalORGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	46	453258	GameScript::GlobalOrGlobal_Trigger	todo				
-trigger	0x401D	Specifics(O:Object*,I:Specifics*Specific)	45	453258	GameScript::Specifics	todo				
-trigger	0x400A	Alignment(O:Object*,I:Alignment*Align)	44	453258	GameScript::Alignment	todo				
-trigger	0x4098	ProficiencyLT(O:Object*,I:Slot*WProf,I:Value*)	40	453258	GameScript::ProficiencyLT	todo				
-trigger	0x408B	PartyCountGT(I:Count*)	38	453258	GameScript::PartyCountGT	todo				
-trigger	0x4013	LOS(O:Object*,I:Range*)	34	453258	GameScript::LOS	todo				
-trigger	0x40AA	ExtraProficiencyGT(O:Object*,I:Value*)	33	453258	GameScript::ExtraProficiencyGT	todo				
-trigger	0x401F	TimeOfDay(I:TimeOfDay*TimeODay)	31	453258	GameScript::TimeOfDay	todo				
-trigger	0x4016	MoraleLT(O:Object*,I:Morale*)	27	453258	GameScript::MoraleLT	todo				
-trigger	0x4089	PartyCountEQ(I:Count*)	27	453258	GameScript::PartyCountEQ	todo				
-trigger	0x4015	MoraleGT(O:Object*,I:Morale*)	26	453258	GameScript::MoraleGT	todo				
-trigger	0x4011	HPGT(O:Object*,I:HitPoints*)	23	453258	GameScript::HPGT	todo				
-trigger	0x4032	HaveAnySpells()	21	778529	GameScript::HaveAnySpells	todo				
-trigger	0x40A8	ExtraProficiency(O:Object*,I:Value*)	20	453258	GameScript::ExtraProficiency	todo				
-trigger	0x40AD	ClassLevelGT(O:Object*,I:Value*Class,I:Value*)	18	453258	GameScript::ClassLevelGT	todo				
-trigger	0x404E	PartyGold(I:Amount*)	16	453258	GameScript::PartyGold	todo				
-trigger	0x40AE	ClassLevelLT(O:Object*,I:Value*Class,I:Value*)	13	453258	GameScript::ClassLevelLT	todo				
-trigger	0x4017	Race(O:Object*,I:Race*Race)	12	453258	GameScript::Race	todo				
-trigger	0x4029	NumCreatureLT(O:Object*,I:Number*)	11	453258	GameScript::NumCreaturesLT	todo				
-trigger	0x4097	Proficiency(O:Object*,I:Slot*WProf,I:Value*)	10	453258	GameScript::Proficiency	todo				
-trigger	0x4091	PartyItemCountGT(S:Item*,I:Count)	9	453258	GameScript::NumItemsPartyGT	todo				
-trigger	0x409B	Team(O:Object*,I:Value*Team)	9	453258	GameScript::Team	todo				
-trigger	0x4038	NotStateCheck(O:Object*,I:State*State)	8	453258	GameScript::NotStateCheck	todo				
-trigger	0x402A	NumCreatureGT(O:Object*,I:Number*)	6	453258	GameScript::NumCreaturesGT	todo				
-trigger	0x4068	TimeGT(I:Time*Time)	6	453258	GameScript::TimeGT	todo				
-trigger	0x4069	TimeLT(I:Time*Time)	6	453258	GameScript::TimeLT	todo				
-trigger	0x4041	GlobalTimerNotExpired(S:Name*,S:Area*)	5	453258	GameScript::GlobalTimerNotExpired	todo				
-trigger	0x409A	Faction(O:Object*,I:Value*Faction)	5	453258	GameScript::Faction	todo				
-trigger	0x408A	PartyCountLT(I:Count*)	4	453258	GameScript::PartyCountLT	todo				
-trigger	0x409C	StuffGlobalRandom(S:Name*,S:Area*,I:Range*)	4	453258	GameScript::StuffGlobalRandom	todo				
-trigger	0x40A2	InternalLT(O:Object*,I:Index*Internal,I:Value*)	4	453258	GameScript::InternalLT	todo				
-trigger	0x402C	HPPercent(O:Object*,I:HitPoints*)	3	453258	GameScript::HPPercent	todo				
-trigger	0x40A6	IsLocked(O:Object*)	3	453258	GameScript::IsLocked	todo				
-trigger	0x4028	NumCreature(O:Object*,I:Number*)	2	453258	GameScript::NumCreatures	todo				
-trigger	0x402E	HPPercentGT(O:Object*,I:HitPoints*)	2	453258	GameScript::HPPercentGT	todo				
-trigger	0x4049	RandomNumLT(I:Range*,I:Value*)	2	453258	GameScript::RandomNumLT	todo				
-trigger	0x4090	PartyItemCountLT(S:Item*,I:Count)	2	453258	GameScript::NumItemsPartyLT	todo				
-trigger	0x403B	NumTimesTalkedToLT(I:Num*)	1	778529	GameScript::NumTimesTalkedToLT	todo				
-trigger	0x4062	InteractingWith(O:Object*)	1	778529	GameScript::InteractingWith	todo				
-trigger	0x40B2	IsInGuardianMantle(O:Object*)	1	453258	GameScript::IsInGuardianMantle	todo				
+trigger	0x400F	Global(S:Name*,S:Area*,I:Value*)	17093	453258	GameScript::Global	P	-	opus		see wp5_triggers.md
+trigger	0x4093	NearbyDialog(S:DialogFile*)	4761	453258	GameScript::NearbyDialog	V	T1	opus		700 px isometric, no LOS; fixed
+trigger	0x4034	GlobalGT(S:Name*,S:Area*,I:Value*)	2415	453258	GameScript::GlobalGT	P	-	opus		see wp5_triggers.md
+trigger	0x4023	True()	2044	453258,778529	GameScript::True	P	-	opus		see wp5_triggers.md
+trigger	0x401C	See(O:Object*)	1532	453258,778529	GameScript::See	S	-	opus		invisibility/sleep rules not compared
+trigger	0x4045	CheckStatGT(O:Object*,I:Value*,I:StatNum*Stats)	1502	453258	GameScript::CheckStatGT	P	-	opus		see wp5_triggers.md
+trigger	0x4046	CheckStatLT(O:Object*,I:Value*,I:StatNum*Stats)	1180	453258	GameScript::CheckStatLT	P	-	opus		see wp5_triggers.md
+trigger	0x4035	GlobalLT(S:Name*,S:Area*,I:Value*)	795	453258	GameScript::GlobalLT	P	-	opus		see wp5_triggers.md
+trigger	0x400B	Allegiance(O:Object*,I:Allegience*EA)	788	453258	GameScript::Allegiance	P	-	opus		see wp5_triggers.md
+trigger	0x4042	PartyHasItem(S:Item*)	747	453258	GameScript::PartyHasItem	P	-	opus		see wp5_triggers.md
+trigger	0x40A1	Internal(O:Object*,I:Index*Internal,I:Value*)	728	453258	GameScript::Internal	P	-	opus		see wp5_triggers.md
+trigger	0x4043	InParty(O:Object*)	705	453258	GameScript::InParty	P	-	opus		see wp5_triggers.md
+trigger	0x400D	Exists(O:Object*)	667	453258	GameScript::Exists	P	-	opus		see wp5_triggers.md
+trigger	0x4051	Dead(S:Name*)	588	453258	GameScript::Dead	P	-	opus		see wp5_triggers.md
+trigger	0x4039	NumTimesTalkedTo(I:Num*)	479	778529	GameScript::NumTimesTalkedTo	P	-	opus		see wp5_triggers.md
+trigger	0x407C	TimerActive(I:ID*)	401	453258	GameScript::TimerActive	P	-	opus		see wp5_triggers.md
+trigger	0x402D	HPPercentLT(O:Object*,I:HitPoints*)	379	453258	GameScript::HPPercentLT	P	-	opus		see wp5_triggers.md
+trigger	0x403A	NumTimesTalkedToGT(I:Num*)	342	778529	GameScript::NumTimesTalkedToGT	P	-	opus		see wp5_triggers.md
+trigger	0x404F	PartyGoldGT(I:Amount*)	341	453258	GameScript::PartyGoldGT	P	-	opus		see wp5_triggers.md
+trigger	0x4076	NearSavedLocation(I:Range*)	334	778529	GameScript::NearSavedLocation	V	T7	opus		plain pixels; fixed
+trigger	0x4075	NearLocation(O:Object*,P:Point*,I:Range*)	326	453258	GameScript::NearLocation	V	T8	opus		cells vs personal range; sev 3
+trigger	0x4047	RandomNum(I:Range*,I:Value*)	198	453258	GameScript::RandomNum	V	T4	opus		0..Range roll; fixed
+trigger	0x4061	HasItem(S:ResRef*,O:Object*)	190	453258	GameScript::HasItem	P	-	opus		see wp5_triggers.md
+trigger	0x4018	Range(O:Object*,I:Range*)	185	453258	GameScript::Range	P	-	opus		see wp5_triggers.md
+trigger	0x407F	BitCheck(S:Name*,S:Area*,I:Bit*Bits)	171	453258	GameScript::BitCheck	P	-	opus		see wp5_triggers.md
+trigger	0x407E	CreatureInArea(S:AreaName*)	163	453258	GameScript::AreaCheck	P	-	opus		see wp5_triggers.md
+trigger	0x400C	Class(O:Object*,I:Class*Class)	141	453258	GameScript::Class	P	-	opus		see wp5_triggers.md
+trigger	0x40B1	LastPersonTalkedTo(O:Object*)	100	453258	GameScript::LastPersonTalkedTo	P	-	opus		see wp5_triggers.md
+trigger	0x4030	False()	99	453258	GameScript::False	P	-	opus		see wp5_triggers.md
+trigger	0x4012	HPLT(O:Object*,I:HitPoints*)	94	453258	GameScript::HPLT	P	-	opus		see wp5_triggers.md
+trigger	0x4050	PartyGoldLT(I:Amount*)	71	453258	GameScript::PartyGoldLT	P	-	opus		see wp5_triggers.md
+trigger	0x4099	ProficiencyGT(O:Object*,I:Slot*WProf,I:Value*)	65	453258	GameScript::ProficiencyGT	P	-	opus		see wp5_triggers.md
+trigger	0x4031	HaveSpell(I:Spell*Spell)	55	778529	GameScript::HaveSpell	P	-	opus		see wp5_triggers.md
+trigger	0x4040	GlobalTimerExpired(S:Name*,S:Area*)	50	453258	GameScript::GlobalTimerExpired	V	T5	opus		zero timer expired; fixed (ZeroTimerIsValid)
+trigger	0x40A3	InternalGT(O:Object*,I:Index*Internal,I:Value*)	50	453258	GameScript::InternalGT	P	-	opus		see wp5_triggers.md
+trigger	0x4086	GlobalORGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	46	453258	GameScript::GlobalOrGlobal_Trigger	P	-	opus		see wp5_triggers.md
+trigger	0x401D	Specifics(O:Object*,I:Specifics*Specific)	45	453258	GameScript::Specifics	P	-	opus		see wp5_triggers.md
+trigger	0x400A	Alignment(O:Object*,I:Alignment*Align)	44	453258	GameScript::Alignment	P	-	opus		see wp5_triggers.md
+trigger	0x4098	ProficiencyLT(O:Object*,I:Slot*WProf,I:Value*)	40	453258	GameScript::ProficiencyLT	P	-	opus		see wp5_triggers.md
+trigger	0x408B	PartyCountGT(I:Count*)	38	453258	GameScript::PartyCountGT	P	-	opus		see wp5_triggers.md
+trigger	0x4013	LOS(O:Object*,I:Range*)	34	453258	GameScript::LOS	V	T10	opus		GemRB adds visual range/hidden; sev 3
+trigger	0x40AA	ExtraProficiencyGT(O:Object*,I:Value*)	33	453258	GameScript::ExtraProficiencyGT	P	-	opus		see wp5_triggers.md
+trigger	0x401F	TimeOfDay(I:TimeOfDay*TimeODay)	31	453258	GameScript::TimeOfDay	P	-	opus		see wp5_triggers.md
+trigger	0x4016	MoraleLT(O:Object*,I:Morale*)	27	453258	GameScript::MoraleLT	V	T2	opus		current morale; fixed
+trigger	0x4089	PartyCountEQ(I:Count*)	27	453258	GameScript::PartyCountEQ	P	-	opus		see wp5_triggers.md
+trigger	0x4015	MoraleGT(O:Object*,I:Morale*)	26	453258	GameScript::MoraleGT	V	T2	opus		current morale; fixed
+trigger	0x4011	HPGT(O:Object*,I:HitPoints*)	23	453258	GameScript::HPGT	P	-	opus		see wp5_triggers.md
+trigger	0x4032	HaveAnySpells()	21	778529	GameScript::HaveAnySpells	P	-	opus		see wp5_triggers.md
+trigger	0x40A8	ExtraProficiency(O:Object*,I:Value*)	20	453258	GameScript::ExtraProficiency	P	-	opus		see wp5_triggers.md
+trigger	0x40AD	ClassLevelGT(O:Object*,I:Value*Class,I:Value*)	18	453258	GameScript::ClassLevelGT	P	-	opus		see wp5_triggers.md
+trigger	0x404E	PartyGold(I:Amount*)	16	453258	GameScript::PartyGold	P	-	opus		see wp5_triggers.md
+trigger	0x40AE	ClassLevelLT(O:Object*,I:Value*Class,I:Value*)	13	453258	GameScript::ClassLevelLT	P	-	opus		see wp5_triggers.md
+trigger	0x4017	Race(O:Object*,I:Race*Race)	12	453258	GameScript::Race	P	-	opus		see wp5_triggers.md
+trigger	0x4029	NumCreatureLT(O:Object*,I:Number*)	11	453258	GameScript::NumCreaturesLT	S	T9	opus		counts visible only in orig
+trigger	0x4097	Proficiency(O:Object*,I:Slot*WProf,I:Value*)	10	453258	GameScript::Proficiency	P	-	opus		see wp5_triggers.md
+trigger	0x4091	PartyItemCountGT(S:Item*,I:Count)	9	453258	GameScript::NumItemsPartyGT	P	-	opus		see wp5_triggers.md
+trigger	0x409B	Team(O:Object*,I:Value*Team)	9	453258	GameScript::Team	P	-	opus		see wp5_triggers.md
+trigger	0x4038	NotStateCheck(O:Object*,I:State*State)	8	453258	GameScript::NotStateCheck	V	T3	opus		inverted; fixed
+trigger	0x402A	NumCreatureGT(O:Object*,I:Number*)	6	453258	GameScript::NumCreaturesGT	S	T9	opus		counts visible only in orig
+trigger	0x4068	TimeGT(I:Time*Time)	6	453258	GameScript::TimeGT	V	T6	opus		hour compare; fixed
+trigger	0x4069	TimeLT(I:Time*Time)	6	453258	GameScript::TimeLT	V	T6	opus		hour compare; fixed
+trigger	0x4041	GlobalTimerNotExpired(S:Name*,S:Area*)	5	453258	GameScript::GlobalTimerNotExpired	P	-	opus		see wp5_triggers.md
+trigger	0x409A	Faction(O:Object*,I:Value*Faction)	5	453258	GameScript::Faction	P	-	opus		see wp5_triggers.md
+trigger	0x408A	PartyCountLT(I:Count*)	4	453258	GameScript::PartyCountLT	P	-	opus		see wp5_triggers.md
+trigger	0x409C	StuffGlobalRandom(S:Name*,S:Area*,I:Range*)	4	453258	GameScript::StuffGlobalRandom	P	-	opus		see wp5_triggers.md
+trigger	0x40A2	InternalLT(O:Object*,I:Index*Internal,I:Value*)	4	453258	GameScript::InternalLT	P	-	opus		see wp5_triggers.md
+trigger	0x402C	HPPercent(O:Object*,I:HitPoints*)	3	453258	GameScript::HPPercent	P	-	opus		see wp5_triggers.md
+trigger	0x40A6	IsLocked(O:Object*)	3	453258	GameScript::IsLocked	P	-	opus		see wp5_triggers.md
+trigger	0x4028	NumCreature(O:Object*,I:Number*)	2	453258	GameScript::NumCreatures	S	T9	opus		counts visible only in orig
+trigger	0x402E	HPPercentGT(O:Object*,I:HitPoints*)	2	453258	GameScript::HPPercentGT	P	-	opus		see wp5_triggers.md
+trigger	0x4049	RandomNumLT(I:Range*,I:Value*)	2	453258	GameScript::RandomNumLT	V	T4	opus		0..Range roll; fixed
+trigger	0x4090	PartyItemCountLT(S:Item*,I:Count)	2	453258	GameScript::NumItemsPartyLT	P	-	opus		see wp5_triggers.md
+trigger	0x403B	NumTimesTalkedToLT(I:Num*)	1	778529	GameScript::NumTimesTalkedToLT	P	-	opus		see wp5_triggers.md
+trigger	0x4062	InteractingWith(O:Object*)	1	778529	GameScript::InteractingWith	P	-	opus		see wp5_triggers.md
+trigger	0x40B2	IsInGuardianMantle(O:Object*)	1	453258	GameScript::IsInGuardianMantle	P	-	opus		see wp5_triggers.md
 event	0x0002	AttackedBy(O:Object*,I:Style*AStyles)	1280	raised elsewhere (find it)	GameScript::AttackedBy	todo				
 event	0x0003	Help(O:Object*)	1031	raised elsewhere (find it)	GameScript::Help_Trigger	todo				
 event	0x0025	Die()	407	raised elsewhere (find it)	GameScript::Die	todo				
