@@ -43,7 +43,7 @@ action	286	SetCorpseEnabled(S:Name*,I:State*)	238	base sub_44B099	GameScript::Am
 action	217	PermanentStatChange(O:Object*,I:StadID*Stats,I:Delta*Delta,I:Modifier*)	230	base sub_44B099	GameScript::PermanentStatChange	V	-	opus		MaxHP change also moves current HP in orig; LEVEL case not read (S)
 action	108	EscapeArea()	208	sprite case 57	GameScript::EscapeArea	S	-	opus		orig walks off-screen, GemRB to nearest travel region
 action	150	StartStore(S:Store*,O:Target*)	192	sprite case 76	GameScript::StartStore	todo				
-action	104	MoraleDec(O:Target*,I:Morale*)	189	sprite case 54	GameScript::MoraleDec	todo				
+action	104	MoraleDec(O:Target*,I:Morale*)	189	sprite case 54	GameScript::MoraleDec	V	A13	opus		GemRB swaps Karach blade on morale actions; orig only at level-up
 action	214	KillFloatMessage(O:Object*)	186	base sub_44B099	GameScript::KillFloatMessage	todo				
 action	118	GivePartyGold(I:Amount*)	180	base sub_44B099	GameScript::GivePartyGold	P	-	opus		
 action	267	StartSong(I:Song*Songs,P:Where*,I:How*SongFlag)	180	base sub_44B099	GameScript::StartSong	todo				

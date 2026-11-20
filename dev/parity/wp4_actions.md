@@ -331,3 +331,20 @@ See finding A1: handled (creature case 57), missing in GemRB.
 - **GemRB:** `EscapeArea` → `FindEscapePosition`: nearest **travel region** first (`AdjustNearestTravel`), the
   viewport edge only when none is found.
 - **Difference:** where leaving NPCs walk (exit vs. off-screen); outcome (removal) the same. Not fully followed.
+
+### A-104 MoraleDec(O:Target, I:Morale) (and the Karach hook GemRB adds to MoraleInc/MoraleSet)
+- **Status:** V   **Severity:** 2   **Uses:** 189 (all DLG; Annah 75, Dakkon 48, Morte 11, Grace 10…)
+- **Original:** creature case 54 (`76A7EA.c` case 54): an op-23 effect (morale, p1 = −int0, timing 1) sent to the target.
+  Nothing else. The Karach blade swap lives only in **level-up**: `sub_5E6187` (level-up, called from `sub_5EF932`),
+  `5E6187.c:643-658`: when the creature's script name maps to 7 (Dak'kon) and the level rose, `sub_5E985F` checks the
+  crossing of level 4 / 7 / 10 and picks the variant by **current** morale (+1831: ≤ 5 B, 6-14 N, ≥ 15 G;
+  `sub_5E99EF`, resrefs `BKarach`…`NKarach3`).
+- **GemRB:** `Actions.cpp` `MoraleDec` (also `MoraleInc` `:3061`, `MoraleSet` `:3043`): `SetBase(IE_MORALE)` then
+  `Game.CheckKarachUpgrade(pc, ±n, 0)` (`GUIScripts/pst/Game.py`). With levelDiff 0 it treats any level ≥ 4 as a
+  crossing (suffix always set), and when the morale change crosses no threshold it falls to `prefix = "b"`, then
+  `CreateItem(pc, "bkarach…", slot 10)`.
+- **Difference / Breaks:** any MoraleDec/MoraleInc/MoraleSet on Dak'kon at level ≥ 4 that doesn't cross 6 or 15 gives
+  him the **bad** blade (`bKarach`, `bKarach2`, `bKarach3`), e.g. `MoraleDec("Dakkon",1)` at morale 12 → bKarach in
+  GemRB, unchanged in the original. In the original morale only matters at his next level-up.
+- **Re-check:** `python tools/parity/dumps.py lines orig sub_5E6187 643 658`; `python tools/parity/dumps.py callers orig
+  sub_5E985F`; `sed -n 19,60p gemrb/GUIScripts/pst/Game.py`; `grep -n CheckKarachUpgrade gemrb/core/GameScript/Actions.cpp`.
