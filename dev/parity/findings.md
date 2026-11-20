@@ -299,3 +299,11 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | O-range | **Visual range is (Nameless One's fighter level + 14) × 32 px** for every creature in EE and the original, recomputed on stat change; GemRB fixes it at the level-3 value (544 px). Every `See` and range-limited object (NearestEnemyOf 2,325 uses): enemies notice and engage from the wrong distance once he levels as a fighter. | V | 2 |
 | O-mostdamaged | **MostDamagedOf can pick a dead party member in GemRB** (EE skips the dead and returns nobody when no one is hurt): Grace's party AI (`PCGRACE`, 11 blocks) casts cures at a corpse. | V | 2 |
 | O-self | GroupOf, Nearest and LastHitter have no case in EE or the original: they resolve to the caller. GemRB computes a real nearest (Nearest: 4 uses, unread). | S | 3 |
+
+## 17. Script engine findings, round 12 (detail in [wp_script_engine.md](wp_script_engine.md))
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| SE-1 | **Script evaluation rate:** EE every 16 ticks per creature (staggered), a busy creature only on a new trigger or after ~16 s; GemRB every tick when idle or on screen. Ambient `RandomNum` blocks fire up to 16× as often, on-screen busy creatures get interrupted by other blocks at once. | V | 2 |
+| SE-2 | **Cutscene mode doesn't stop scripts in PST** (EE skips that check for PST only); GemRB freezes every script during cutscenes. | V | 2 |
+| SE-3 | Response weights: EE gives the first response one extra chance and the last one fewer (a last weight-1 response never runs: 16 sets in AR0600); GemRB exact. Recommend leaving GemRB. | V | 3 |
