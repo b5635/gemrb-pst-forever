@@ -650,3 +650,71 @@ trigger handler +148); the base AI-object vtable at `8DC1B0` (`sub_44B099` at +1
 - **Status:** P (S: details)   **Uses:** 26. Original base case 160 → `sub_469917`: creature target (missing → the
   action's spell-id object fallback), spell applied directly without casting; wizard spells scale by the caller's level
   byte. GemRB `ApplySpell` → `core->ApplySpell(…, int1 level)`. Level rule not compared.
+
+### A-169 DestroyItem(S:Item, O:Target, I:All) (finding A18)
+- **Status:** V   **Severity:** 1   **Uses:** 20 (all DLG: `DCOPPER`, `DMORTAI` FalseCon; `DDERAN` loandoc; `DMANTUOK`
+  Cheese/Pcheese ×11; `DSOHMIEN` Sohmien; `DULTHERA` Legclub; `DTEST`)
+- **Original:** base case 169 → `sub_45D71A` (`45D71A.c:43-94`, the action-169 branch): the item is taken from the
+  **object** (creature resolved with `sub_45E41B(49)`; every use names `Protagonist`): first matching slot; All = 0 →
+  one unit of a stack (or the single item), then stop; All = 1 → every matching slot; party feedback 4 once; removal by
+  message `8DC3B0`.
+- **GemRB:** `Actions.cpp` `DestroyItem`: `GetInventory(Sender)->DestroyItem(res, 0, 1)`: the **caller's** inventory
+  (the dialogue NPC: `DialogHandler.cpp` queues transition actions on `target`), object and All ignored.
+- **Difference / Breaks:** every PST use removes nothing in GemRB: the Nameless One keeps the false contract
+  (Copper/Mortai), Deran's loan document, Mantuok's cheese (11 lines), Sohmien's item, Ulthera's leg club. Quests can be
+  repeated or show stale options (`PartyHasItem` stays true).
+- **Re-check:** `python tools/parity/dumps.py lines orig sub_45D71A 39 95`; `grep -n "void GameScript::DestroyItem" -A7
+  gemrb/core/GameScript/Actions.cpp`; `grep -n "AddAction(tr->actions" gemrb/core/DialogHandler.cpp`.
+
+### A-207 SavePlace() (finding A19)
+- **Status:** V   **Severity:** 2   **Uses:** 15 (BCS `0600AELN`, `0600NEM2`, `0600NEME`, `0602FTDP`…)
+- **Original:** creature case 88 → `sub_77ED03`: saved x/y (+6892/+6896) = current position, saved facing (+6900) =
+  current facing. ReturnToSavedPlace (A-208) walks back there.
+- **GemRB:** the name `saveplace` is bound to `SaveLocation` (`GameScript.cpp`), which writes a **point variable named by
+  string0** (empty here, so nothing) and never touches `IE_SAVEDXPOS/YPOS/FACE`. (`SetSavedLocation` with no point
+  would do the right thing.)
+- **Difference:** SavePlace does nothing; a later `ReturnToSavedPlace()` walks to the creature's old saved spot (or
+  stops if none). Aelwyn/Nemelle (`0600*`) and `0602FTDP` return to the wrong place.
+- **Re-check:** `python tools/parity/dumps.py show orig sub_77ED03 --all`; `grep -n '"saveplace"' gemrb/core/GameScript/GameScript.cpp`;
+  `grep -n "void GameScript::SaveLocation" -A7 gemrb/core/GameScript/Actions.cpp`.
+
+### A-272 ChangeDialog(O:Object, S:Dialog), A-138 SetDialog(S:Dialog)
+- **Status:** V (sev 3 timing) / P   **Uses:** 25 / 23
+- **Original:** base case 272: a creature target gets **`SetDialog(dialog)` appended to its own action queue** (message
+  `8DB938`), so the change happens when it reaches that action; a door / region / container gets its dialog string set at
+  once. SetDialog (creature case 68 → `sub_7A5DF8`): sets the caller's dialog through message `sub_7B39B0`.
+- **GemRB:** `ChangeDialogue`: sets the actor's dialog at once (actors only); `SetDialogue` same on the caller.
+- **Difference:** a busy target (e.g. `ChangeDialog(Myself…)` is most data; `"Morte"` 1 use) switches immediately in GemRB.
+  No outcome found that depends on it.
+
+### A-295 CreateCreatureAtFeet(S:NewObject)
+- **Status:** V   **Severity:** 3   **Uses:** 24 (all DLG: `BTrelon` 6, `Pet_Lim` 4, `Geherl`, `BoxDmn1`…)
+- **Original:** base case 295 → `sub_46F3AB`: the creature is placed at the nearest free spot to the **centre of the
+  viewport** (`sub_5D846F` viewport origin + half the view rect, `+1244`), script name registered (`sub_593599`).
+- **GemRB:** `CreateCreatureCore(CC_OFFSET…)`: at the caller's feet.
+- **Difference:** placement only; during a dialogue the view is normally on the speakers, so both land near them.
+
+### A-132 VerbalConstant(O:Object, I:Constant)
+- **Status:** P (A11)   **Uses:** 23. Original base case 132: creature target; message `sub_463410` with the sound-slot
+  constant int0 (played by the voice code of A11). GemRB `DisplayStringCoreVC(Verbal(int0), DS_CONSOLE)`. Slot mapping is
+  `wp_voices.md`.
+
+### A-221 DestroyPartyGold(I:Amount)
+- **Status:** P   **Uses:** 21. Original base case 221 → `sub_46C3E3(1)`: party gold − min(gold, int0); the caller gets
+  nothing (flag 1). GemRB `DestroyPartyGold`: same.
+
+### A-298 DisableSpriteDither, A-299 EnableSpriteDither, A-300 DisableFogDither, A-301 EnableFogDither
+- **Status:** P (presentation)   **Uses:** 21 each. Original: flags +10300 / +10304 of the game object set to 0/1.
+  GemRB: `DitherSprites` and the fog debug flag. Look only.
+
+### A-123 ClearAllActions(), A-133 ClearActions(O:Object)
+- **Status:** P   **Uses:** 18 / 13. Original base case 133 → `sub_46B450`: object missing → fail; message `8DC378`
+  (queue cleared, vfunc +100). Case 123 → `sub_46B4F1`: every object of the area (type 1 or creature) except the caller
+  gets the same clear plus one queued action (`sub_4049AA`, id not identified). GemRB `ClearActions` (`Stop`, modal off)
+  and `ClearAllActions` (every living actor but the caller, plus the game script in master areas). The extra queued
+  action in the original was not identified (S).
+
+### A-226 GenerateModronMaze()
+- **Status:** S (generator not compared)   **Uses:** 15. Original base case 226 → `sub_46FB37`: reads the
+  `MazeDifficulty` variable and calls the generator `sub_548AB0(difficulty)`. GemRB: `EF_CREATEMAZE` →
+  `GUIScripts/pst/Maze.py`. The maze generator itself is a track C item.

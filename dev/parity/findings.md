@@ -242,6 +242,8 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | A15 | **ForceAttack doesn't interrupt the attacker in GemRB.** Original clears the attacker's action queue, then queues `Attack`; GemRB appends the attack behind whatever it was doing. 531 uses. | V | 2 |
 | A16 | **PlaySequenceTimed waits ticks instead of seconds.** Original loops the animation for int1 **seconds** and blocks; GemRB `SetWait(int1)` = int1 ticks, no loop: `PlaySequenceTimed(25,4)` lasts 0.27 s instead of 4 s. 70 uses (Mortuary skeleton workers `0208SK*`). | V | 2 |
 | A17 | **LeaveParty keeps the companion's party scripts in GemRB.** The original sets script slots AREA, SPECIFICS, CLASS, RACE and GENERAL to empty and sends `Leaves` to each party member; GemRB resets scripts only under `HasDPLAYER` (off for PST). 36 uses (companions leaving). | V | 2 |
+| A18 | **DestroyItem takes the item from the wrong creature.** All 20 PST uses are dialogue lines `DestroyItem("X", Protagonist, n)`; the original removes from the named object, GemRB from the caller (the dialogue NPC), ignoring the object and All. Nothing is removed: FalseCon (Copper, Mortai), loandoc (Deran), Cheese/Pcheese (Mantuok, 11 lines), Sohmien, Legclub (Ulthera). | V | 1 |
+| A19 | **SavePlace does nothing in GemRB.** Bound to `SaveLocation` (a point variable named by a string it doesn't have); the creature's saved position/facing is never set, so `ReturnToSavedPlace` goes to the old spot. 15 uses (`0600AELN`, `0600NEME`, `0602FTDP`…). | V | 2 |
 
 ## 13. Voice findings, round 7 (detail in [wp_voices.md](wp_voices.md))
 

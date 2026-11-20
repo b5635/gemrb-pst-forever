@@ -105,22 +105,22 @@ action	159	ChangeAlignment(O:Object*,I:Value*Align)	33	base sub_44B099	GameScrip
 action	247	ExploreMapChunk(P:Center*,I:Radius*,I:Mode*)	33	base sub_44B099	GameScript::ExploreMapChunk	V	-	opus		radius px vs cells; mode 1 un-explores (ignored); sev 3
 action	309	QuitGame(I:Value*MovVal,I:Value*MovVal,I:Value*MovVal)	33	base sub_44B099	GameScript::QuitGame	S	-	opus		orig Game_Over=6 + EndMovie vars; GemRB plays at once (A8)
 action	160	ApplySpell(O:Target*,I:Spell*Spell)	26	base sub_44B099	GameScript::ApplySpell	P	-	opus		level rule not compared
-action	272	ChangeDialog(O:Object*,S:ResRef*)	25	base sub_44B099	GameScript::ChangeDialogue	todo				
-action	295	CreateCreatureAtFeet(S:ResRef*)	24	base sub_44B099	GameScript::CreateCreatureAtFeet	todo				
-action	132	VerbalConstant(O:Object*,I:Constant*soundOff)	23	base sub_44B099	GameScript::VerbalConstant	todo				
-action	138	SetDialog(S:DialogFile*)	23	sprite case 68	GameScript::SetDialogue	todo				
+action	272	ChangeDialog(O:Object*,S:ResRef*)	25	base sub_44B099	GameScript::ChangeDialogue	V	-	opus		orig queues SetDialog on the target; GemRB immediate; sev 3
+action	295	CreateCreatureAtFeet(S:ResRef*)	24	base sub_44B099	GameScript::CreateCreatureAtFeet	V	-	opus		orig places at viewport centre; GemRB at caller; sev 3
+action	132	VerbalConstant(O:Object*,I:Constant*soundOff)	23	base sub_44B099	GameScript::VerbalConstant	P	-	opus		voice slot via A11
+action	138	SetDialog(S:DialogFile*)	23	sprite case 68	GameScript::SetDialogue	P	-	opus		caller dialog
 action	146	Polymorph(I:AnimationType*Animate)	23	sprite case 72	GameScript::Polymorph	S	A2/section 9: RangeModes ignored	opus		round 2-5; recheck the parts marked S
-action	221	DestroyPartyGold(I:Amount*)	21	base sub_44B099	GameScript::DestroyPartyGold	todo				
-action	298	DisableSpriteDither()	21	base sub_44B099	GameScript::DisableSpriteDither	todo				
-action	299	EnableSpriteDither()	21	base sub_44B099	GameScript::EnableSpriteDither	todo				
-action	300	DisableFogDither()	21	base sub_44B099	GameScript::DisableFogDither	todo				
-action	301	EnableFogDither()	21	base sub_44B099	GameScript::EnableFogDither	todo				
-action	169	DestroyItem(S:Object*,O:Target*,I:All*Boolean)	20	base sub_44B099	GameScript::DestroyItem	todo				
+action	221	DestroyPartyGold(I:Amount*)	21	base sub_44B099	GameScript::DestroyPartyGold	P	-	opus		gold removed, nobody receives
+action	298	DisableSpriteDither()	21	base sub_44B099	GameScript::DisableSpriteDither	P	-	opus		presentation
+action	299	EnableSpriteDither()	21	base sub_44B099	GameScript::EnableSpriteDither	P	-	opus		presentation
+action	300	DisableFogDither()	21	base sub_44B099	GameScript::DisableFogDither	P	-	opus		presentation
+action	301	EnableFogDither()	21	base sub_44B099	GameScript::EnableFogDither	P	-	opus		presentation
+action	169	DestroyItem(S:Object*,O:Target*,I:All*Boolean)	20	base sub_44B099	GameScript::DestroyItem	V	A18	opus		GemRB destroys from the caller (dialog NPC), not the object (Protagonist): all 20 uses remove nothing
 action	296	RestParty(I:SuggestedDream*,I:HP*,I:Renting*)	20	base sub_44B099	GameScript::RestParty	V	A7	opus		round 2-5; recheck the parts marked S
-action	123	ClearAllActions()	18	base sub_44B099	GameScript::ClearAllActions	todo				
-action	207	SavePlace()	15	sprite case 88	GameScript::SaveLocation	todo				
-action	226	GenerateModronMaze()	15	base sub_44B099	GameScript::GenerateMaze	todo				
-action	133	ClearActions()	13	base sub_44B099	GameScript::ClearActions	todo				
+action	123	ClearAllActions()	18	base sub_44B099	GameScript::ClearAllActions	P	-	opus		extra queued action in orig not identified (S)
+action	207	SavePlace()	15	sprite case 88	GameScript::SaveLocation	V	A19	opus		bound to SaveLocation (variable) - saved x/y/face never set
+action	226	GenerateModronMaze()	15	base sub_44B099	GameScript::GenerateMaze	S	-	opus		generator not compared (track C)
+action	133	ClearActions()	13	base sub_44B099	GameScript::ClearActions	P	-	opus		queue clear
 action	65	Explore()	10	base sub_44B099	GameScript::Explore	todo				
 action	271	ForceFacing(O:Object*,I:Dir*)	10	base sub_44B099	GameScript::ForceFacing	todo				
 action	102	MoraleSet(O:Target*,I:Morale*)	8	sprite case 52	GameScript::MoraleSet	V	A13	opus		Karach swap
