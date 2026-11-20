@@ -2,9 +2,10 @@
 
   python tools/parity/exevt.py slots 8F0788 [N]      N dword slots from a VA (default 64), with function names
   python tools/parity/exevt.py refs 76A7EA            every place the exe stores this 32-bit value (data xrefs)
+  python tools/parity/exevt.py str 971690 [N]          C strings at a VA, or behind N pointers starting there (CString globals)
 """
 import struct, sys, os
-ROOT = os.path.join(os.path.dirname(__file__), "..", "..", ".re", "orig")
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".re", "orig")
 d = open(os.path.join(ROOT, "Torment.exe"), "rb").read()
 pe = struct.unpack_from("<I", d, 0x3C)[0]
 ns = struct.unpack_from("<H", d, pe + 6)[0]; opt = struct.unpack_from("<H", d, pe + 20)[0]
@@ -33,3 +34,13 @@ elif cmd == "refs":
 	b = struct.pack("<I", a); i = d.find(b)
 	while i != -1:
 		print("%X" % to_va(i)); i = d.find(b, i + 1)
+elif cmd == "str":
+	n = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+	def cstr(v):
+		o = to_off(v)
+		return d[o:o + 64].split(b"\0")[0].decode("latin1") if o is not None else "?"
+	if not n:
+		print(cstr(a))
+	for i in range(n):
+		p = struct.unpack_from("<I", d, to_off(a + 4 * i))[0]
+		print("%X -> %X  %r" % (a + 4 * i, p, cstr(p)))

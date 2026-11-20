@@ -240,6 +240,7 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | A13 | **Dak'kon's Karach changes on MoraleDec/Inc/Set in GemRB** (`CheckKarachUpgrade`); with no morale threshold crossed it falls to the **bad** blade. The original swaps the blade only at level-up (levels 4/7/10, variant by current morale; `sub_5E6187` → `sub_5E985F`). 48+ Dakkon morale lines. | V | 2 |
 | A14 | **Damage misreads every amount ≥ 16 and can kill.** GemRB decodes int1 as a dice code always (`Damage(Protagonist,Lower,25)` → 9, `20` → 4, `50` → 2) and routes it through `Actor::Damage` (resistances, luck, death). The original treats int1 as dice only with bits 0xF000 and edits current HP directly, clamped to ≥ 1: dialogue damage never kills. 78 uses (74 DLG). | V | 1 |
 | A15 | **ForceAttack doesn't interrupt the attacker in GemRB.** Original clears the attacker's action queue, then queues `Attack`; GemRB appends the attack behind whatever it was doing. 531 uses. | V | 2 |
+| A16 | **PlaySequenceTimed waits ticks instead of seconds.** Original loops the animation for int1 **seconds** and blocks; GemRB `SetWait(int1)` = int1 ticks, no loop: `PlaySequenceTimed(25,4)` lasts 0.27 s instead of 4 s. 70 uses (Mortuary skeleton workers `0208SK*`). | V | 2 |
 
 ## 13. Voice findings, round 7 (detail in [wp_voices.md](wp_voices.md))
 

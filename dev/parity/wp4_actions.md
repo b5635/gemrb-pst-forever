@@ -520,3 +520,57 @@ trigger handler +148); the base AI-object vtable at `8DC1B0` (`sub_44B099` at +1
 - **Status:** P (look only)   **Uses:** 107 / 72. Original base cases 291/292 → `sub_46EAA3`: a VEF/BAM effect at the
   point (291) or attached to the object (292, missing → fail); negative iterations = loop |n| times with a flag; done at
   once. GemRB `CreateVisualEffect` / `CreateVisualEffectObjectSticky`: same, instant.
+
+### A-263 PlaySequenceTimed(I:Anim, I:Seconds) (finding A16)
+- **Status:** V   **Severity:** 2   **Uses:** 70 (all BCS: `0208SK12`-`SK19` skeleton workers, others)
+- **Original:** creature case 102 → `sub_78D78D`: starts the sequence, remembers the game time (+1140), then each update
+  **restarts the sequence whenever it ends** (`sub_78DBA8`) until `(now − start) / 15 ≥ int1`: int1 is in **seconds**,
+  and the action blocks for that long.
+- **GemRB:** `Actions.cpp` `PlaySequenceTimed`: `SetStance(int0)`, `SetWait(int1)`: int1 **ticks**, and no looping.
+- **Difference:** `PlaySequenceTimed(25,4)` (9 uses) → original 4 s of looping animation; GemRB 4 ticks (0.27 s), so
+  scripted work loops (the Mortuary skeletons) run 15× faster than intended.
+- **Re-check:** `python tools/parity/dumps.py show orig sub_78D78D --all`; `grep -n "void GameScript::PlaySequenceTimed" -A16
+  gemrb/core/GameScript/Actions.cpp`; `python tools/parity/actargs.py 263 --where`.
+
+### A-262 ChangeColor(I:Range, I:Color)
+- **Status:** V   **Severity:** 3   **Uses:** 75 (BCS; cutscenes `0610CUT6/7`, `1500CS9`, `1500DOUB`)
+- **Original:** creature case 101 → `sub_7A94FC`: when int0 has bit 0x4000 (the most used form, 16384-16390), the caller's
+  color byte for range `int0 & 7` (0-6) is set to int1 and a recolor is flagged (+2010-2012); otherwise the animation's
+  vfunc +168 recolors range `int0 & 7`. Range > 6 → fail.
+- **GemRB:** `ChangeColor`: only int0 9-14 (clownrge ids) are handled; **every 0x4000 form returns doing nothing**.
+- **Difference:** the cutscene recolors (16384-16390, ~50 uses) never show in GemRB.
+
+### A-224 TransformPartyItem(S:Old, S:New, I:Charge1-3)
+- **Status:** V   **Severity:** 3   **Uses:** 48. Original base case 224 → `sub_45DCDB`: party in portrait order, **the first
+  member holding the item, its first matching slot only** (action 308, the All variant, does every slot of every member);
+  new item with the given charges (message `sub_541F69`). GemRB `TransformPartyItem`: one slot **per member**, last
+  member first. Differs only when two members carry the item.
+
+### A-171 CreatePartyGold(I:Amount)
+- **Status:** P   **Uses:** 57. Original base case 171 → `sub_46C5C3` (shared with GivePartyGold; the caller's purse is only
+  used when the action id is 118): party gold + int0 (message `8DC588`). GemRB `Game::AddGold(int0)`.
+
+### A-216 FullHeal(O:Object)
+- **Status:** P   **Uses:** 47. Original base case 216: creature target not dead (state 0x800) → current HP = max HP
+  (+1264+1944 → +28), nothing else. GemRB `FullHeal` → `Heal(0)`: HP = modified max HP; no dead check (no data heals a
+  corpse).
+
+### A-126 Activate(O:Object)
+- **Status:** P   **Uses:** 61. Original base case 126: creature **not in the party** → SetActive message (1,1); region →
+  clear flag 0x100 (deactivated); container → clear 0x80; area animation → set bit 1. GemRB `Activate`: actor → `Unhide`
+  (party members too: they are never deactivated, see A-125), container `CONT_DISABLED`, region `TRAP_DEACTIVATED`,
+  missing object → area animation (`AmbientActivateCore`). Same.
+
+### A-276 SetDoorLocked(O:Door, I:Locked)
+- **Status:** P   **Uses:** 72. Original base case 276: door only; int0 ≠ 0 → lock (vfunc +188), 0 → clear locked bit 2.
+  GemRB `Door::SetDoorLocked(int0 ≠ 0)`, `"FALSE"` (−1) read as 0 (two DLG states). Same.
+
+### A-85 RandomWalk(), A-253 RunToObject(O:Target)
+- **Status:** P   **Uses:** 69 / 48. Original creature cases 37 (random walk, party-member path flag first) / 96 (move to object
+  `sub_785E47`, run). GemRB `RandomWalk` (blocking), `RunToObject` → `MoveToObjectCore(IF_RUNNING)`. Walk details not
+  compared.
+
+### A-287 DebugOutput(S:Message), A-26 PlaySound(S:Sound), A-167 StartMovie(S:Movie)
+- **Status:** P   **Uses:** 58 / 56 / 50. DebugOutput: original base case 287 does nothing (GemRB logs). PlaySound
+  (`sub_463C80`): the sound at the caller's position, channel 5, done at once (GemRB: spatial at the caller). StartMovie
+  (`sub_46D56B`): fails when the movie resource is missing, else plays it; done. GemRB `PlayMovie`, released.

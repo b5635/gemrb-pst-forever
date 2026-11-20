@@ -3,6 +3,7 @@ GemRB-only script BALDUR.bcs. The verdict columns are filled by hand (dev/parity
 
 python tools/parity/script_ledger.py          # writes dev/parity/script_ledger.tsv (keeps existing verdicts)
 python tools/parity/script_ledger.py set action 219 V A10 "note"   # set one row's verdict (by = the session's model)
+python tools/parity/script_ledger.py setmany rows.tsv              # many rows: kind, id, status, finding, note[, by] per line, tab-separated
 
 Columns: kind, id, name, uses, orig_handler, gemrb, status, finding, by, audited, note.
 status: todo | P (parity) | V (verified difference, finding written) | S | ? (see AGENT_GUIDE section 5).
@@ -32,6 +33,14 @@ def set_row(kind, rid, status, finding, note, by):
 	sys.exit("no row %s %s" % (kind, rid))
 
 def main():
+	if len(sys.argv) > 2 and sys.argv[1] == "setmany":
+		# one row per line: kind<TAB>id<TAB>status<TAB>finding<TAB>note[<TAB>by]  (no shell quoting needed)
+		for line in open(sys.argv[2], encoding="utf-8"):
+			a = line.rstrip("
+").split("	")
+			if len(a) >= 4 and not line.startswith("#"):
+				set_row(a[0], a[1], a[2], a[3], a[4] if len(a) > 4 else "", a[5] if len(a) > 5 else "opus")
+		return
 	if len(sys.argv) > 1 and sys.argv[1] == "set":
 		a = sys.argv[2:]
 		return set_row(a[0], a[1], a[2], a[3], a[4] if len(a) > 4 else "", a[5] if len(a) > 5 else "opus")
