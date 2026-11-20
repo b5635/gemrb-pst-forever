@@ -49,6 +49,13 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
   names with stray spaces (`"PILLAR "`, `" KNOW_SIGIL"`…, A7, listed under A-30); GLOBAL↔KAPUTZ fallback for
   `_DEAD`/`KILL_` names missing in GemRB (only `EiVene_Dead`, harmless); SetGlobal's `JOIN_*` hook (A8);
   GemRB's DestroySelf ends cutscene mode for PST (A5).
+- Round 8, second part: 19 more rows (ledger 60/310; actions 60/147): TakePartyItem, DestroyPartyItem, GivePartyGold,
+  Kill, ChangeEnemyAlly/Specifics/SetTeam, TeleportParty (S), EscapeArea (S), MoraleDec/Inc/Set, StartStore,
+  SetCorpseEnabled, portal travel/cursor, StartCutScene, cutscene mode on/off.
+- **New sev 1: A12** TakePartyItem takes the whole stack in GemRB (original: one unit). Breaks the cranium-rat `Tail`
+  trades (4 buyers, one stack). **Fix candidate before more investigation** (AGENT_GUIDE 7.8).
+- **New sev 2: A13** GemRB swaps Dak'kon's Karach on every MoraleDec/Inc/Set (falls to the bad blade); the original
+  only at level-up.
 - Left `todo` on purpose for A5: Continue (36), CutSceneId (127). FloatMessage (210) needs the creature vtable slot +104.
 
 ## Next, in order (detail in AGENT_GUIDE section 4)
@@ -59,7 +66,7 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
    used opcodes, batched by family). Open from round 5: Guardian Mantle save direction (E-012d), GemRB's Cloak of
    Warding / Guardian Mantle vs effect damage, effect byte +6.
 3. **Track C:** WP6 rules, WP7 tables, items, stores, plain projectiles, WP8 GemRB PST branches, WP9 EE data.
-4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: A1 EscapeAreaRunning, R2
+4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **A12 TakePartyItem stacks (sev 1)**, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
    Nameless death rules, A5 RunAwayFrom attacks, S14 Howl, S15 Globe, S16/S17 Power Words, E7 Curse saves, S4 attack
    rolls, E17 scroll caster level, E18 TransferHP, E19 Ball Lightning / Adder's Kiss.
 
