@@ -68,3 +68,35 @@ Creature field names below are EE dword indexes into `CGameAIBase` (no names in 
   `Condition::Evaluate` the same (`EFFICIENT_OR` is IWD2 only).
 - **Negated event triggers:** see T13 (A3). **Variable scopes / KAPUTZ:** A9 (P, round 8). **Timer units:** A1
   (StartTimer, StartRandomTimer A11). **ActionOverride:** A1 ledger row.
+
+## A10: things scripts observe indirectly
+
+### SE-4 Death counters (V/S, sev 2)
+- **EE** `CGameSprite::SetDeathGlobals` (called once per death by `CGameEffectDeath::ApplyEffect`, guarded by flag
+  0x40000000), driven by the CRE attribute flags (0x2E0): 0x10 → `<death variable>_Dead_Kaputz` +1 (EE's stand-in
+  for KAPUTZ `<name>_DEAD`); 0x80 → `KILL_<FACTION.IDS name>` +1; 0x100 → `KILL_<TEAM.IDS name>` +1, **always with
+  the `KILL_` prefix**; 0x400/0x800/0x1000/0x2000 → `GOOD`/`LAW`/`LADY`/`MURDER` += the CRE's mod bytes. All go to
+  the game's global table (`CInfGame` +52000, the one holding `Game_Over`). **There is no case for 0x20 (count the
+  creature-type variable at 0x2BC) or 0x40 (`KILL_` prefix for it).**
+- **GemRB** `Actor::Die` (`HAS_KAPUTZ` branch): 0x20 → `<type>` or `KILL_<type>` (0x40) +1 in KAPUTZ; 0x80/0x100 →
+  faction/team name, `KILL_` only when 0x40 is set; 0x10 → KAPUTZ `<scriptname>_DEAD`; the four counters the same.
+- **Data:** 929 CREs set 0x20 (all with 0x40: `KILL_townsperson` 167, `KILL_hive_townsperson` 148, `KILL_thug` 81,
+  …), 7 set faction/team without 0x40 (MOCHAI, SMITH…SMITH6). Dialogues read `Kill_Githyanki`, `Kill_Githzerai`,
+  `Kill_Special_Abashai` in KAPUTZ: the githyanki soldiers (`GITHSOL*`, flags 0x60) feed `Kill_Githyanki` **only**
+  through the 0x20 path, which EE doesn't have.
+- **Status:** V for the prefix rule (7 CREs, sev 3); **S** for 0x20: either EE dropped the type counter (then EE
+  never counts githyanki kills and GemRB matches the original design) or it lives elsewhere (`CGameSprite::Die`
+  path not found). Recommendation: keep GemRB's 0x20 handling until that is settled.
+
+### SE-5 Party XP (V, sev 3; same as round 8's AddexperienceParty note)
+- EE `CInfGame::AddPartyXP`: adds the difficulty XP percentage (`CInfGame` +11851, multiplayer +11852), divides by
+  the living party members, and gives the remainder out one point each to the first members.
+- GemRB `Game::ShareXP`: divides by the living members, drops the remainder, no difficulty percentage there.
+- Not confirmed: that kill XP goes through `AddPartyXP` in EE (its callers: script actions, `ApplyTriggers`,
+  lock picking, trap removal).
+
+### Other A10 items
+- `Dead("name")`: EE reads `<name>_Dead_Kaputz`, GemRB KAPUTZ `<name>_DEAD`: same variable in each engine's own
+  storage. P.
+- Rest: `RestParty` (A1, round 2 A-RestParty), `PSTCanRestParty` (track C, WP6).
+- Item use-ups that quests test (`PartyHasItem` after charges run out) and store transactions: track C items/stores.

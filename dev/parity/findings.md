@@ -323,3 +323,5 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | SP-2 | One spawn pass: EE spawns `create_qty` when the `spec` count is below `spec_qty` (unless `sub_92F910` clamps); GemRB stops at `spec_qty`. | S | 2 |
 | SP-1 | Timed `[event]` groups: EE waits one `interval` after area load before the first spawn; GemRB spawns at the first check. | V | 3 |
 | SP-0 | Ignored keys (`check_crowd`, `check_view_port`, `control_var`, …): EE ignores them too for PST data (crowd check is a stub, EE's key is `check_by_view_port`). | P | - |
+| SE-4 | Death counters: EE always prefixes faction/team kill counters with `KILL_` and has no creature-type counter (CRE flag 0x20, 929 CREs; `Kill_Githyanki` depends on it); GemRB counts the type and prefixes only with flag 0x40. Keep GemRB's type counter until EE's is found. | S | 2 |
+| SE-5 | Party XP: EE adds the difficulty percentage and hands out the remainder; GemRB drops it. | V | 3 |
