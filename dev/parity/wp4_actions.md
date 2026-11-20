@@ -354,6 +354,26 @@ See finding A1: handled (creature case 57), missing in GemRB.
   timing 1, nothing else. GemRB: same stat change plus the Karach swap (A-104).
 
 ### A-150 StartStore(S:Store, O:Target)
-- **Status:** P   **Uses:** 192. Original creature case 76 → `sub_7B2623`: opens store int the GUI for the target
+- **Status:** P   **Uses:** 192. Original creature case 76 → `sub_7B2623`: opens the store GUI for the target
   object (customer), owner = caller; done at once. GemRB `StartStore`: opens for the caller, released at once.
   Store rules (prices, rent) are track C.
+
+### A-286 SetCorpseEnabled(S:Name, I:State)
+- **Status:** P   **Uses:** 238. Original base case 286 → `sub_46E3F4` → `sub_46E4B6` over two area object lists: an area
+  animation (type 48) with that name (case-insensitive) gets bit 1 of +154 set/cleared; a creature (type 17) with that
+  script name gets a flag in +1990. GemRB binds the name to `AmbientActivate` (animations, then ambients). All 238
+  BCS uses name an area animation (checked against every ARE's animation list), so the creature branch is unused.
+
+### A-279 EnablePortalTravel, A-278 ActivatePortalCursor(O:Object, I:Value)
+- **Status:** P (sev 3 sound)   **Uses:** 127 / 122. Original base cases 279/278: the object must be a region (type 65)
+  **of kind 2 (travel)**; sets/clears bit 2 / bit 1 of its flag word (`sub_4F6255` / `sub_4F6210`); enabling travel also
+  plays `AM_VORTX`. GemRB: same bits (`PORTAL_TRAVEL` 2, `PORTAL_CURSOR` 1) on proximity or travel regions; **no
+  `AM_VORTX` sound** (no reference to it anywhere in GemRB).
+
+### A-120 StartCutScene(S:CutScene), A-121 StartCutSceneMode(), A-122 EndCutSceneMode()
+- **Status:** P   **Uses:** 433 / 265 / 133. Original base case 120 → `sub_46A64E`: loads the BCS; per block, takes the
+  first response, resolves the object of its first action, and sends that creature the response's actions (message
+  `8DC550`); conditions are not evaluated. int0 ≠ 0 (StartCutSceneEx) sets a flag in the message and calls the actor's
+  vfunc +152 (A8 in findings, open). Cases 121/122 send message `8DC2E8` with 1/0 (cutscene mode on/off). GemRB
+  `StartCutScene` → `EvaluateAllBlocks(false)` follows the same rule; `StartCutSceneMode`/`EndCutSceneMode` toggle the
+  mode. Who runs scripts in cutscene mode is A5.
