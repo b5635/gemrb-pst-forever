@@ -228,6 +228,8 @@ def main():
 		# one sequential read of a packed copy (built once): opening 20k small files costs ~15 s on Windows
 		pat = re.compile(key, re.I if "-i" in rest else 0)
 		only = rest[rest.index("--in") + 1] if "--in" in rest else None
+		global CAP
+		if "--max" in rest: CAP = int(rest[rest.index("--max") + 1])
 		hits, cur, ln = 0, ("", ""), 0
 		with open(pack(game), encoding="utf-8", errors="replace") as fh:
 			for l in fh:

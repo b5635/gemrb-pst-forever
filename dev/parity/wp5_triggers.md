@@ -110,3 +110,133 @@ Fixes made this round are marked **Fixed** (PST only, behind `PST_STATE_FLAGS`, 
 | 0x40A6 IsLocked | 3 | original: doors only (containers false); all three uses are doors |
 | 0x4062 InteractingWith | 1 | `sub_40F297` object match; not compared further |
 | 0x40B2 IsInGuardianMantle | 1 | Guardian Mantle counter (+21271) == 1; GemRB `IMM_GUARDIAN` (see E-012) |
+
+---
+
+# A3: event triggers (round 11, 2026-11-19)
+
+Done: 24/24. Event triggers (ids < 0x4000) are not cases of the dispatchers: engine code raises them into the
+object's **pending trigger list** and the condition evaluator only matches them.
+
+**How the original handles events (read once, applies to every row):**
+- **Raise:** the trigger constructors `sub_43411A(id, int)` and `sub_434010(id, object, int)` build the trigger; a
+  message carries it to the object's pending list (creature `+890`). Every raise site in the exe:
+  `python tools/parity/dumps.py grep orig "sub_(434010|43411A)\(" --max 400` (188 lines; `--max` is new).
+- **Evaluate:** `sub_40629D` walks a block's conditions: a status trigger (bit 0x4000) goes to the dispatcher and
+  its `!` flips the result; an **event** is true when **some pending trigger** matches it through `sub_434215`: same
+  id (or **a pending 0x5D PickPocketFailed satisfies a script 0x02 AttackedBy**), pending int == script int unless the
+  script's int is 0, object match `sub_40F297`. The `!` of an event flips the match **only for a pending trigger with
+  the same id**: `!Event(x)` is true when a trigger of that id is pending whose parameters *don't* match, and false
+  when none is pending.
+- **Lifetime:** the script pass `sub_45F538` (7 slots `this+834…858`) empties the pending list at the end of **every**
+  pass (line 225 `sub_898F22(this+890)`), whether a block ran or not. Exception: in the restricted state of line 48
+  (A5) only the override slot runs, and the list survives unless a block ran.
+- EE numbers the PST-only events differently (`WasInDialog` 257, `NamelessBitTheDust` 262, `FailedToOpen` 264,
+  `NullDialog` 269, `Vacant` 274, `HarmlessOpened` 275, `HarmlessClosed` 276, `HarmlessEntered` 277): grep
+  `CAITrigger::CAITrigger\(` in ee to find a raise site by name.
+
+**GemRB:** raises with `AddTrigger(TriggerEntry(trigger_x, …))` into `Scriptable::triggers`; trigger functions use
+`MatchTrigger`/`MatchTriggerWithObject` (`Scriptable.cpp`), which don't consume; `Trigger::Evaluate`
+(`GameScript.cpp`) applies `!` to the whole result; `Scriptable::Update` clears the list only `if (changed)` (a block ran).
+
+New tool: `python tools/parity/bcs.py <script>` decompiles a BCS; `--grep REGEX` searches every block of every
+script (one line per block); `--objects` counts object functions and fields (A4).
+
+## Differences (findings T11-T16, `findings.md` section 14)
+
+### T16 NullDialog is a status check in GemRB: true almost always (sev 1, V)
+- **Original:** `sub_7A3A64:309-315` (the talk action; EE `CGameSprite::PlayerDialog:298-309`): when a creature is
+  asked to talk and its dialogue resref is empty, event 0xA4 `NullDialog(talker)` is raised on it. Nothing else raises it.
+- **GemRB:** `Triggers.cpp` `GameScript::NullDialog`: resolves the object and returns true when **it is not in a
+  dialogue**. Nothing raises `trigger_nulldialog`. So `NullDialog([ea=PC])` is true on any pass where a PC resolves
+  and isn't talking.
+- **Data (2 blocks, both in `AR0403`):** `0403PROP` on "Starved Dog Barking" (`SDTHUG2`, which *has* dialogue
+  `DSDTHUG`, so the event can never fire in the original): `NullDialog([ea=PC])` → `Enemy()`,
+  `RunningAttack(NearestEnemyOf(Myself))`. `0403GDUL` on the two Painted Thugs (`PTHUG1`/`PTHUG2`, dialogue `None`):
+  `NullDialog([ea=PC])` → `AR0403Dueling_Gangers` = 4, which makes them stop duelling each other and attack the party.
+- **Re-check:** `python tools/parity/bcs.py 0403GDUL`; `python tools/parity/dumps.py lines orig sub_7A3A64 305 320`;
+  `grep -n "int GameScript::NullDialog" -A14 gemrb/core/GameScript/Triggers.cpp`; `grep -rn trigger_nulldialog gemrb/core`.
+  In game (AR0403): `GemRB.EvaluateString("NullDialog([PC])", 0, <thug id>)` returns 1 with nobody talking.
+- **Breaks:** the AR0403 duelling-gangers scene: they turn on the party on sight instead of fighting each other until
+  talked to, attacked or approached within 5; the barking thug attacks unprovoked.
+
+### T11 TimerExpired is consumed by the first block that tests it (sev 2, V)
+- **Original:** `sub_44A918` (timer tick, EE `CGameAIBase::CheckTimers`, once a second): each timer counts down; at
+  ≤ 0 it is removed and event 0x22 with int = timer id is raised (line 38). It is pending for the whole next pass, so
+  every block of that pass that tests `TimerExpired(n)` sees it.
+- **GemRB:** a status check (`Scriptable::TimerExpired`): the first evaluation after expiry returns true **and erases
+  the timer**. Conditions stop at the first false one, so a block `TimerExpired(n) <other>` whose other condition fails
+  eats the timer, and a later fallback block `TimerExpired(n)` never fires.
+- **Data (8 scripts):** `0605DOL3`, `0605ECC3`, `0605KES3`, `0605NEN3`, `0605VIV3` (`TimerExpired(4)
+  Internal(Myself,3,2)` then `TimerExpired(4)` → `ChangeAIScript`): unless Internal 3 is 2 the creature never switches
+  script and its timer is gone. `0200DF5` (`TimerExpired(1) TimeOfDay(2)` first, then two `GLOBALleaving` branches),
+  `0200DM2`, `0200DM3` (two `GLOBALleaving` branches): the relocation on the second branch is lost.
+- **Re-check:** `python tools/parity/bcs.py 0605DOL3`; `python tools/parity/dumps.py lines orig sub_44A918 20 70`;
+  `grep -n "bool Scriptable::TimerExpired" -A12 gemrb/core/Scriptable/Scriptable.cpp`.
+- **Breaks:** ambient 0605 NPCs and the 0200 dustmen get stuck in their current script or place.
+
+### T12 Unhandled events stay pending across script passes in GemRB (sev 2, V)
+- **Original:** `sub_45F538:202-225`: after the last slot the pending list is emptied, every pass.
+- **GemRB:** `Scriptable::Update`: `if (changed) ClearTriggers();`, `changed` true only when a block ran
+  (`GameScript::Update`). An event no block used waits until some block runs, possibly many passes later.
+- **Difference:** `AttackedBy([ea=PC]) Global("x",1)` fires in GemRB when `x` becomes 1 long after the attack (if nothing
+  else ran meanwhile); in the original only in the pass right after. Same for `OnCreation()` with other conditions
+  (`0000SUMN`, `0403GANG`, `0403GDUL`, `0403GNGB`, `0701HGRD`).
+- **Re-check:** `python tools/parity/dumps.py lines orig sub_45F538 196 226`; `grep -n "if (changed)" -B2 -A3 gemrb/core/Scriptable/Scriptable.cpp`.
+
+### T13 Negated event triggers (sev 3, V)
+- **Original:** `sub_40629D`: `!Event(x)` = "an event of this id is pending whose parameters differ"; with nothing
+  pending, or for a parameterless event, false.
+- **GemRB:** true whenever no matching event is pending.
+- **Data (161 blocks):** `Help() !Help([ea=PC])` (158 guard scripts, e.g. `0100THV1`): same outcome except when a PC
+  and a non-PC Help are pending together (original true, GemRB false); `0301BLAR` `AttackedBy() !AttackedBy([ea=PC])`
+  likewise. **`AR1501` `!Global("GLOBALCurrent_Area",1501) !Vacant()`** is never true in the original (the block
+  setting `GLOBALCurrent_Area` = 1501 and toggling corpses `AR1501_K`/`AR1501_N` never runs); GemRB runs it on the first
+  pass with the party there (`1501CS1`/`1501CS4` set the corpses again). `1800TR21` `!NamelessBitTheDust()` also has
+  `False()` (dead in both).
+- **Re-check:** `python tools/parity/bcs.py --grep '!(Help|AttackedBy|Vacant|NamelessBitTheDust)\('`; `python tools/parity/ida.py show orig 40629D`.
+
+### T14 A failed pickpocket doesn't count as AttackedBy in GemRB (sev 2, V)
+- **Original:** `sub_7A9B03:138` (pickpocket) raises only 0x5D PickPocketFailed on the victim, and `sub_434215` lets a
+  pending 0x5D satisfy a script's `AttackedBy` (0x02): every `AttackedBy([ea=PC])` block (1,060 uses: `Enemy()`,
+  `Attack(LastAttackerOf(Myself))`, `RunAwayFrom`) fires on a failed pickpocket.
+- **GemRB:** `Actions.cpp` `PickPocket`: PST has `StealIsAttack = 0` and no `ppbehave.2da`, so only
+  `trigger_pickpocketfailed` is raised. (EE raises both: S.)
+- **Re-check:** `python tools/parity/ida.py show orig 434215`; `python tools/parity/dumps.py lines orig sub_7A9B03 130 140`;
+  `sed -n 4756,4770p gemrb/core/GameScript/Actions.cpp`.
+- **Breaks:** victims that should turn hostile, flee or shout for help after a caught pickpocket stay calm (only the 8
+  `PickPocketFailed(Protagonist)` scripts of 0600/0601 react).
+
+### T15 Damage effects raise HitBy and AttackedBy in the original (sev 2, S)
+- **Original:** `sub_4B534F` (virtual; matches EE `CGameEffectDamage::OnAddSpecific`): when an op-12 effect is added
+  the target gets `HitBy(source, damage type = high word of param2)` (0x20) and `AttackedBy(source)` (0x02), whatever the
+  damage and whether or not the source is hostile.
+- **GemRB:** `Actor::Damage` raises `trigger_hitby` only for damage > 0, naming `LastHitter`, which is set only while it
+  is 0 (the **first** hitter stays); `AttackedBy` comes from weapon attacks and `SF_HOSTILE` effects (`EffectQueue.cpp`).
+- **Data:** `HitBy([ea=PC],64)` (magic) in `0205CNTR`, `0205POS3`, `0205SERV` (`AR0205DisturbanceLevel`); `AttackedBy`
+  blocks against non-hostile damage.
+- **Missing:** the vtable that owns `sub_4B534F` (`ida.py xrefs orig 4B534F`), to prove it is op 12's add hook.
+
+## Parity rows (P)
+
+| Event | Uses | Original raise site | GemRB |
+|---|---|---|---|
+| 0x02 AttackedBy | 1,280 | weapon hit `7BC70E:80`, damage effect `4B534F:35`, `67B6A2:291`, `78113D:253` | `Actor::AttackedBy`; see T12, T14, T15 |
+| 0x03 Help | 1,031 | `sub_79FB29:27`, every object within range (A-17) | `Map::Shout`; `!Help` see T13 |
+| 0x25 Die | 407 | `sub_4B71B4:60,153`, the dying creature | `Actor::Die` |
+| 0x36 OnCreation | 337 | object ctor `sub_44997C:82` (objects are rebuilt when a save loads) | `Scriptable` ctor; see T12 |
+| 0xA5 WasInDialog | 244 | dialogue end `sub_49907D:26`, every participant | `DialogHandler::EndDialog` → `LeftDialog` |
+| 0x9F HarmlessEntered | 113 | `sub_4F113E:396`, once per entry when the region doesn't fire | `InfoPoint::TriggerTrap` (not trapped) |
+| 0x4C Entered | 70 | `sub_4F113E:335` (trap fires), `sub_7AAA11:406` | `Highlightable::TriggerTrap` |
+| 0x24 Trigger | 52 | `SendTrigger` `sub_465BEB:25` | `Actions.cpp` `SendTrigger` |
+| 0x94 Vacant | 49 | `sub_7D1D1C:888`: each update, every loaded area that isn't the viewed one | status: no party member in the area; `!Vacant` T13 |
+| 0x22 TimerExpired | 47 | T11 | T11 |
+| 0x52 Opened, 0x9D HarmlessOpened, 0x9E HarmlessClosed, 0xAF FailedToOpen, 0x57 Unlocked, 0x60 PickLockFailed | 18/11/1/5/1/4 | `sub_4A17F7` (151, 408, 444, 579, 630), `sub_4955F4`, `sub_7AE549`, `sub_7AFE03` | `Door.cpp`, `Actions.cpp`, `Highlightable.cpp` |
+| 0x5E StealFailed | 9 | store `sub_67B6A2:264` | `GUIScript.cpp` steal |
+| 0x5D PickPocketFailed | 8 | `sub_7A9B03:138` | T14 |
+| 0x79 TriggerClick | 8 | `sub_4F38D6:702` | `GameControl.cpp` `trigger_clicked` |
+| 0x06 ReceivedOrder | 3 | `GiveOrder` `sub_46C958:25` | `Actions.cpp` `GiveOrder` |
+| 0x20 HitBy | 3 | T15 | T15 |
+| 0x4A Died | 3 | `sub_4B71B4:196`, every object within visual range (`sub_47699E`) | `Actor::SendDiedTrigger` |
+| 0xA4 NullDialog | 2 | T16 | T16 |
+| 0xAB NamelessBitTheDust | 2 | **never raised**: no constructor call or other constant 171 in the exe. EE raises 262 on the area of the dying protagonist (`CInfGame::DispatchCharacterDeathMessage`) | `Actor::Die`, Player1's own list. Users: `0901SHM0` (creature script: never fires in any engine), `1800TR21` (dead block) |

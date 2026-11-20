@@ -222,30 +222,30 @@ trigger	0x4090	PartyItemCountLT(S:Item*,I:Count)	2	453258	GameScript::NumItemsPa
 trigger	0x403B	NumTimesTalkedToLT(I:Num*)	1	778529	GameScript::NumTimesTalkedToLT	P	-	opus		see wp5_triggers.md
 trigger	0x4062	InteractingWith(O:Object*)	1	778529	GameScript::InteractingWith	P	-	opus		see wp5_triggers.md
 trigger	0x40B2	IsInGuardianMantle(O:Object*)	1	453258	GameScript::IsInGuardianMantle	P	-	opus		see wp5_triggers.md
-event	0x0002	AttackedBy(O:Object*,I:Style*AStyles)	1280	raised elsewhere (find it)	GameScript::AttackedBy	todo				
-event	0x0003	Help(O:Object*)	1031	raised elsewhere (find it)	GameScript::Help_Trigger	todo				
-event	0x0025	Die()	407	raised elsewhere (find it)	GameScript::Die	todo				
-event	0x0036	OnCreation()	337	raised elsewhere (find it)	GameScript::OnCreation	todo				
-event	0x00A5	WasInDialog()	244	raised elsewhere (find it)	GameScript::WasInDialog	todo				
-event	0x009F	HarmlessEntered(O:Object*)	113	raised elsewhere (find it)	GameScript::HarmlessEntered	todo				
-event	0x004C	Entered(O:Object*)	70	raised elsewhere (find it)	GameScript::Entered	todo				
-event	0x0024	Trigger(I:TriggerNum*)	52	raised elsewhere (find it)	GameScript::TriggerTrigger	todo				
-event	0x0094	Vacant()	49	raised elsewhere (find it)	GameScript::Vacant	todo				
-event	0x0022	TimerExpired(I:ID*)	47	raised elsewhere (find it)	GameScript::TimerExpired	todo				
-event	0x0052	Opened(O:Object*)	18	raised elsewhere (find it)	GameScript::Opened	todo				
-event	0x009D	HarmlessOpened(O:Object*)	11	raised elsewhere (find it)	GameScript::HarmlessOpened	todo				
-event	0x005E	StealFailed(O:Object*)	9	raised elsewhere (find it)	GameScript::StealFailed	todo				
-event	0x005D	PickPocketFailed(O:Object*)	8	raised elsewhere (find it)	GameScript::PickpocketFailed	todo				
-event	0x0079	TriggerClick()	8	raised elsewhere (find it)	GameScript::Clicked	todo				
-event	0x00AF	FailedToOpen(O:Object*)	5	raised elsewhere (find it)	GameScript::OpenFailed	todo				
-event	0x0060	PickLockFailed(O:Object*)	4	raised elsewhere (find it)	GameScript::PickLockFailed	todo				
-event	0x0006	ReceivedOrder(O:Object*,I:OrderID*Order)	3	raised elsewhere (find it)	GameScript::ReceivedOrder	todo				
-event	0x0020	HitBy(O:Object*,I:DameType*Damages)	3	raised elsewhere (find it)	GameScript::HitBy	todo				
-event	0x004A	Died(O:Object*)	3	raised elsewhere (find it)	GameScript::Died	todo				
-event	0x00A4	NullDialog(O:Object*)	2	raised elsewhere (find it)	GameScript::NullDialog	todo				
-event	0x00AB	NamelessBitTheDust()	2	raised elsewhere (find it)	GameScript::NamelessBitTheDust	todo				
-event	0x0057	Unlocked(O:Object*)	1	raised elsewhere (find it)	GameScript::Unlocked	todo				
-event	0x009E	HarmlessClosed(O:Object*)	1	raised elsewhere (find it)	GameScript::HarmlessClosed	todo				
+event	0x0002	AttackedBy(O:Object*,I:Style*AStyles)	1280	raised elsewhere (find it)	GameScript::AttackedBy	P	T12,T14	opus		raised by weapon hits and op-12 adds; GemRB misses failed-pickpocket and non-hostile damage (T14, T15)
+event	0x0003	Help(O:Object*)	1031	raised elsewhere (find it)	GameScript::Help_Trigger	P	T13	opus		sub_79FB29 every object in range; !Help differs only with PC+non-PC help pending
+event	0x0025	Die()	407	raised elsewhere (find it)	GameScript::Die	P	-	opus		sub_4B71B4 on the dying creature; GemRB Actor::Die
+event	0x0036	OnCreation()	337	raised elsewhere (find it)	GameScript::OnCreation	P	T12	opus		object ctor sub_44997C (also on load); GemRB Scriptable ctor; lifetime T12
+event	0x00A5	WasInDialog()	244	raised elsewhere (find it)	GameScript::WasInDialog	P	-	opus		sub_49907D every dialogue participant at the end; GemRB LeftDialog
+event	0x009F	HarmlessEntered(O:Object*)	113	raised elsewhere (find it)	GameScript::HarmlessEntered	P	-	opus		sub_4F113E:396 once per entry, region not firing; GemRB TriggerTrap untrapped
+event	0x004C	Entered(O:Object*)	70	raised elsewhere (find it)	GameScript::Entered	P	-	opus		sub_4F113E:335 trap fires; GemRB Highlightable::TriggerTrap
+event	0x0024	Trigger(I:TriggerNum*)	52	raised elsewhere (find it)	GameScript::TriggerTrigger	P	-	opus		SendTrigger sub_465BEB; GemRB SendTrigger
+event	0x0094	Vacant()	49	raised elsewhere (find it)	GameScript::Vacant	P	T13	opus		event to non-viewed areas each update; GemRB status check; !Vacant AR1501 differs (T13)
+event	0x0022	TimerExpired(I:ID*)	47	raised elsewhere (find it)	GameScript::TimerExpired	V	T11	opus		orig event lasts the pass; GemRB erases the timer at the first test: 8 scripts lose fallbacks
+event	0x0052	Opened(O:Object*)	18	raised elsewhere (find it)	GameScript::Opened	P	-	opus		door/container open sub_4A17F7, sub_4955F4
+event	0x009D	HarmlessOpened(O:Object*)	11	raised elsewhere (find it)	GameScript::HarmlessOpened	P	-	opus		sub_4A17F7:630, sub_4955F4:81
+event	0x005E	StealFailed(O:Object*)	9	raised elsewhere (find it)	GameScript::StealFailed	P	-	opus		store steal sub_67B6A2:264; GemRB GUIScript steal
+event	0x005D	PickPocketFailed(O:Object*)	8	raised elsewhere (find it)	GameScript::PickpocketFailed	V	T14	opus		orig PickPocketFailed also satisfies AttackedBy (sub_434215); GemRB doesn't
+event	0x0079	TriggerClick()	8	raised elsewhere (find it)	GameScript::Clicked	P	-	opus		sub_4F38D6:702; GemRB trigger_clicked
+event	0x00AF	FailedToOpen(O:Object*)	5	raised elsewhere (find it)	GameScript::OpenFailed	P	-	opus		sub_4A17F7:151; GemRB OpenDoor failure
+event	0x0060	PickLockFailed(O:Object*)	4	raised elsewhere (find it)	GameScript::PickLockFailed	P	-	opus		thief actions sub_7AE549/7AFE03; GemRB Highlightable
+event	0x0006	ReceivedOrder(O:Object*,I:OrderID*Order)	3	raised elsewhere (find it)	GameScript::ReceivedOrder	P	-	opus		GiveOrder sub_46C958; GemRB GiveOrder
+event	0x0020	HitBy(O:Object*,I:DameType*Damages)	3	raised elsewhere (find it)	GameScript::HitBy	S	T15	opus		orig: every op-12 add sends HitBy(source,type); GemRB: damage>0, first LastHitter
+event	0x004A	Died(O:Object*)	3	raised elsewhere (find it)	GameScript::Died	P	-	opus		sub_4B71B4:196 objects in visual range; GemRB SendDiedTrigger
+event	0x00A4	NullDialog(O:Object*)	2	raised elsewhere (find it)	GameScript::NullDialog	V	T16	opus		orig event when a dialogue-less creature is asked to talk; GemRB status 'not in dialog' (sev 1, AR0403)
+event	0x00AB	NamelessBitTheDust()	2	raised elsewhere (find it)	GameScript::NamelessBitTheDust	P	-	opus		never raised in the original exe; GemRB on Player1 only: 0901SHM0 never fires in either
+event	0x0057	Unlocked(O:Object*)	1	raised elsewhere (find it)	GameScript::Unlocked	P	-	opus		sub_7AE549/7AFE03 unlock; GemRB Highlightable
+event	0x009E	HarmlessClosed(O:Object*)	1	raised elsewhere (find it)	GameScript::HarmlessClosed	P	-	opus		door close sub_4A17F7:444; GemRB Door.cpp
 baldur	block00	"!Faction(Protagonist,ANARCHIST) Global(""JOIN_ANARCHISTS"",""GLOBAL"",1) THEN"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
 baldur	block01	"!Faction(Protagonist,SENSATE) Global(""JOIN_SENSATES"",""GLOBAL"",1) !Global(""JOIN_ANARCHISTS"",""GLOBAL"",1)"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				
 baldur	block02	"!Faction(Protagonist,DUSTMEN) Global(""JOIN_DUSTMEN"",""GLOBAL"",1) !Global(""JOIN_ANARCHISTS"",""GLOBAL"",1)"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	todo				

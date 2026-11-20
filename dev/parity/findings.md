@@ -257,7 +257,7 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | V5 | Being hit plays slot 14 or 18 at 50/50; GemRB only 18. (A11-2) | V | 3 |
 
 
-## 14. Trigger findings, round 10 (detail in [wp5_triggers.md](wp5_triggers.md))
+## 14. Trigger findings, rounds 10-11 (detail in [wp5_triggers.md](wp5_triggers.md))
 
 | ID | Finding | Status | Sev |
 |---|---|---|---|
@@ -271,3 +271,9 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | T8 | NearLocation: GemRB subtracts the personal radius and doesn't use range + 1. | V | 3 |
 | T9 | NumCreature(LT/GT) count only creatures the caller sees in the original, the whole area in GemRB (area scripts `AR1601`, `AR1401`). | S | 3 |
 | T10 | LOS: GemRB adds visual range and hidden/invisible checks to the original's range + line-of-sight test. | V | 3 |
+| T16 | **NullDialog is "not in dialogue" in GemRB, so true almost always.** Original: an event raised only when a creature without dialogue is asked to talk. AR0403: the duelling Painted Thugs (`0403GDUL`) and the barking thug (`0403PROP`) turn on the party at once. (A3) | V | 1 |
+| T11 | **TimerExpired is eaten by the first block that tests it** (GemRB erases the timer); in the original the event lasts the whole pass. 8 scripts lose their fallback branch: 0605 `*3` NPCs never switch script, 0200 dustmen don't relocate. (A3) | V | 2 |
+| T12 | **Unused events stay pending in GemRB** until some block runs; the original empties the list after every pass. Old `AttackedBy`/`OnCreation` can fire a block much later. (A3) | V | 2 |
+| T14 | **A failed pickpocket doesn't count as AttackedBy** in GemRB; in the original a pending PickPocketFailed satisfies `AttackedBy` (1,060 hostile-reaction blocks). (A3) | V | 2 |
+| T15 | Every op-12 damage effect raises `HitBy(source, type)` and `AttackedBy(source)` in the original; GemRB only for damage > 0, naming the first hitter, and AttackedBy only for hostile sources. (A3) | S | 2 |
+| T13 | Negated events: `!Event(x)` is "an event of this id with other parameters is pending" in the original, "none matching pending" in GemRB. `AR1501`'s `!Vacant()` block never runs in the original, runs in GemRB. (A3) | V | 3 |
