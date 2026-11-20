@@ -1,6 +1,6 @@
 # A11: voice lines and CRE sound slots, original vs GemRB
 
-Progress: done for the slot map and for select, action, attack, cast, damage, battle cry, hide, spell disrupted and set
+Progress (round 12): **A11 done**. Earlier: done for the slot map and for select, action, attack, cast, damage, battle cry, hide, spell disrupted and set
 trap. Next: location comments (events 14-19 and 41-45 vs GemRB `comment.2da` / `Actor::GetAreaComment`), the rest of
 the cases (1-9, 24-40: morale, happy, banter, insult, compliment, dialogue), and `sub_73DB91` (count of filled slots).
 
@@ -78,15 +78,38 @@ Grace, Annah fill 14/16/17/18 the same way. No companion fills 9-13 (battle crie
 - **Fix direction:** add 70, 71, 72 → 97 (Noop) rows to `gemrb/unhardcoded/pst/vcremap.2da`.
 - **Re-check:** `python tools/parity/dumps.py lines orig 73DEEF 1259 1366 | grep -E "case|v84 ="`.
 
-### A11-6 Battle cries (open: GemRB side not traced)
+### A11-6 Battle cries (round 12: GemRB side traced)
 - **Status:** ?   **Severity:** 3
 - **Original:** event 10 (`73DEEF.c:360-410`), sent by `sub_6DE2A2:256` next to a `SendHitTrigger` call (an attack
   start, by the look of it; the function was not read in full). Non-party creatures share
   a global timer (`+4804` on the world screen, set to random 0..44 when one plays); every creature needs the option
   `+9110` and its own cooldown `+20850` ≤ 0, then sets it to 90; slot `9 + rand(filled of 9-10)` (only **2** slots;
   EE SPEECH.2DA says 5). Companions have no battle-cry slots, so this only concerns monsters.
-- **GemRB:** `Actor::PlayWarCry(range)` (Actor.cpp ~3871): caller and range not checked yet.
+- **GemRB:** `Actor::PlayWarCry(5)`, called from `GSUtils.cpp` `AttackCore` when the attacker picks a new target;
+  random among the 5 battle-cry slots (9-13), plus the monster's sound file. EE: `CGameSprite::Attack` and
+  `AttackReevaluate` send the battle-cry event at the same moment (and `CPsAbilityLitanyOfCurses::Fire`). Same
+  trigger; the shared non-party timer (0..44) and per-creature 90-tick cooldown of the original are not in GemRB
+  (sev 3, monsters only). Status: V sev 3.
 
 ### Parity
 - Critical hit / miss lines: original has no such event for PST; GemRB's `vcremap.2da` maps 65/66 to Noop. P.
 - Dying: event 13 → slot 19 (`73DEEF.c:442-468`); GemRB `Verbal::Die` = 19. P.
+
+## Round 12 (2026-11-19): the remaining cases, judged against PST:EE
+
+EE `CGameSprite::PlaySound` is table-driven: every case takes `SPEECH.2DA`'s OFFSET/NUM row and plays a random filled
+slot in it. GemRB's `Verbal` enum uses the same slot numbers for rows 0-74 (`INITIAL_MEETING` 0 … `AREA_LOWER_WARD`
+74), with `vcremap.2da` moving the rare selects. Triggers of each line in EE: morale failure → `MORALE`
+(`DoMoraleFailure`), happiness checks → `HAPPY`/`UNHAPPY_*` (`CheckHappiness`), party order swap → `LEADER`
+(`SwapCharacters`), damage effect → `HURT`, idle → `BORED` (world screen timer); GemRB raises the same constants from
+the matching places (`Actor.cpp` happiness/tired/hurt, `Game.cpp` leader/bored). P at this level.
+
+### A11-7 The Lower Ward comment never plays (V, sev 3)
+- **EE** `CScreenWorld::HandleAmbiance` (PST branch): every 600 ticks, 16 % chance, a random party member (the same
+  one again only 1 time in 10), then by the area's type flags: 0x1 Hive (night line when 0x400 is set and it's
+  night), 0x4 Clerk's Ward, **0x8 Lower Ward**, 0x10 Ravel, 0x20 Baator, 0x40 Cube, 0x80 Negative Material Plane,
+  0x100 Curst, 0x200 Carceri.
+- **GemRB** `Game::CheckAreaComment` copies the timing exactly; its `pst/comment.2da` maps the flags the same,
+  except **LOWER = 0x2**. PST areas: AR0500 (the Lower Ward) carries 0x8; no area carries 0x2. So the Lower Ward line
+  (slot 74) never plays in GemRB. Fix: `comment.2da` LOWER 0x2 → 0x8.
+- Day/night: every Hive area also has 0x400, so GemRB's per-row SWITCH matches EE.

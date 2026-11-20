@@ -325,3 +325,10 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | SP-0 | Ignored keys (`check_crowd`, `check_view_port`, `control_var`, …): EE ignores them too for PST data (crowd check is a stub, EE's key is `check_by_view_port`). | P | - |
 | SE-4 | Death counters: EE always prefixes faction/team kill counters with `KILL_` and has no creature-type counter (CRE flag 0x20, 929 CREs; `Kill_Githyanki` depends on it); GemRB counts the type and prefixes only with flag 0x40. Keep GemRB's type counter until EE's is found. | S | 2 |
 | SE-5 | Party XP: EE adds the difficulty percentage and hands out the remainder; GemRB drops it. | V | 3 |
+
+## 20. Voice findings, round 12 (detail in [wp_voices.md](wp_voices.md))
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| A11-7 | **Lower Ward area comment never plays:** GemRB `pst/comment.2da` uses flag 0x2, PST's AR0500 has 0x8 (EE `HandleAmbiance`). | V | 3 |
+| A11-6 | Battle cries fire at the same moment in both; GemRB lacks the original's shared timer and 90-tick cooldown (monsters only). | V | 3 |
