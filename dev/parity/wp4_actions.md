@@ -348,3 +348,12 @@ See finding A1: handled (creature case 57), missing in GemRB.
   GemRB, unchanged in the original. In the original morale only matters at his next level-up.
 - **Re-check:** `python tools/parity/dumps.py lines orig sub_5E6187 643 658`; `python tools/parity/dumps.py callers orig
   sub_5E985F`; `sed -n 19,60p gemrb/GUIScripts/pst/Game.py`; `grep -n CheckKarachUpgrade gemrb/core/GameScript/Actions.cpp`.
+
+### A-103 MoraleInc, A-102 MoraleSet
+- **Status:** V (A13)   **Uses:** 73 / 8. Original creature cases 53 / 52: op 23 with mode 0 (add) / 1 (set),
+  timing 1, nothing else. GemRB: same stat change plus the Karach swap (A-104).
+
+### A-150 StartStore(S:Store, O:Target)
+- **Status:** P   **Uses:** 192. Original creature case 76 → `sub_7B2623`: opens store int the GUI for the target
+  object (customer), owner = caller; done at once. GemRB `StartStore`: opens for the caller, released at once.
+  Store rules (prices, rent) are track C.

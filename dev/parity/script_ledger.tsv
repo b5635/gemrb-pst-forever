@@ -42,7 +42,7 @@ action	111	DestroySelf()	245	sprite case 59	GameScript::DestroySelf	S	-	opus		Ge
 action	286	SetCorpseEnabled(S:Name*,I:State*)	238	base sub_44B099	GameScript::AmbientActivate	todo				
 action	217	PermanentStatChange(O:Object*,I:StadID*Stats,I:Delta*Delta,I:Modifier*)	230	base sub_44B099	GameScript::PermanentStatChange	V	-	opus		MaxHP change also moves current HP in orig; LEVEL case not read (S)
 action	108	EscapeArea()	208	sprite case 57	GameScript::EscapeArea	S	-	opus		orig walks off-screen, GemRB to nearest travel region
-action	150	StartStore(S:Store*,O:Target*)	192	sprite case 76	GameScript::StartStore	todo				
+action	150	StartStore(S:Store*,O:Target*)	192	sprite case 76	GameScript::StartStore	P	-	opus		
 action	104	MoraleDec(O:Target*,I:Morale*)	189	sprite case 54	GameScript::MoraleDec	V	A13	opus		GemRB swaps Karach blade on morale actions; orig only at level-up
 action	214	KillFloatMessage(O:Object*)	186	base sub_44B099	GameScript::KillFloatMessage	todo				
 action	118	GivePartyGold(I:Amount*)	180	base sub_44B099	GameScript::GivePartyGold	P	-	opus		
@@ -76,7 +76,7 @@ action	48	JumpToPoint(P:Target*)	78	sprite case 33	GameScript::JumpToPoint	todo
 action	115	SetGlobalTimer(S:Name*,S:Area*,I:Time*GTimes)	78	base sub_44B099	GameScript::SetGlobalTimer	todo				
 action	259	Damage(O:Target*,I:Delta*Delta,I:Modifier*)	78	base sub_44B099	GameScript::Damage	todo				
 action	262	ChangeColor(I:Range*ClownRge,I:Color*ClownClr)	75	sprite case 101	GameScript::ChangeColor	todo				
-action	103	MoraleInc(O:Target*,I:Morale*)	73	sprite case 53	GameScript::MoraleInc	todo				
+action	103	MoraleInc(O:Target*,I:Morale*)	73	sprite case 53	GameScript::MoraleInc	V	A13	opus		Karach swap
 action	276	SetDoorLocked(O:Object*,I:Locked*Boolean)	72	base sub_44B099	GameScript::SetDoorLocked	todo				
 action	292	StickySinisterPoof(S:BamResRef*,O:Object*,I:Itterations*)	72	base sub_44B099	GameScript::CreateVisualEffectObjectSticky	todo				
 action	263	PlaySequenceTimed(I:Anim*AnimStat,I:Seconds*)	70	sprite case 102	GameScript::PlaySequenceTimed	todo				
@@ -123,7 +123,7 @@ action	226	GenerateModronMaze()	15	base sub_44B099	GameScript::GenerateMaze	todo
 action	133	ClearActions()	13	base sub_44B099	GameScript::ClearActions	todo				
 action	65	Explore()	10	base sub_44B099	GameScript::Explore	todo				
 action	271	ForceFacing(O:Object*,I:Dir*)	10	base sub_44B099	GameScript::ForceFacing	todo				
-action	102	MoraleSet(O:Target*,I:Morale*)	8	sprite case 52	GameScript::MoraleSet	todo				
+action	102	MoraleSet(O:Target*,I:Morale*)	8	sprite case 52	GameScript::MoraleSet	V	A13	opus		Karach swap
 action	137	StartDialog(S:DialogFile*,O:Target*)	8	sprite case 67	GameScript::StartDialogue	todo				
 action	87	ProtectObject(O:Target*,I:Range*)	7	sprite case 39	GameScript::ProtectObject	todo				
 action	311	GeneratePartyMember(P:Location*,I:Value*Specific)	7	base sub_44B099	GameScript::GeneratePartyMember	todo				
