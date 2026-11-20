@@ -485,3 +485,104 @@ All data uses mode 0 (172 uses: fire 51, magic 50, piercing 19, electricity 15, 
 - **Difference:** p2 5 is "not silver" in the original; GemRB makes it "silver". Data: SILVMAG.itm (1 line). The check that uses
   the record (op 12, `sub_4B245B`) was not compared here.
 - **Data affected:** P1SF…P3SFCF (p2 0/4/11), PLUS1IM…PLUS6IM (p2 0), SILVMAG (p2 5).
+
+---
+
+## Round 14 (2026-11-19): WP2 rest, judged against PST:EE (track B3)
+
+Usage below is from the new `tools/parity/opmodes.py <ops> [--files]`, which reads **every** feature block of every SPL/ITM
+(SPL casting effects included, unlike `opuses.py`) and prints p2 values, timings and p1 ranges. A quick way to find PST
+special cases in EE: `python tools/parity/dumps.py grep ee "ENGINE_MODE" --in ApplyEffect --max 120` lists 41 handlers
+with a PST branch; every one used by PST data is covered below or in `wp10_combat.md`.
+
+### Re-checks against EE of older entries
+- **E-208 Iron Fist: EE differs on the to-hit part:** `CGameSprite::Hit` gives +3 to hit with the fist (C-9), so GemRB's
+  `IE_FISTHIT +3` is right. Damage +6 / Carceri max dice: EE: same (`CGameEffectDamage::ApplyEffect` :709-735).
+- **E-073 Damage bonus: EE differs.** `CGameEffectDamageMod::ApplyEffect` (6BC830) :10-23: in PST the handler **sets** the
+  damage mod to p1 (clamped ±20) on every pass, whatever p2; other games add. So the last op 73 applied wins, and it also
+  overwrites what Bless/Aid/Curse added to the same field earlier in the pass. GemRB adds (`STAT_MOD`). Data: 15 uses, p1
+  −4…+8, all mode 0. V, sev 3 (only differs when a creature carries two damage bonus sources).
+- **E-129 Aid: EE: same** (`CGameEffectNon_CumulativeAid::ApplyEffect` :35: 8 × p1, no dice). GemRB still rolls p1d8.
+- **E-012h byte +6 = 255:** identified in EE: the saved-for-half marker (C-14).
+- **S41 Acid Storm delay:** EE: mode 4 delay is ticks in PST (P-5 in `wp11_effect_pipeline.md`), same as GemRB.
+
+### E-130 Bless: PST's version also adds damage and enemy morale
+- **Status:** V   **Severity:** 3   **Uses:** 2 (SPPR101, SPWI118)   **By:** opus
+- **EE:** `CGameEffectNon_CumulativeBless::ApplyEffect` (6DE390) :16-69: if not already blessed (state 0x800000): set it;
+  **damage mod += p1**, hit mod += p1; in PST, **morale += p1 for non-PCs**, all five saves −= p1 (better); first pass adds
+  an op 9 glow for the duration + 2 s. (Other games: morale += p1 for everyone, no saves.)
+- **GemRB:** `PSTOpcodes.cpp:1045` `fx_bless`: state, colour, to-hit −p1 (better THAC0), saves −p1. **No damage bonus, no
+  morale.**
+- **Difference:** Bless (p1 = 1) gives +1 damage in EE, not in GemRB; a blessed enemy gets +1 morale in EE.
+
+### E-134 Petrification: in PST the victim stays in the party and no death is announced
+- **Status:** V   **Severity:** 2   **Uses:** 2 (AXOFT p2 0, SPWI101 Chromatic Orb p2 2)   **By:** opus
+- **EE:** `CGameEffectPetrification::ApplyEffect` (703610) :111-120, :257-261: `DeathNotice` (death trigger/XP path) and
+  `LeaveParty` are inside `ENGINE_MODE != 3`: off in PST. It sets state 0x80 (base and derived) and **HP = 0**.
+- **GemRB:** `FXOpcodes.cpp` `fx_set_petrified_state`: sets `STATE_PETRIFIED`, **makes a party member leave the party**,
+  sends the Died trigger, runs the all-dead check; HP untouched.
+- **Difference:** a companion petrified by an enemy Chromatic Orb (level-6+ result) leaves the party in GemRB and stays in
+  EE. Enemies' Died triggers fire in GemRB but not in EE. (E-012b: a petrified creature that takes damage shatters in EE.)
+
+### E-104 Experience: protagonist's wisdom bonus and class XP pool missing
+- **Status:** V   **Severity:** 2   **Uses:** 8 (tattoos TTCUTPUR, TTLOSTIN, TTSHADOW, TTSHATLO, TTSILENT, TTSOURCE, TTWASTIN,
+  TTWEEP; mode 0, timing 1, p1 250…6000)   **By:** opus
+- **EE:** `CGameEffectXP::ApplyEffect` :25-90: the XP goes to the **current class's XP field** (`CDerivedStats::GetXPField`
+  by class: the Nameless One keeps one XP pool per class); for the **protagonist** mode 0 adds p1 + p1 × WIS bonus % (wisdom
+  table column `WISDOMXPBONUS`).
+- **GemRB:** `FXOpcodes.cpp:3596` `fx_experience_modifier`: `BASE_MOD(IE_XP)`: plain add to `IE_XP`, no wisdom bonus, no
+  per-class pool (GemRB's `Actor::AddExperience` has both rules, `Actor.cpp:8561-8589`, but op 104 doesn't call it).
+- **Difference:** the tattoo XP rewards (up to 6000) get no wisdom bonus and, while the Nameless One is a mage or thief, land
+  in his fighter pool in GemRB.
+
+### E-105 Gold: P
+- `CGameEffectGold::ApplyEffect` :74-95: for party members mode 0 **adds** gold in PST (other games subtract). GemRB
+  `fx_gold_modifier` (`FXOpcodes.cpp:3605`): PST has `FixedMoraleOpcode = 0` → adds. Data: CLIPCOP, TEARRING, TTCUTPUR.
+
+### E-018 Max HP: P
+- `CGameEffectHitPoints::ApplyEffect` modes 0-5; PST data only uses **mode 3** (max HP only, 13 equipped uses). GemRB
+  `fx_maximum_hp_modifier` (`FXOpcodes.cpp:1645`) case 3: max HP only.
+
+### E-001 Attacks per round: P
+- `CGameEffectAttackNo::ApplyEffect` :60-86 mode 2 = base APR × p1 % rounded to half attacks, min 1. Data: SPWI504 p1 200
+  (doubles). GemRB `fx_attacks_per_round_modifier`: percent of base on the half-attack encoding, same result.
+
+### E-060 Miscast magic: P for data
+- `CGameEffectCastingFailure::ApplyEffect` :10-43: in PST the miscast value is **set** to p1 (other games add). Data:
+  SPWI104, SPWI212 (p1 100, modes 0/1); GemRB adds, but anything ≥ 100 gives the same outcome.
+
+### Families (one verdict per opcode; EE handler read for the one named, the others share its class pattern)
+EE pattern for stat modifiers: mode 0 add (saves: subtract = better), 1 set (clamped), 2 percent of base, timing 1 writes
+the CRE base; caps applied later in `CDerivedStats::CheckLimits`. GemRB: `STAT_MOD`/`HandleBonus`. PST data uses **mode 0
+only** for all of these (opmodes.py), so mode 1/2 differences can't show.
+
+| Op | Name | Data (uses, p2) | EE read | Verdict |
+|---|---|---|---|---|
+| 6, 10, 15, 19, 44, 49 | CHR, CON, DEX, INT, STR, WIS | 9-21 each, p2 0 (one p2 1 each) | `CGameEffectSTR` (clamp 1-25; PST CHR dice mode, E-006) | P |
+| 21 | Lore | 9, p2 0 (one 1) | family | P |
+| 22 | Luck | 12, p2 0 | `CGameEffectLuck` (mode 2: ±20 clamp) | P (luck itself: C-2, C-15) |
+| 23 | Morale | 1, p2 0 | family | P |
+| 27-30, 84-89, 166, 173 | resistances, MR, poison resist | 1-10 each, p2 0 (89: one p2 1) | `CGameEffectResistFire`, `ResistSlashing` (PST: add mode **not capped at 150**; set ±150) | P (no data near 150) |
+| 33-37 | saves | 12-21 each, p2 0 | `CGameEffectSaveVsDeath` (mode 0 subtracts p1 = better; set/percent clamp 0-20) | P (GemRB ignores p2 for saves: port risk only) |
+| 42, 62 | wizard / priest slots | 27 / 8, bitmask | E-042 | P |
+| 59, 90-92 | stealth, locks, traps, pickpocket | 6-13, p2 0 | `CGameEffectSkillStealth` (clamp 0-125 on set/percent) | P |
+| 54 | to-hit | 93, p2 0 | `CGameEffectThac0` (PST: set/percent floor 1 instead of 0) | P (E-054) |
+| 93, 94, 97 | fatigue, intoxication, STR extra | 2, 2, 1 (mode 1) | not read | ? (no combat effect in PST data: MASLOW/HEARCHRM reset fatigue, FTEETH STR extra 30) |
+| 3 | berserk | 4 (FDAG, HATEGIFT, JESTER, PDAG) | `CGameEffectBerserk` (PST: party only) | P (C-10 for the missing +2/+2) |
+| 24 | panic | 5 | `CGameEffectPanic` (PST: no berserk immunity check) | P |
+| 45 | stun | 4 | `CGameEffectStun` (PST: state 0x8 only, no helpless, no icon) | P (C-3: GemRB auto-hits stunned) |
+| 39 | sleep | 3 | `CGameEffectSleep` (helpless 0x20, op 162 wake-up) | E-039 |
+| 128 | confusion | 7 | `CGameEffectConfusion` (PST adds a colour pulse) | E-128 |
+| 65 | blur | 2 | `CGameEffectBlur` (PST: state 0x20000000; no "can't blur" check) | P |
+| 25 | poison | 10, p2 0/2/3 | `CGameEffectPoison` + `CPersistantEffectPoison::AIUpdate` (modes 0 p1/s, 1 % current HP, 2/3 periodic) | S (period units of modes 2/3 not settled; p2 3: JESTER, SPWI002, TPUNCH, VTEETH, WIDMKR) |
+| 26 | remove curse | 3 (p2 1: SPIN013) | `CGameEffectRemoveCurse` :53 (PST p2 1: removes op 381 effects, frees cursed items) | S (GemRB p2 1 not compared) |
+| 32 | raise dead | 2 (p2 100) | `CGameEffectResurrect` (PST branch at :199 not read) | ? |
+| 101, 102, 83, 120 | immunities | 14 / 4 / 1 / 22 | `CGameEffectImmunityToEffect` (non-PST op-24 special only) | P (E-120 for p2 5) |
+| 129, 130 | aid, bless | 23, 2 | read | E-129 (EE: same), E-130 |
+| 134 | petrification | 2 | read | E-134 |
+| 104, 105 | XP, gold | 8, 3 | read | E-104, E-105 |
+| 1, 18, 60 | APR, max HP, miscast | 1, 13, 4 | read | P (E-001, E-018, E-060) |
+| 11, 75, 79, 161 | cures (poison, blind, disease, panic) | 1 each | not read | P? (state clears; no PST branch in EE) |
+| 16, 20, 38 | haste, invisibility, silence | 1, 2, 1 | not read (no PST branch in EE) | P? |
+| 110, 124, 125, 150, 159, 171, 172, 177, 209, 212 | retreat, dimension door, unlock, find traps, mirror image, spell add/remove, apply effect, hostile image, speak with dead | 1-7 each | not read | ? (track C; 171/172 are the Nameless One's SPIN abilities) |
+| 8, 9, 41, 51, 66, 139, 141, 142, 152, 174, 189, 191, 194, 197, 199, 205 | colours, sparkle, transparency, strings, icons, movie, sounds, BAMs, flash, VVC, background, viewport | presentation | not compared | presentation (out of track B) |
