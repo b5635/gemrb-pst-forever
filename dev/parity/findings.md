@@ -277,3 +277,17 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | T14 | **A failed pickpocket doesn't count as AttackedBy** in GemRB; in the original a pending PickPocketFailed satisfies `AttackedBy` (1,060 hostile-reaction blocks). (A3) | V | 2 |
 | T15 | Every op-12 damage effect raises `HitBy(source, type)` and `AttackedBy(source)` in the original; GemRB only for damage > 0, naming the first hitter, and AttackedBy only for hostile sources. (A3) | S | 2 |
 | T13 | Negated events: `!Event(x)` is "an event of this id with other parameters is pending" in the original, "none matching pending" in GemRB. `AR1501`'s `!Vacant()` block never runs in the original, runs in GemRB. (A3) | V | 3 |
+
+
+## 15. BALDUR.bcs findings, round 11 (detail in [wp_baldur.md](wp_baldur.md))
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| B2 | **`Game_Over` 7 does nothing in GemRB** (original: death text 67295); BALDUR maps 6 to that text instead (6 is the `QuitGame` end path). `0500GGRD` sets 7. | V | 1 |
+| B7 | **Fortress of Regrets party count** happens in GemRB on any AR0202 visit after `Pharod_Quest` = 2, only for companions while the party holds `SkScrap`/`SkRegret`; original: at the `Fort_Port` exit, no item check, companions leave the party (`*EG.CRE`), `LimLim` → `D_LimLim` (GemRB's swap is a no-op). | V | 2 |
+| B4 | **Lady's maze** exit location not stored (`Maze_Exit_*`); GemRB always returns to AR0200 and never sets `Modron_Cube` back to 1. | V | 2 |
+| B5 | Lady's maze second time: original `Game_Over` 1 (text 44963), GemRB `QuitGame(0,0,0)` with no text. | V | 2 |
+| B1 | Faction joins: original keeps every `Join_*` membership (Chaosmen 1 or 3) as flags; GemRB one faction stat that flips every pass when two are set. | V | 2 |
+| B8 | Original rules BALDUR doesn't cover: companions leave at `AR1800`→`FR1700` and `AR3017`→`FR0502`, `Pregnant_Quest` > 2 world map on Sigil exits, `AR1203` slab facing. | S | 2 |
+| B3 | Shadow movie on first AR0200/AR0206 visit, not on arrival at `FR0201`. | V | 3 |
+| B6 | Foundry redirect after AR0512 loads instead of straight to AR0513. | V | 3 |
