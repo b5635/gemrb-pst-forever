@@ -1,4 +1,4 @@
-# Handoff: where the parity investigation stands (2026-11-19, round 9)
+# Handoff: where the parity investigation stands (2026-11-19, round 11)
 
 Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the work packages) and `findings.md` (all findings, by round).
 
@@ -84,22 +84,45 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
 - Tools: `trigargs.py 0x40xx [--dlg] [--where]` (trigger parameter use in BCS and DLG);
   `GemRB.EvaluateString(trigger, quiet, who)` takes a caller (party slot or global ID) for in-game trigger tests.
 
+## Round 11 (2026-11-19): A3 event triggers, A8 BALDUR done; A4 started
+- **Ledger complete: 310/310 rows have a verdict** (actions, triggers, events, BALDUR). Track A continues with the
+  packages that have no ledger rows yet (A4-A7, A9-A11).
+- **A3 (24/24, `wp5_triggers.md` "A3")**: how the original raises, matches and clears events (`sub_43411A`/`sub_434010`
+  raise, `sub_40629D` evaluate, `sub_434215` match, `sub_45F538` clears the pending list after every pass).
+  **T16 (sev 1) NullDialog** is a status check in GemRB (true almost always): AR0403's duelling Painted Thugs and the
+  barking thug attack the party at once. T11 (sev 2) TimerExpired eaten by the first block that tests it (8 scripts);
+  T12 (sev 2) unused events stay pending in GemRB; T14 (sev 2) a failed pickpocket counts as AttackedBy in the original;
+  T15 (S) damage effects raise HitBy/AttackedBy; T13 (sev 3) negated events.
+- **A8 (64/64, `wp_baldur.md`)**: **B2 (sev 1)** `Game_Over` 7 does nothing in GemRB (`0500GGRD`); B7 Fortress party
+  count at the wrong moment with an extra `SkScrap`/`SkRegret` condition, companions don't leave; B4/B5 Lady's maze
+  exit location and second-time death text; B1 faction joins (single stat, flips with two joins); B8 (S) original
+  leave-area rules not covered at all (AR1800→FR1700, AR3017→FR0502 party dismissal, `Pregnant_Quest` world map, AR1203 slab).
+- **A4 started (`wp5_objects.md`)**: usage counted (only 11 object functions are used), name lookup and
+  `NearestEnemyOf` compared EE vs GemRB; original not confirmed yet.
+- Notes for A5 found on the way: the original runs 7 slots (`sub_45F538`, `this+834…858`); a slot whose response is
+  non-empty stops the lower slots, `Continue()` only chains blocks inside one script (`sub_414E96` checks action 36);
+  in the restricted state (`sub_45F538:48`) only the override slot runs.
+
 ## Next, in order (detail in AGENT_GUIDE section 4)
-1. **Track A, scripts and dialogue, to 100 % of `script_ledger.tsv`:** ~~A1 actions~~ (done round 9), ~~A2 triggers~~ (done round 10), A3 event
-   triggers, A4 object selectors, A5 script engine, A6 dialogue engine, A7 parser, A8 BALDUR.bcs, A9 INI spawns,
+1. **Track A:** ~~A1 actions~~ (round 9), ~~A2 triggers~~ (round 10), ~~A3 event triggers~~, ~~A8 BALDUR.bcs~~ (round 11),
+   A4 object selectors (started: confirm in the original, then the remaining functions and IDS fields), A5 script engine, A6 dialogue engine, A7 parser, A9 INI spawns,
    A10 indirect state (death variables, XP, rest), A11 voice lines and sound slots (never investigated).
 2. **Track B, combat:** combat rules (`wp10_combat.md`), effect pipeline (`wp11_effect_pipeline.md`), WP2 rest (77
    used opcodes, batched by family). Open from round 5: Guardian Mantle save direction (E-012d), GemRB's Cloak of
    Warding / Guardian Mantle vs effect damage, effect byte +6.
 3. **Track C:** WP6 rules, WP7 tables, items, stores, plain projectiles, WP8 GemRB PST branches, WP9 EE data.
-4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **A14 Damage amount/death (sev 1)** (A12, A18 fixed round 10), A19 SavePlace, A20 GlobalSetGlobal, A17 LeaveParty scripts, A16 PlaySequenceTimed, A15 ForceAttack, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
+4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **T16 NullDialog (sev 1)**, **B2 Game_Over 7 (sev 1)**, **A14 Damage amount/death (sev 1)**, T11 TimerExpired, T14 pickpocket→AttackedBy, T12 event lifetime, B7 Fortress count, (A12, A18 fixed round 10), A19 SavePlace, A20 GlobalSetGlobal, A17 LeaveParty scripts, A16 PlaySequenceTimed, A15 ForceAttack, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
    Nameless death rules, A5 RunAwayFrom attacks, S14 Howl, S15 Globe, S16/S17 Power Words, E7 Curse saves, S4 attack
    rolls, E17 scroll caster level, E18 TransferHP, E19 Ball Lightning / Adder's Kiss.
 
 ## For audit (Opus spot-checks these; newest first)
+- Round 11: T16, B2 (sev 1) first, then T11, T14, T12, B7.
 - (none yet; rounds 7-9 were written by Opus). If a Sonnet session re-checks: A18, A14 first (Re-check lines in `wp4_actions.md`).
 
 ## Tool changes (newest first; use these)
+- 2026-11-19 (round 11): `bcs.py <script> [--gemrb]` decompiles a BCS to text; `bcs.py --grep REGEX` prints every
+  matching block of every script on one line (the fastest way to find users of a trigger/action/variable);
+  `bcs.py --objects` counts object functions and IDS fields. `dumps.py grep ... --max N` raises the 60-hit cap.
 - 2026-11-19 (round 9): `exevt.py slots <VA> [N]` / `refs <addr>` / `str <VA> [N]`: read vtables, data pointers and
   strings straight from `Torment.exe` (no IDA). Creature vtable `8F07BC`, base AI object `8DC1B0`, message vtables:
   slot 6 = Run. `script_ledger.py setmany rows.tsv` sets many rows from a tab-separated file (no shell quoting).
