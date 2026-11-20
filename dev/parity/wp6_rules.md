@@ -1,6 +1,6 @@
 # WP6: PST rules (track C), judged against PST:EE
 
-Done: death, level-up, rest, stealth, casting branches, flavour (R-7…R-15). Next: WP7 tables.
+Done: death, level-up, rest, stealth, casting branches, flavour, caster-level durations (R-7…R-16).
 Checklist: `pst_functions.md`. IDs `R-<n>` continue R1-R6 (`findings.md` section 6).
 
 ## 1. The Nameless One's death and revival
@@ -154,3 +154,28 @@ written `[x.y]` (AR0702 `[4550.2759:4]`). `SetNamelessDeath`/`SetNamelessDeathPa
   at random; other branches play MRT223/MRT224 by chance (1 in 5 gate) when Grace is in the party.
 - **GemRB:** none (`grep -rn "MRT582\|Grace_Ring_Equipped" gemrb/` = 0); `item_use.2da` covers only the usability texts.
   No script or dialogue reads `Grace_Ring_Equipped` (0 BCS, 0 DLG), so nothing observable beyond the line itself.
+
+## 6. Casting path, continued
+
+### R-16 Caster-level spell durations: GemRB's `spldurat.2da` matches EE except Litany, SPWI602, Blacksphere, op 301
+- **Status:** V      **Severity:** 2 (Litany) / 3 (rest)      **By:** opus
+- **EE:** `CGameSprite::SpellPST:538-564` passes every ability effect through `CGameAIBase::ApplyLevelBasedDurationMods`
+  with key = 1000 (SPPR) / 2000 (SPWI) / 3000 (SPIN) + the resref's number and L = caster level. It overwrites the
+  duration (`+0x28`, both copies) and for some the field `+0x48`, which GemRB's table calls the onset `DELAY`.
+- **GemRB:** `Spell.cpp AdjustPSTDurations` + `gemrb/unhardcoded/pst/spldurat.2da` (BASE + PER_LEVEL × L, skip one
+  effect index, DELAY, MAX; only timing modes 0/3, never op 195).
+  | Spell | EE | GemRB `spldurat` | Verdict |
+  |---|---|---|---|
+  | SPIN101 Litany of Curses | 10 × L, no cap, every effect but op 45; save modifier −`Morte_Taunt` | 5 × L, max 30, skips effect 2; −`Morte_Taunt` in `GetSavingThrow` | **V**: level 12 → EE 120, GemRB 30 |
+  | SPWI104 Fist of Iron | 5 × L + 5, delay 15 | 5 + 5 × L, delay 15 | P |
+  | SPWI114 Friends | 5 × L + 5 + 0…15, delay 15, not op 8 | 15 + 5 × L, delay 15, skips effect 2 | V3 (EE random base 5-20, GemRB 15) |
+  | SPWI214 Luck | 5 × L, delay 15 | 5 × L, delay 15 | P |
+  | SPWI216 Blur | 5 × L + 15, delay 15 | 15 + 5 × L, delay 0 | V3 (delay) |
+  | SPWI311 Zerthimon's Focus | 5 × L, delay 25; op 301 fixed 25 | 5 × L, delay 25 | V3 (op 301) |
+  | SPPR104 Detect Evil | 25 × L + 50, max 300 | handled in `fx_detect_evil` (commented row) | not re-checked |
+  | SPWI308 Tasha's | 5 × L, delay 160; op 373 → 5, op 174 → 1 with a time-based delay 27-42; ops 353/356 untouched | 5 × L, delay 7, all effects | V3 |
+  | SPWI402 Confusion | L + 10, delay 25 | 10 + L, delay 25 | P |
+  | SPWI401 Blacksphere | **op 39 only**: 10, delay 100 | all timing-0/3 effects: 10, delay 100 | V3 |
+  | SPWI602 | no rule (SPL durations) | 5 × L | V3 (GemRB invention) |
+- **Re-check:** `python tools/parity/dumps.py lines ee "CGameAIBase::ApplyLevelBasedDurationMods(" 30 161`;
+  `cat gemrb/unhardcoded/pst/spldurat.2da`; `sed -n '/static void AdjustPSTDurations/,/^}/p' gemrb/core/Spell.cpp`.
