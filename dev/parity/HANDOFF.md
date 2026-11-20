@@ -1,4 +1,4 @@
-# Handoff: where the parity investigation stands (2026-11-19, round 8)
+# Handoff: where the parity investigation stands (2026-11-19, round 9)
 
 Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the work packages) and `findings.md` (all findings, by round).
 
@@ -58,22 +58,41 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
   only at level-up.
 - Left `todo` on purpose for A5: Continue (36), CutSceneId (127). FloatMessage (210) needs the creature vtable slot +104.
 
+## Round 9 (2026-11-19): A1 actions finished
+- **All 147 action rows decided** (P 93, V 33, S 20, ? 1); detail in `wp4_actions.md` "Round 9". Ledger: 147/310 rows.
+- New findings: **A14 (sev 1) Damage** misreads every amount ≥ 16 as a dice code (`Damage(Protagonist,Lower,25)` = 9) and
+  can kill (original floors HP at 1); **A18 (sev 1) DestroyItem** removes from the dialogue NPC instead of the named
+  object: all 20 uses (FalseCon, loandoc, Mantuok's cheese, Sohmien, Legclub) remove nothing; A15 ForceAttack doesn't
+  clear the attacker's queue; A16 PlaySequenceTimed waits ticks not seconds; A17 LeaveParty keeps the companion's
+  scripts (original empties 5 slots); A19 SavePlace bound to SaveLocation (does nothing); A20 GlobalSetGlobal copies
+  the wrong way (+ FollowCreature blocks forever, PST: no-op).
+- Sev 3 V: FloatMessage family (sound/log/off-screen, KillFloatMessage owner), ChangeColor 0x4000 forms ignored,
+  TransformPartyItem per member, ExploreMapChunk units + un-explore mode, ChangeDialog timing, CreateCreatureAtFeet
+  placement, ForceFacing.
+- S worth a look: **SetNamelessDisguise** writes GLOBAL `APPEARANCE`, which isn't in `VAR.VAR` while PST runs with
+  `NoNewVariables` (run-time check: does the zombie disguise / dustman-robe look ever apply?); GeneratePartyMember
+  (original loads CRE snapshots from `layout.ini`, GemRB moves and kills the live NPC); QuitGame (`Game_Over` = 6 path,
+  A8); ForceSpell = ReallyForceSpell path in the original; Continue with an empty response (A5).
+
 ## Next, in order (detail in AGENT_GUIDE section 4)
-1. **Track A, scripts and dialogue, to 100 % of `script_ledger.tsv`:** A1 actions (by use), A2 triggers, A3 event
+1. **Track A, scripts and dialogue, to 100 % of `script_ledger.tsv`:** ~~A1 actions~~ (done round 9), A2 triggers, A3 event
    triggers, A4 object selectors, A5 script engine, A6 dialogue engine, A7 parser, A8 BALDUR.bcs, A9 INI spawns,
    A10 indirect state (death variables, XP, rest), A11 voice lines and sound slots (never investigated).
 2. **Track B, combat:** combat rules (`wp10_combat.md`), effect pipeline (`wp11_effect_pipeline.md`), WP2 rest (77
    used opcodes, batched by family). Open from round 5: Guardian Mantle save direction (E-012d), GemRB's Cloak of
    Warding / Guardian Mantle vs effect damage, effect byte +6.
 3. **Track C:** WP6 rules, WP7 tables, items, stores, plain projectiles, WP8 GemRB PST branches, WP9 EE data.
-4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **A12 TakePartyItem stacks (sev 1)**, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
+4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **A18 DestroyItem target (sev 1)**, **A14 Damage amount/death (sev 1)**, **A12 TakePartyItem stacks (sev 1)**, A19 SavePlace, A20 GlobalSetGlobal, A17 LeaveParty scripts, A16 PlaySequenceTimed, A15 ForceAttack, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
    Nameless death rules, A5 RunAwayFrom attacks, S14 Howl, S15 Globe, S16/S17 Power Words, E7 Curse saves, S4 attack
    rolls, E17 scroll caster level, E18 TransferHP, E19 Ball Lightning / Adder's Kiss.
 
 ## For audit (Opus spot-checks these; newest first)
-- (none yet; rounds 7-8 were written by Opus)
+- (none yet; rounds 7-9 were written by Opus). If a Sonnet session re-checks: A18, A14 first (Re-check lines in `wp4_actions.md`).
 
 ## Tool changes (newest first; use these)
+- 2026-11-19 (round 9): `exevt.py slots <VA> [N]` / `refs <addr>` / `str <VA> [N]`: read vtables, data pointers and
+  strings straight from `Torment.exe` (no IDA). Creature vtable `8F07BC`, base AI object `8DC1B0`, message vtables:
+  slot 6 = Run. `script_ledger.py setmany rows.tsv` sets many rows from a tab-separated file (no shell quoting).
 - 2026-11-19 (round 8): `actargs.py <id> [--dlg] [--where] [--top N]`: how every BCS (and DLG text) calls an action,
   parameters counted; `script_ledger.py set <kind> <id> <status> <finding> "<note>" [by]` sets one row;
   `dumps.py find` accepts names with `(` (literal match when the regex is invalid).

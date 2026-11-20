@@ -7,7 +7,7 @@ action	84	Face(I:Direction*)	3125	sprite case 36	GameScript::Face	P	-	opus
 action	3	Attack(O:Target*)	2812	sprite case 2	GameScript::Attack	P	-	opus		script level; fist vs sleeper + battle cry 1/6 to track B
 action	30	SetGlobal(S:Name*,S:Area*,I:Value*)	2763	base sub_44B099	GameScript::SetGlobal	P	-	opus		no create both (NoNewVariables); _DEAD/KILL_ cross-table fallback missing, only EiVene_Dead
 action	7	CreateCreature(S:NewObject*,P:Location*)	2385	base sub_44B099	GameScript::CreateCreature	P	-	opus		
-action	36	Continue()	2112	sprite case 28	GameScript::Continue	todo				
+action	36	Continue()	2112	sprite case 28	GameScript::Continue	P	-	opus		last-action rule same; empty response differs in EE (A5, S)
 action	17	Help()	1843	sprite case 13	GameScript::Help	P	-	opus		self may be included in orig; range vfunc unknown
 action	202	IncrementGlobalOnce(S:Name1*,S:Area1*,S:Name2*,S:Area2*,I:Val*)	1693	base sub_44B099	GameScript::IncrementGlobalOnce	P	-	opus		corrected: NoNewVariables, all vars declared
 action	210	FloatMessage(O:Object*,I:StrRef*)	1643	base sub_44B099	GameScript::DisplayStringHead	V	-	opus		only on-screen area; no sound/log; Kill uses caller as owner
@@ -17,7 +17,7 @@ action	218	PlaySequence(I:Anim*AnimStat)	1057	sprite case 91	GameScript::PlaySeq
 action	60	ChangeAIScript(S:ScriptFile*,I:Level*Scrlev)	887	base sub_44B099	GameScript::ChangeAIScript	P	-	opus		
 action	29	RunAwayFrom(O:Creature*,I:Time*AITime)	874	sprite case 24	GameScript::RunAwayFrom	V	A5	opus		round 2-5; recheck the parts marked S
 action	200	SetAnimState(O:Object*,I:Anim*AnimStat)	802	sprite case 84	GameScript::PlaySequence	V	A10	opus		as PlaySequence
-action	127	CutSceneId(O:Object*)	715	sprite case 63	GameScript::CutSceneID	todo				
+action	127	CutSceneId(O:Object*)	715	sprite case 63	GameScript::CutSceneID	P	-	opus		runner selection in A-120
 action	215	FaceObject(O:Object*)	701	sprite case 90	GameScript::FaceObject	P	-	opus		
 action	208	ReturnToSavedPlace()	593	sprite case 89	GameScript::ReturnToSavedLocation	V	-	opus		no saved facing restore; sev 3
 action	164	AddexperienceParty(I:XP*)	579	base sub_44B099	GameScript::AddExperienceParty	V	-	opus		remainder dropped in GemRB; sev 3

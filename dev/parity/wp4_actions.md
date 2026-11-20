@@ -1,7 +1,6 @@
 # WP4: script actions, original vs GemRB
 
-Progress (round 8): Ex actions, RestParty, IncrementGlobalOnce, Enemy, then by use: MoveToPoint, Wait, WaitRandom, SmallWait,
-Face, Attack, SetGlobal, IncrementGlobal, BitSet. Next: the ledger's `todo` rows from the top (Continue 36, Help 17, CreateCreature 7).
+Progress (round 9): **A1 complete, 147/147 actions decided** (P 93, V 33, S 20, ? 1). Next package: A2 triggers.
 Parameter distributions: `python tools/parity/actargs.py <id> [--dlg] [--where]`.
 Tool: `python tools/parity/case.py action <id>` prints the original's handler (creature switch `sub_76A7EA` via
 `byte_76D476`, else base `sub_44B099`). Current-action fields on the creature: int0 `+1132` (`this[283]`), int1 `+1136`
@@ -806,3 +805,15 @@ trigger handler +148); the base AI-object vtable at `8DC1B0` (`sub_44B099` at +1
   (1,152), `sub_7972FE` (868; int2 = 1234567 is a special "no transition while flag +10222" form), `sub_54B150` (maze,
   102). GemRB `UseItem`, `SpellPoint`, `LeaveAreaLUA`, `FixEngineRoom` (`EnginInMaze` + `Maze.CustomizeArea`). Left for
   the packages that own them (casting: track B; area travel: A9; maze: track C).
+
+### A-36 Continue(), A-127 CutSceneId(O:Object)
+- **Status:** P (as actions) / S (runner rules, A5)   **Uses:** 2,112 / 715
+- **Original:** creature cases 28 / 63 do nothing when executed (done). Their meaning lives in the script runner and in
+  StartCutScene: CutSceneId is the object `sub_46A64E` resolves from each block's first action (A-120); Continue is
+  matched by the runner (EE `CGameAIBase::ProcessAI` / `ProcessPendingTriggers`: `CAIResponse::InListEnd(CONTINUE)`,
+  i.e. only as the **last** action of the chosen response; a chosen response with **no actions** also lets the next
+  script slot run).
+- **GemRB:** `Continue` (AF_IMMEDIATE|AF_CONTINUE) and `CutSceneID` are empty; `Response::Execute` returns "continue" only
+  when Continue is the last action; an empty response returns 0 (stop). Cutscene runner selection as in A-120.
+- **Open (A5):** the empty-response case (EE continues, GemRB stops) and whether the original's runner (not read, EE only)
+  agrees.
