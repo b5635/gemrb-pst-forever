@@ -37,9 +37,11 @@ EE: `CGameDialogSprite` (`StartDialog`, `EnterDialog`, `Load` → `sub_B35BC0` b
   nothing at all → "NO VALID REPLIES OR LINKS".
 - GemRB `GetDialogOptions`: walks transitions from the **last** to the first; the first true text-less transition
   met (i.e. the highest index) becomes the continue link and stops the walk.
-- **Open:** whether `sub_B35BC0` stores replies reversed (then EE also prefers the highest index). It decides which
-  link wins when a state has several true text-less transitions. Blocked on reading `sub_B35BC0`'s reply loop
-  (`dumps.py lines ee sub_B35BC0 260 380`).
+- `sub_B35BC0` stores replies in **file order** (`SetAtGrow` at the end), and `Display` walks them ascending, so
+  visible replies show in file order in both engines. **Open:** which of several true text-less links EE follows:
+  the link pass (`Display:655-800`) counts held replies and marks a reply by a pointer that is updated on every
+  iteration; reading which one is marked needs a careful pass over those lines (or a staged test: a DLG state with
+  two true text-less transitions).
 
 ### Other A6 items
 - Tokens: EE `CScreenWorld::SetDialogTokens`; GemRB `Interface::GetString` token substitution. Not compared (sev 3).
