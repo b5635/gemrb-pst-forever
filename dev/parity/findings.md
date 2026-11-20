@@ -315,3 +315,11 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | D-8 | **EE rewrote the dialogue data**: 2,602 strings differ in content (quest fixes such as DADMINAS, DAETHEL, D0202P, DAGRIL; EE-only action names; `ClearActions` before cutscenes). GemRB runs the original files. Owner decision: port the content fixes as an optional pack (phase 7). | V | 2 |
 | D-4 | Which of several true text-less links wins: GemRB the highest index; EE's order depends on how `sub_B35BC0` stores replies (unread). | S | 2 |
 | D-5/6/7 | Whitespace, statement splitting (0 differences on every string, `dlgsplit.py`), names and IDS symbols: parity. | P | - |
+
+## 19. Spawn findings, round 12 (detail in [wp_spawns.md](wp_spawns.md))
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| SP-2 | One spawn pass: EE spawns `create_qty` when the `spec` count is below `spec_qty` (unless `sub_92F910` clamps); GemRB stops at `spec_qty`. | S | 2 |
+| SP-1 | Timed `[event]` groups: EE waits one `interval` after area load before the first spawn; GemRB spawns at the first check. | V | 3 |
+| SP-0 | Ignored keys (`check_crowd`, `check_view_port`, `control_var`, …): EE ignores them too for PST data (crowd check is a stub, EE's key is `check_by_view_port`). | P | - |
