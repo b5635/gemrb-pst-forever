@@ -3920,9 +3920,20 @@ void GameScript::DestroyAllEquipment(Scriptable* Sender, Holder<Action> /*parame
 
 void GameScript::DestroyItem(Scriptable* Sender, Holder<Action> parameters)
 {
-	Inventory* inv = GetInventory(Sender);
+	Scriptable* owner = Sender;
+	ieDword count = 1;
+	// PST's DestroyItem(S:Object, O:Target, I:All): the item goes from the named object (parity finding A18),
+	// All = 0 one unit of a stack, All = 1 every matching slot
+	if (core->HasFeature(GFFlags::PST_STATE_FLAGS)) {
+		if (parameters->objects[1]) {
+			owner = GetScriptableFromObject(Sender, parameters);
+		}
+		if (parameters->int0Parameter) count = (ieDword) ~0;
+	}
+	Inventory* inv = owner ? GetInventory(owner) : nullptr;
 	if (inv) {
-		inv->DestroyItem(parameters->resref0Parameter, 0, 1); //destroy one (even indestructible?)
+		inv->DestroyItem(parameters->resref0Parameter, 0, count); //destroy one (even indestructible?)
+		if (Actor* act = Scriptable::As<Actor>(owner)) act->ReinitQuickSlots();
 	}
 }
 
@@ -4151,6 +4162,24 @@ void GameScript::GetItem(Scriptable* Sender, Holder<Action> parameters)
 void GameScript::TakePartyItem(Scriptable* Sender, Holder<Action> parameters)
 {
 	const Game* game = core->GetGame();
+	if (core->HasFeature(GFFlags::PST_STATE_FLAGS)) {
+		// PST: party in portrait order, first slot holding the item; a stack loses one unit
+		// (nothing moves to the caller), a single item moves to the caller (parity finding A12)
+		for (int idx = 0; idx < game->GetPartySize(false); idx++) {
+			Actor* pc = game->GetPC(idx, false);
+			int slot = pc->inventory.FindItem(parameters->resref0Parameter, 0);
+			if (slot < 0) continue;
+			const CREItem* item = pc->inventory.GetSlotItem(slot);
+			if (item && (item->Flags & IE_INV_ITEM_STACKED) && item->Usages[0] > 1) {
+				delete pc->inventory.RemoveItem(slot, 1);
+				pc->ReinitQuickSlots();
+				return;
+			}
+			MoveItemCore(pc, Sender, parameters->string0Parameter, IE_INV_ITEM_UNDROPPABLE, IE_INV_ITEM_UNSTEALABLE);
+			return;
+		}
+		return;
+	}
 	int i = game->GetPartySize(false);
 	while (i--) {
 		Actor* pc = game->GetPC(i, false);
