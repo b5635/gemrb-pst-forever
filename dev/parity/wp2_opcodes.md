@@ -607,3 +607,26 @@ only** for all of these (opmodes.py), so mode 1/2 differences can't show.
   compared further.
 - **Re-check:** `python tools/parity/dumps.py lines ee "CGameEffectDamage::ApplyEffect" 764 805` and `... 884 933`;
   `sed -n 8120,8165p gemrb/core/Scriptable/Actor.cpp`.
+
+## Round 15 (track C): the opcodes left open in round 14
+
+### E-025 Poison mode 3 ("1 HP every p1 seconds") is 5× slower in GemRB
+- **Status:** V      **Severity:** 2      **Uses:** 5 (p2 3: JESTER, TPUNCH, VTEETH, WIDMKR, SPWI002)      **By:** opus
+- **EE:** `CGameEffectPoison::ApplyEffect` builds a persistent poison (`CPersistantEffectPoison`): mode 0 = p1 HP per
+  second; 1 = p1 % of current HP; 2 = 1 HP p1 times per second; **3 = 1 HP every p1 seconds** (`+24` period = p1);
+  4 = like 3 with the period from the resource field. `CPersistantEffectPoison::AIUpdate:71-122` counts whole seconds
+  (15 ticks) and fires mode 3 when its counter reaches the period.
+- **GemRB:** `fx_set_poisoned_state`: `RPD_SECONDS` (3) uses `tmp = p1 × core->Time.round_sec` seconds (5 in this
+  fork), then × ticks per second: 1 HP every **5 × p1** seconds. Modes 0 (default branch: 1 HP/s, data p1 = 1) and 2
+  (`RPD_POINTS`: p1 HP/s) agree with EE for the data (CLUB2; FDAG, IRON3, PCHEESE, SPLINTER).
+- **Difference:** VTEETH (p1 3, 30 s): EE 10 HP, GemRB 2 HP; WIDMKR (p1 5, 10 s): EE 2 HP, GemRB 0-1.
+- **Re-check:** `python tools/parity/dumps.py lines ee "CPersistantEffectPoison::AIUpdate(" 71 125`;
+  `sed -n '/^int fx_set_poisoned_state/,/^}/p' gemrb/plugins/FXOpcodes/FXOpcodes.cpp`; `python tools/parity/opmodes.py 25 --files`.
+
+### Other leftovers
+| Op | Verdict |
+|---|---|
+| 26 p2 1 (SPIN013) | P: EE (`CGameEffectRemoveCurse:53-71`, PST only) removes every op 381 effect and ends persistent effects of type 11; GemRB `fx_remove_curse` p2 1 removes the jumble curse (its op 381) and stops. Type-11 persistent effects not identified (S, sev 3). |
+| 32 raise dead | P: the PST branch (`CGameEffectResurrect:199-202`) only skips the stand-up sequence (presentation). |
+| 93, 94, 97 | P: no PST branch in EE; data only resets fatigue/intoxication (MASLOW, HEARCHRM) and sets STR extra (FTEETH). |
+| 110, 124, 125, 150, 159, 171, 172, 177, 209, 212 | P?: no PST branch in EE (`dumps.py grep ee ENGINE_MODE --in CGameEffect…` = none for their classes); generic EE vs generic GemRB, 1-7 uses each, not compared line by line. |
