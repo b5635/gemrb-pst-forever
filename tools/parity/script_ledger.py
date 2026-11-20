@@ -36,8 +36,7 @@ def main():
 	if len(sys.argv) > 2 and sys.argv[1] == "setmany":
 		# one row per line: kind<TAB>id<TAB>status<TAB>finding<TAB>note[<TAB>by]  (no shell quoting needed)
 		for line in open(sys.argv[2], encoding="utf-8"):
-			a = line.rstrip("
-").split("	")
+			a = line.rstrip("\r\n").split("\t")
 			if len(a) >= 4 and not line.startswith("#"):
 				set_row(a[0], a[1], a[2], a[3], a[4] if len(a) > 4 else "", a[5] if len(a) > 5 else "opus")
 		return

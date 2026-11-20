@@ -93,18 +93,18 @@ action	253	RunToObject(O:Target*)	48	sprite case 96	GameScript::RunToObject	P	-	
 action	216	FullHeal(O:Object*)	47	base sub_44B099	GameScript::FullHeal	P	-	opus		HP=max
 action	144	CloseDoor(O:Object*)	43	base sub_44B099	GameScript::CloseDoor	P	-	opus		see A-143
 action	212	FloatMessageRnd(O:Object*,S:Pool*)	43	base sub_44B099	GameScript::FloatMessageRnd	V	-	opus		see A-210; GemRB logs to console
-action	277	IncrementExtraProficiency(O:Target*,I:Modifier*)	43	base sub_44B099	GameScript::IncrementExtraProficiency	todo				
-action	82	CreateItem(S:ResRef*,I:Usage1*,I:Usage2*,I:Usage3*)	41	base sub_44B099	GameScript::CreateItem	todo				
-action	265	IncrementProficiency(O:Target*,I:SlotNum*WProf,I:Modifier*)	41	base sub_44B099	GameScript::IncrementProficiency	todo				
-action	293	SetNamelessClass(I:Value*Class)	39	base sub_44B099	GameScript::SetNamelessClass	todo				
-action	21	LeaveParty()	36	sprite case 17	GameScript::LeaveParty	todo				
-action	245	BitClear(S:Name*,S:Area*,I:Bit*Bits)	36	base sub_44B099	GameScript::BitClear	todo				
-action	113	ForceSpell(O:Target*,I:Spell*Spell)	35	base sub_44B099	GameScript::ForceSpell	todo				
-action	119	DropInventory()	33	sprite case 61	GameScript::DropInventory	todo				
-action	159	ChangeAlignment(O:Object*,I:Value*Align)	33	base sub_44B099	GameScript::ChangeAlignment	todo				
-action	247	ExploreMapChunk(P:Center*,I:Radius*,I:Mode*)	33	base sub_44B099	GameScript::ExploreMapChunk	todo				
-action	309	QuitGame(I:Value*MovVal,I:Value*MovVal,I:Value*MovVal)	33	base sub_44B099	GameScript::QuitGame	todo				
-action	160	ApplySpell(O:Target*,I:Spell*Spell)	26	base sub_44B099	GameScript::ApplySpell	todo				
+action	277	IncrementExtraProficiency(O:Target*,I:Modifier*)	43	base sub_44B099	GameScript::IncrementExtraProficiency	P	-	opus		no float text in GemRB
+action	82	CreateItem(S:ResRef*,I:Usage1*,I:Usage2*,I:Usage3*)	41	base sub_44B099	GameScript::CreateItem	P	-	opus		no stacking in orig
+action	265	IncrementProficiency(O:Target*,I:SlotNum*WProf,I:Modifier*)	41	base sub_44B099	GameScript::IncrementProficiency	P	-	opus		slot mapping not checked
+action	293	SetNamelessClass(I:Value*Class)	39	base sub_44B099	GameScript::SetNamelessClass	P	-	opus		GemRB EnforceUsability; orig item check not seen (S)
+action	21	LeaveParty()	36	sprite case 17	GameScript::LeaveParty	V	A17	opus		orig clears script slots 1,2,4,5,6 and sends Leaves to party; GemRB keeps all (HasDPLAYER=0)
+action	245	BitClear(S:Name*,S:Area*,I:Bit*Bits)	36	base sub_44B099	GameScript::BitClear	P	-	opus		no creation
+action	113	ForceSpell(O:Target*,I:Spell*Spell)	35	base sub_44B099	GameScript::ForceSpell	S	-	opus		orig = ReallyForceSpell path; GemRB not instant
+action	119	DropInventory()	33	sprite case 61	GameScript::DropInventory	P	-	opus		protagonist never drops (orig)
+action	159	ChangeAlignment(O:Object*,I:Value*Align)	33	base sub_44B099	GameScript::ChangeAlignment	P	-	opus		alignment set
+action	247	ExploreMapChunk(P:Center*,I:Radius*,I:Mode*)	33	base sub_44B099	GameScript::ExploreMapChunk	V	-	opus		radius px vs cells; mode 1 un-explores (ignored); sev 3
+action	309	QuitGame(I:Value*MovVal,I:Value*MovVal,I:Value*MovVal)	33	base sub_44B099	GameScript::QuitGame	S	-	opus		orig Game_Over=6 + EndMovie vars; GemRB plays at once (A8)
+action	160	ApplySpell(O:Target*,I:Spell*Spell)	26	base sub_44B099	GameScript::ApplySpell	P	-	opus		level rule not compared
 action	272	ChangeDialog(O:Object*,S:ResRef*)	25	base sub_44B099	GameScript::ChangeDialogue	todo				
 action	295	CreateCreatureAtFeet(S:ResRef*)	24	base sub_44B099	GameScript::CreateCreatureAtFeet	todo				
 action	132	VerbalConstant(O:Object*,I:Constant*soundOff)	23	base sub_44B099	GameScript::VerbalConstant	todo				
