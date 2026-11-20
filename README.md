@@ -109,7 +109,7 @@ Legend: done, partial, not started.
 ## Building and running
 
 ```
-build_install.bat          builds Release and installs to D:\Games\GemRB
+build_install.bat          builds Release and installs to C:\Games\GemRB
 build_install.bat run      same, then starts the game
 ```
 

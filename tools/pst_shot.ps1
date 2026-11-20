@@ -1,10 +1,10 @@
 # Launches the installed GemRB with a save auto-loaded, waits, captures the game window to a PNG, then closes it.
-# Usage: powershell -File tools\pst_shot.ps1 -Out shots\baseline.png [-Save 0] [-Wait 25] [-GameDir D:\Games\GemRB]
+# Usage: powershell -File tools\pst_shot.ps1 -Out shots\baseline.png [-Save 0] [-Wait 25] [-GameDir C:\Games\GemRB]
 param(
 	[string]$Out = "shots\shot.png",
 	[int]$Save = 0,
 	[int]$Wait = 25,
-	[string]$GameDir = "D:\Games\GemRB",
+	[string]$GameDir = "C:\Games\GemRB",
 	[string]$Driver = "",
 	[string[]]$Set = @(),
 	[switch]$Keep

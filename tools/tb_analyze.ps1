@@ -1,5 +1,5 @@
 # Combat AI dump: analyzes every PST script in the running game (start it with dev.ps1 first)
-# and writes D:\Games\GemRB\dev\combat_profiles.md.
+# and writes C:\Games\GemRB\dev\combat_profiles.md.
 #   tb_analyze.ps1 [-GamePath C:\Program Files (x86)\Black Isle\Torment]
 param([string]$GamePath = "C:\Program Files (x86)\Black Isle\Torment")
 $src = Get-Content -Raw (Join-Path $PSScriptRoot "tb_profiles.py")

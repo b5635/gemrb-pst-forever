@@ -22,7 +22,7 @@ known: don't re-report it, extend it) and `README.md` (tools, file layout).
 ## 0. Rules (do not break these)
 
 1. **Only write under `dev/parity/` and `tools/parity/`.** Don't change engine code, GemRB data
-   (`gemrb/unhardcoded`, `gemrb/GUIScripts`), game files or the install in `D:\Games\GemRB`. If something
+   (`gemrb/unhardcoded`, `gemrb/GUIScripts`), game files or the install in `C:\Games\GemRB`. If something
    must be fixed, it's a finding.
 2. **Decompiled code stays in the git-ignored workspace.** The repo pushes to a public GitHub remote, and the
    decompiled code belongs to Black Isle and Beamdog. You may read it, quote it and keep verbatim excerpts as

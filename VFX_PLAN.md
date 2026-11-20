@@ -202,7 +202,7 @@ already took. Do not spend time there.
 - `GemRB.LearnSpell(pc, resref, LS_MEMO)` (flags in `GUIScripts/ie_spells.py`),
   `GemRB.SaveGame`, `GemRB.ExecuteActionAt(actor, action, targetGlobalID)`,
   `GemRB.ExecuteString(action, slot)`.
-- Saves in `D:\Games\GemRB\pst_saves\save` (today: Auto-Save, 002 The Hive, 009 Warrens of
+- Saves in `C:\Games\GemRB\pst_saves\save` (today: Auto-Save, 002 The Hive, 009 Warrens of
   Thought, 011 Drowned Nations Catacombs, 11, 12, wererat).
 - Python venv for tools: `D:\gemrb\tools\upscale\.venv` (Python 3.12, numpy, Pillow).
 - Survey scripts written during planning: `tools/vfx/work/pst_data.py` (layered resource
@@ -305,7 +305,7 @@ vfx_lab.ps1 play    [-Save vfxlab]                       # for the owner: start,
 - `play`: start, `Setup()`, `Grant()`, set `EnableCheatKeys=1` live if possible
   (otherwise say it must be in `GemRB.cfg`), and print: "select a caster and cast from the
   hotbar; Ctrl+Space opens the console: VfxLab.Next(), VfxLab.Off(), VfxLab.On(),
-  VfxLab.Set('VfxLights', 0), VfxLab.Reload() after editing D:\Games\GemRB\unhardcoded\pst\vfx*.2da".
+  VfxLab.Set('VfxLights', 0), VfxLab.Reload() after editing C:\Games\GemRB\unhardcoded\pst\vfx*.2da".
 - All scripts use `D:\gemrb\tools\upscale\.venv\Scripts\python.exe` for the Python tools.
 
 `make_sheet.py`: `--dir shots/vfx/SPWI107 --label on` writes `on_sheet.png` (grid of 6 columns,
@@ -704,7 +704,7 @@ centroid; a tall blue-white strip gives `VLINE`; a dark smoke frame gives `DARK`
   tables (find how GameData caches tables; add an eviction method if there is none).
 - Python binding `GemRB.VfxReload()` in `GUIScript.cpp` calls `VfxTables::Get().Reload()`;
   `VfxLab.Reload()` calls it. Also add `tools/vfx/sync_tables.ps1` that copies
-  `gemrb/unhardcoded/pst/vfx*.2da` to `D:\Games\GemRB\unhardcoded\pst\` (no build needed for
+  `gemrb/unhardcoded/pst/vfx*.2da` to `C:\Games\GemRB\unhardcoded\pst\` (no build needed for
   table edits).
 
 ### 7.4 Lights from the gather (`VfxSystem::CollectLights`)

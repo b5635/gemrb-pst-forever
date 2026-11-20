@@ -1,6 +1,6 @@
 """Phase 2: build drop-in hi-res twins from EE art for classic layouts.
 
-    python twins.py [--out D:\\Games\\GemRB] [--only spells,worldmap,areas,bams] [--ee PATH] [--classic PATH]
+    python twins.py [--out C:\\Games\\GemRB] [--only spells,worldmap,areas,bams] [--ee PATH] [--classic PATH]
 
 Rule for every twin: equal frame count, each frame's aspect within 1.5% of the classic frame,
 Lanczos resize to exactly classic_size * n with n = max(2, round(ee_w / classic_w)). Anything that
@@ -216,7 +216,7 @@ class Twins:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=r"D:\Games\GemRB")
+    ap.add_argument("--out", default=r"C:\Games\GemRB")
     ap.add_argument("--ee", default=str(DEFAULT_EE))
     ap.add_argument("--classic", default=str(CLASSIC))
     ap.add_argument("--only", default="spells,worldmap,areas,bams")

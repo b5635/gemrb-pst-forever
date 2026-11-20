@@ -3,7 +3,7 @@
     python scenegen.py --stage survey|lights|depth|surface|detect|all
            [--only WED[,WED]] [--limit N] [--force] [--review]
            [--game "C:\\Program Files (x86)\\Black Isle\\Torment"]
-           [--out "D:\\Games\\GemRB\\upscaled\\lighting"]
+           [--out "C:\\Games\\GemRB\\upscaled\\lighting"]
 """
 
 from __future__ import annotations

@@ -29,7 +29,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from tb_gamedata import REPO
 
-GAME = r"D:\Games\GemRB"
+GAME = r"C:\Games\GemRB"
 DEV = os.path.join(GAME, "dev")
 LOG = os.path.join(GAME, "gemrb.log")
 CRASHES = os.path.join(GAME, "crashes")

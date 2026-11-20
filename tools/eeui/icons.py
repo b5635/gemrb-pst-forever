@@ -2,7 +2,7 @@
 (AMATTCK, AMTLK): a stone rim, a dashed teal square, a half-dark inside, a metal pictogram
 with an orange accent; frame 1 lit like AMATTCK's pressed frame.
 
-    python icons.py [--out D:\\Games\\GemRB]
+    python icons.py [--out C:\\Games\\GemRB]
 
 Writes classic BAM V1 files (32x32, the round End Turn button 64x64) into
 gemrb/override/pst/ (installed with the game, they work with EEUI off too) and their 2x twins
@@ -247,7 +247,7 @@ MOVES = {
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=r"D:\Games\GemRB")
+    ap.add_argument("--out", default=r"C:\Games\GemRB")
     out = Path(ap.parse_args().out)
     twins = out / "upscaled" / "gui" / "bam"
     base, lit_base = square_base(twins)

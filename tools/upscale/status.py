@@ -19,7 +19,7 @@ from state import State, output_path, outputs_complete, png_stats, sha1
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 DEFAULT_GAME = Path(r"C:\Program Files (x86)\Black Isle\Torment")
-DEFAULT_OUT = Path(r"D:\Games\GemRB\upscaled")
+DEFAULT_OUT = Path(r"C:\Games\GemRB\upscaled")
 WORK = HERE / "work"
 CLASSIFICATION = WORK / "classification.json"
 STATE_PATH = WORK / "state.json"

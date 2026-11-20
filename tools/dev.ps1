@@ -20,7 +20,7 @@ param(
 	[int]$Lines = 40,
 	[int]$Timeout = 15,
 	[switch]$Right,
-	[string]$GameDir = "D:\Games\GemRB"
+	[string]$GameDir = "C:\Games\GemRB"
 )
 $ErrorActionPreference = "Stop"
 $devDir = Join-Path $GameDir "dev"

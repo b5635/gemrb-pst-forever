@@ -1,13 +1,13 @@
 @echo off
-rem Builds GemRB (Release) and installs it over D:\Games\GemRB, replacing the binaries and scripts.
+rem Builds GemRB (Release) and installs it over C:\Games\GemRB, replacing the binaries and scripts.
 rem Usage: build_install.bat          - build and install
 rem        build_install.bat run      - build, install and start the game
 
 setlocal
 set BUILD_DIR=%~dp0build
-set GAME_DIR=D:\Games\GemRB
+set GAME_DIR=C:\Games\GemRB
 
-rem Never delete or copy D:\Games\GemRB\upscaled (hi-res art, UPSCALE_PLAN.md).
+rem Never delete or copy C:\Games\GemRB\upscaled (hi-res art, UPSCALE_PLAN.md).
 rem the install step overwrites GemRB.cfg with the default sample, so keep the real one safe
 set CFG_BACKUP=%TEMP%\GemRB.cfg.keep
 if exist "%GAME_DIR%\GemRB.cfg" copy /y "%GAME_DIR%\GemRB.cfg" "%CFG_BACKUP%" >nul

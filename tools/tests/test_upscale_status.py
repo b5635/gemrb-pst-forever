@@ -19,7 +19,7 @@ import status as up_status  # noqa: E402
 
 class OutputLayout(unittest.TestCase):
     def test_paths(self):
-        root = Path("D:/Games/GemRB/upscaled")
+        root = Path("C:/Games/GemRB/upscaled")
         self.assertEqual(output_path(root, "areas", "tis", "ar0100"), root / "areas" / "AR0100")
         self.assertEqual(output_path(root, "gui", "mos", "guiinv"), root / "gui" / "mos" / "GUIINV.png")
         self.assertEqual(output_path(root, "gui", "bmp", "port"), root / "gui" / "bmp" / "PORT.png")

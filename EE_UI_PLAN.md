@@ -19,7 +19,7 @@ game with `tools\dev.ps1`, report what was seen in game versus only compiled.
   (`D:\GOG Games\Planescape Torment - Enhanced Edition\`) is read only by our tools, never mounted
   as game data. Never merge EE's `chitin.key`: it would replace classic CREs, BAMs and scripts.
 - **No EE files in git.** EE art, PVRZ pages, generated layouts and derived PNGs go to
-  `D:\Games\GemRB\ee_ui\` and `D:\Games\GemRB\upscaled\`. Only our tools, engine code, Python and
+  `C:\Games\GemRB\ee_ui\` and `C:\Games\GemRB\upscaled\`. Only our tools, engine code, Python and
   small tables we wrote go into the repo. Never write into Program Files or the GOG folder.
 - **Body text uses EE's BOOKMANI.ttf** (`EEFonts=1`, `gemrb/unhardcoded/pst/eefonts.2da`), rendered at
   window resolution; the owner prefers it to the classic bitmap body fonts (2026-11-18). Titles and
@@ -111,7 +111,7 @@ button boxes, centred this way, land exactly on the arcs of STARTBG. Classic STA
 
 1. `gemrb/core/Interface.cpp` `LoadFonts`: remove the "EXOCET.ttf is optional" fallback block. It
    is dead now that `fonts.2da` names only BAMs.
-2. Delete `D:\Games\GemRB\override\pst\EXOCET.ttf`.
+2. Delete `C:\Games\GemRB\override\pst\EXOCET.ttf`.
 3. Keep the `Font.cpp` change (NEAREST only when the sheet has a hi-res twin); it is correct.
 4. Build, run `Test_gemrb_core --gtest_filter=FontHiRes*`, start the game, confirm the log shows
    `Loaded Font: FONTDLG for ResRef FONTDLG`.
@@ -131,8 +131,8 @@ Move the working prototypes out of `tools/upscale/work/` into a real tool. Reuse
 - `tools/eeui/decode.py`: MOS V2 → RGBA array (compose blocks from pages), BAM V2 → frames with
   their centre offsets and cycle table, MOS V1/BAM V1 via `tools/upscale/extract.py`.
 - `tools/eeui/inventory.py`: the inventory report (from `work/ee_inventory.py` and
-  `ee_inventory2.py`), writing `D:\Games\GemRB\ee_ui\inventory.txt`.
-- `tools/eeui/run_eeui.bat`: `python tools\eeui\build.py --ee "<EE path>" --out D:\Games\GemRB`.
+  `ee_inventory2.py`), writing `C:\Games\GemRB\ee_ui\inventory.txt`.
+- `tools/eeui/run_eeui.bat`: `python tools\eeui\build.py --ee "<EE path>" --out C:\Games\GemRB`.
 
 Check: decode STARTBG and CGBACK to PNG and compare them with
 `work/ee-extract/STARTBG_preview.png` / `CGBACK_preview.png` (same picture, now full detail).
@@ -141,7 +141,7 @@ Decode NORMBUTT, STARTBUT and SP001 frames to PNG and look at them.
 ## 5. Phase 2: drop-in twins (classic layouts, no engine change)
 
 These improve today's classic screens straight away. All output goes to the existing hi-res tree,
-and every file written is listed in `D:\Games\GemRB\upscaled\ee_twins.txt` (one relative path per
+and every file written is listed in `C:\Games\GemRB\upscaled\ee_twins.txt` (one relative path per
 line). Change `tools/upscale/upscale.py` to skip any resource whose twin path is in that list,
 including with `--force`, so the ESRGAN run never overwrites EE art.
 
@@ -266,7 +266,7 @@ Check in game: with `EEUI=1` nothing visible changes yet (no screen uses it). Ru
 
 ## 7. Phase 4: the converter (`tools/eeui/build.py`)
 
-Generates everything EE screens need into `D:\Games\GemRB\ee_ui\`:
+Generates everything EE screens need into `C:\Games\GemRB\ee_ui\`:
 
 - **Art.** Every MOS/BAM referenced by `UI.menu` (except `lua`, which means set at run time), the
   plates in section 1, the paper dolls, and the JR*KN pictures, copied byte for byte with their
@@ -419,8 +419,8 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   Nothing is committed.
 - 2026-11-14: bestiary researched (section 5.1, phases 2g, 2h, 14). Nothing built yet.
 - 2026-11-14: Phase 0. Removed the `EXOCET.ttf` fallback from `Interface::LoadFonts`. Deleted
-  `D:\Games\GemRB\override\pst\EXOCET.ttf`. Kept the `Font.cpp` NEAREST-on-twin draw. Built
-  Release and installed to `D:\Games\GemRB`. `Test_gemrb_core --gtest_filter=FontHiRes*` passed
+  `C:\Games\GemRB\override\pst\EXOCET.ttf`. Kept the `Font.cpp` NEAREST-on-twin draw. Built
+  Release and installed to `C:\Games\GemRB`. `Test_gemrb_core --gtest_filter=FontHiRes*` passed
   (2/2). In game the log is `Loaded Font: FONTDLG for ResRef FONTDLG` (BAM, 255 hi-res frames);
   same for TRMTFONT, EXOFONT, POSTANT, NUMBER*, SYSFONT, NORMAL. No `EXOCET.ttf` was opened.
   HUD text is the classic bitmap face (`shots/eeui_phase0_fonts.png`). Nothing is committed.
@@ -429,7 +429,7 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   STARTBUT, SP001 decode at the sizes in section 1; STARTBG and SP001 looked at (match the EE art).
   `inventory.py` and `run_eeui.bat` are not written yet (`build.py` is phase 4).
 - 2026-11-17: Phase 2 (2a, 2b, 2c, 2d) via `tools/eeui/twins.py`. Written to
-  `D:\Games\GemRB\upscaled` and listed in `ee_twins.txt` (337 files; log in `ee_twins.log`).
+  `C:\Games\GemRB\upscaled` and listed in `ee_twins.txt` (337 files; log in `ee_twins.log`).
   2a 104/104 spell icons (n=8). 2b WMWRLDB 2x (classic worldmap.wmp confirmed to use it).
   2c 122/122 area maps (n up to 12 for tiny classic maps; EE art is upsampled when
   `round(ee/classic)*classic` exceeds it). 2d only WMPICKL passes the rule; IVSLOT, CGPLUS, CGMINUS,
@@ -466,7 +466,7 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   Not seen: the minify filter at a 2x window, SetFit on a real map screen (phase 15), 1080 mode.
   Nothing committed.
 - 2026-11-17: Phase 4 (converter). `tools/eeui/build.py` (+ `menu_parser.py`, `extra_art.txt`,
-  `run_eeui.bat`) writes `D:\Games\GemRB\ee_ui\` in ~16 s: 96 menus (94 with controls, 997 controls)
+  `run_eeui.bat`) writes `C:\Games\GemRB\ee_ui\` in ~16 s: 96 menus (94 with controls, 997 controls)
   as `layout/<MENU>.json`, 233 art files (165 MOS, 68 BAM) with 548 PVRZ pages (174 MB), 9 aliases
   (`EU0001..9`: STFCTION, STALIGN, CGSCRL1, CGPLUS, CGMINUS, GENBUT1, WMTIME, IVSLOT, CGCANCEL; kept
   stable across runs), `styles.json` (13 styles, 20 colours), 94 previews, `review/bestiary.txt`
@@ -652,7 +652,7 @@ commit `ee_ui\`, `upscaled\`, screenshots or `tools/upscale/work/`.
   NOT done: dialog (`WORLD_DIALOG`: PST's dialog lives in the message window of the world HUD, so it
   moves to phase 18), the party reform window itself (needs `PortraitWindow.py`, off limits until phase
   18), take/drop in a real container, Escape/Done paths, `EEUI=0` container. Installed copies of
-  scripts go in `D:\Games\GemRB\GUIScripts\pst\` for pst files (a stray flat copy of `EEUI.py` and
+  scripts go in `C:\Games\GemRB\GUIScripts\pst\` for pst files (a stray flat copy of `EEUI.py` and
   `QuitGame.py` was removed). Nothing committed.
 - Phase 18 (world HUD, part 1): new `pst/EEHud.py`, wired from `MessageWindow.OnLoad`,
   `PortraitWindow`, `GUICommonWindows.SnapPortraitWindow` and `TurnOrder`; same window aliases and

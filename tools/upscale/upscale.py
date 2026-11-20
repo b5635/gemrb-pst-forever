@@ -1,10 +1,10 @@
-"""Offline upscale of Planescape: Torment art into D:\\Games\\GemRB\\upscaled.
+"""Offline upscale of Planescape: Torment art into C:\\Games\\GemRB\\upscaled.
 
     python upscale.py --categories gui,areas [--scale 2] [--limit N]
         [--only RESREF[,RESREF]] [--force] [--mode continue|stale|force]
         [--dry-run] [--status] [--hash-stale]
         [--game "C:\\Program Files (x86)\\Black Isle\\Torment"]
-        [--out "D:\\Games\\GemRB\\upscaled"] [--tile 512] [--fp16]
+        [--out "C:\\Games\\GemRB\\upscaled"] [--tile 512] [--fp16]
         [--model-areas PATH] [--model-gui PATH] [--model-sprites PATH]
         [--compare]
 
@@ -56,7 +56,7 @@ def _need():
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 DEFAULT_GAME = Path(r"C:\Program Files (x86)\Black Isle\Torment")
-DEFAULT_OUT = Path(r"D:\Games\GemRB\upscaled")
+DEFAULT_OUT = Path(r"C:\Games\GemRB\upscaled")
 
 # One file per category is enough for a run. Compare uses every candidate present.
 CANDIDATES = {

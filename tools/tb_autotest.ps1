@@ -10,7 +10,7 @@
 param(
 	[string[]]$Cases = @("mortuary", "ghouls"),
 	[int]$MaxSeconds = 240,
-	[string]$GameDir = "D:\Games\GemRB"
+	[string]$GameDir = "C:\Games\GemRB"
 )
 $ErrorActionPreference = "Stop"
 $dev = Join-Path $PSScriptRoot "dev.ps1"

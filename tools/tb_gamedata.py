@@ -8,7 +8,7 @@ import glob
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UNHARD = os.path.join(REPO, "gemrb", "unhardcoded", "pst")
-CFG = r"D:\Games\GemRB\GemRB.cfg"
+CFG = r"C:\Games\GemRB\GemRB.cfg"
 
 TYPES = {"itm": 0x3ED, "spl": 0x3EE, "cre": 0x3F1, "ids": 0x3F0, "pro": 0x3FD}
 EXT = {v: k for k, v in TYPES.items()}

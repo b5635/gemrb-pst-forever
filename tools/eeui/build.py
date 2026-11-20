@@ -1,6 +1,6 @@
 """Phase 4 converter: EE's UI.menu / BGEE.lua / art -> <out>/ee_ui/ for the GemRB EE-layout screens.
 
-    python tools\\eeui\\build.py --ee "<EE path>" --out D:\\Games\\GemRB [--height 720] [--no-previews]
+    python tools\\eeui\\build.py --ee "<EE path>" --out C:\\Games\\GemRB [--height 720] [--no-previews]
 
 Writes into <out>/ee_ui/: art (MOS/BAM + PVRZ pages, byte for byte, aliased to EU####.ext when a
 classic name would clash), layout/<MENU>.json, styles.json, aliases.txt, previews/<MENU>.png,
@@ -544,7 +544,7 @@ class LocalPages:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ee", default=str(DEFAULT_EE))
-    ap.add_argument("--out", default=r"D:\Games\GemRB")
+    ap.add_argument("--out", default=r"C:\Games\GemRB")
     ap.add_argument("--classic", default=str(CLASSIC))
     ap.add_argument("--height", type=int, default=720)
     ap.add_argument("--no-previews", action="store_true")

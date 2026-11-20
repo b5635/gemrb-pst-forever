@@ -37,7 +37,7 @@ BIF_CACHE = _UPSCALE / "work" / "bifcache"
 TERRAIN_2DA = REPO / "gemrb" / "unhardcoded" / "pst" / "terrain.2da"
 
 DEFAULT_GAME = Path(r"C:\Program Files (x86)\Black Isle\Torment")
-DEFAULT_OUT = Path(r"D:\Games\GemRB\upscaled\lighting")
+DEFAULT_OUT = Path(r"C:\Games\GemRB\upscaled\lighting")
 
 # Exact values from the plan. T is 0.5625 / 0.4375, not a rounded literal.
 ELEV_SIN = 0.75

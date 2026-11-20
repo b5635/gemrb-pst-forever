@@ -1,7 +1,7 @@
 # Forces the settings from tools\dev_settings.ini into the installed game (see that file).
-# Usage: powershell -File tools\apply_dev_settings.ps1 [-GameDir D:\Games\GemRB]
+# Usage: powershell -File tools\apply_dev_settings.ps1 [-GameDir C:\Games\GemRB]
 param(
-	[string]$GameDir = "D:\Games\GemRB",
+	[string]$GameDir = "C:\Games\GemRB",
 	[string]$Settings = (Join-Path $PSScriptRoot "dev_settings.ini")
 )
 $ErrorActionPreference = "Stop"

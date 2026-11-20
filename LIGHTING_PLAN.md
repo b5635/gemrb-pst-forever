@@ -48,7 +48,7 @@ first. Their rules apply to every step here. Then read this whole file once befo
   from `tools/upscale/` (add that folder to `sys.path`). It reuses the existing venv at
   `tools/upscale/.venv` (Python 3.12, torch 2.11 cu128). No second venv.
 - **Output location:** `<UpscalePath>/lighting/<WED>/`, default
-  `D:\Games\GemRB\upscaled\lighting\<WED>\`. `<WED>` is the area's WED resref, upper case
+  `C:\Games\GemRB\upscaled\lighting\<WED>\`. `<WED>` is the area's WED resref, upper case
   (`Map::WEDResRef` in the engine; `LM`, `SR`, `HT` bitmaps use the same stem). Never write into
   `C:\Program Files (x86)\Black Isle\Torment\`. `build_install.bat` already leaves `upscaled\` alone.
 - **Review images** (previews, contact sheets, debug overlays) go to `tools/lighting/work/`,
@@ -162,7 +162,7 @@ first. Their rules apply to every step here. Then read this whole file once befo
   (`UpscalePath` or `<exe dir>/upscaled`).
 - Unit tests: sources are listed in `gemrb/CMakeLists.txt` under `ADD_EXECUTABLE(Test_gemrb_core`
   (e.g. `tests/core/Test_HiResArt.cpp`). Run `build\gemrb\Release\Test_gemrb_core.exe` with
-  `D:\Games\GemRB` on `PATH`.
+  `C:\Games\GemRB` on `PATH`.
 - In-game driving: `tools\dev.ps1 start|py|click|key|shot|log|crash`. Inside `py`, `act('...')`
   runs a script action. Toggles flip live: `GemRB.SetVar('BakedLights', 0)`.
 - `E:\GitHub\pst-forever` has no prior art for any of this (checked).
@@ -289,7 +289,7 @@ tools/lighting/
 ```
 python tools/lighting/scenegen.py --stage survey|lights|depth|surface|detect|all
        [--only WED[,WED]] [--limit N] [--force] [--review]
-       [--game "C:\...\Torment"] [--out "D:\Games\GemRB\upscaled\lighting"]
+       [--game "C:\...\Torment"] [--out "C:\Games\GemRB\upscaled\lighting"]
 ```
 
 - Resumable like the upscaler: `tools/lighting/work/state.json` via `state.State`, key
@@ -845,12 +845,12 @@ thresholds: V_MIN=0.85 EXCESS_MIN=0.12 A8_MIN=0.05 SCORE_MIN=0.035 CHROMA_COS_MI
 most lights: AR0800 64
 ```
 
-  Review images in `tools/lighting/work/review/`. Output `D:\Games\GemRB\upscaled\lighting\<WED>\lights.txt`.
+  Review images in `tools/lighting/work/review/`. Output `C:\Games\GemRB\upscaled\lighting\<WED>\lights.txt`.
 - Thresholds kept the section 6.1 start values except `MERGE_DIST` 24 -> 64 (AR1101 lava was many cores on one glow) and `LM_SPOT_MIN` 2 -> 12. AR0508 cave-mouth glow is still a miss (phase 4).
 - Engine: `AreaSceneData` loads `lights.txt`; `Map::CollectSceneLights` adds them when `BakedLights=1`. `BakedLightGain=100`. `PartyLight` default is 0 (owner request during this phase).
 - Python: `test_lights.py` plus the phase 0 tests. C++: `Test_AreaSceneData`. `tb_autotest.ps1` was not re-run in the phase 1 session.
 - Upscale dry-run before adding ARE: 5609 resources. gui 974 (bam 715, bmp 10, mos 249), areas 125 (tis 125), sprites 1871 (bam 1871), skip 5 (bam 5). After `0x03F2: "are"`: same four category counts, 5817 resources. The extra entries are ARE files. `idx.names("are")` is non-empty.
-- `run_scenegen.bat --stage survey` on all 123 WEDs, 0 failures, no `errors.log`, about 2.5 minutes. Rows in `tools/lighting/work/survey.csv`. Summary below. Manifest: `D:\Games\GemRB\upscaled\lighting\manifest.json` (`survey-1`, 123 areas, failed empty).
+- `run_scenegen.bat --stage survey` on all 123 WEDs, 0 failures, no `errors.log`, about 2.5 minutes. Rows in `tools/lighting/work/survey.csv`. Summary below. Manifest: `C:\Games\GemRB\upscaled\lighting\manifest.json` (`survey-1`, 123 areas, failed empty).
 - Survey summary (2026-11-14):
 
 ```
@@ -881,7 +881,7 @@ STOP: 107 of 123 areas (87.0%) have a non-uniform HT map.
   still keys off `Pos.y`. Multiple HT values are stairs, not storeys. The survey still records
   HT unique counts as a fact. Phase 2 calibrates against `floor_mask` and wall polygons only.
 
-- Phase 2 is in. Nothing is committed. Output `D:\Games\GemRB\upscaled\lighting\<WED>\height.bin` (123 files) plus rewritten `lights.txt` (7.2.7, stage `lights-2`). Disk size of `lighting/`: 365.4 MB (370 files). No `errors.log`.
+- Phase 2 is in. Nothing is committed. Output `C:\Games\GemRB\upscaled\lighting\<WED>\height.bin` (123 files) plus rewritten `lights.txt` (7.2.7, stage `lights-2`). Disk size of `lighting/`: 365.4 MB (370 files). No `errors.log`.
 - Third comparison model (Hugging Face search, transformers `AutoModelForDepthEstimation`, not diffusion): `xingyang1/Distill-Any-Depth-Large-hf`, MIT, 2025 Distill-Any-Depth Large. Depth Anything 3 has no AutoModel checkpoint; Apple Depth Pro is AMLR and 384-px patches. Distill-Any-Depth loads like DA-V2 (ViT-14, safetensors).
 - Comparison (6 areas x 3 models x 2 sizes), sheet `tools/lighting/work/review/depth_compare.png`. Areas: AR1000, AR1001 (dungeon), AR0500 + AR0400 (city / outdoor hive; PST sets AT_CITY only on AR0500), AR0202, AR0105 (indoor). Pick rule: best wall among median held-out residual < 4 px. Every candidate had wall 1.0 and residual < 4, so residual broke the tie.
 
@@ -925,7 +925,7 @@ depth_input: 518
 ```
 
   No key line (fit `hypot(c1,c2)/c0 < 0.05`): AR0110 AR0202 AR0203 AR0511 AR0604 AR0605 AR0901 AR0903 AR1400 AR1500 AR1700 AR3011.
-- Disk size of `D:\Games\GemRB\upscaled\lighting\`: 1088.3 MB (123 height + 123 normal + 123 ao). Under the 3 GB cap; no zlib.
+- Disk size of `C:\Games\GemRB\upscaled\lighting\`: 1088.3 MB (123 height + 123 normal + 123 ao). Under the 3 GB cap; no zlib.
 - Surface constants kept at section 8.1 start values (blur sigma 1, AO 16 dirs / 96 units / height 30 / gamma 0.7, key h>6, nvar 0.05, horiz 0.05, tint cover 0.30).
 - Review for the 8 areas from 7.5 (AR1000 AR1001 AR0500 AR0400 AR0202 AR0105 AR1601 AR0306): `normal_<WED>.png`, `ao_<WED>.png`, key arrow on `lights_<WED>.png` under `tools/lighting/work/review/`.
 - Engine: `ForArea` loads GLN1 (unit 5, GL_RGB8 linear) and GLA1 (unit 6, GL_R8 linear). Same cache key `(scene*, generation)`. `LightFS` mode 0 uses the normal map on non-sprite pixels; sprites keep the luminance bump. Mode 3 sprite AO after the ambient clear, `GL_DST_COLOR, GL_ZERO`. `SceneLighting` carries `hasKey` / `keyDir` / `keyStrength`; `DrawShadows` uses `project(keyDir[0], keyDir[1], 0.85, 0.62 * clamp(keyStrength, 0.4, 1))`. Ambient mix keeps luma. Toggles `LightNormalMap=1`, `SpriteAO=60`, `AreaKeyLight=1`.

@@ -60,7 +60,7 @@ Exact steps (fresh machine):
 
      -DVCPKG_MANIFEST_DIR=D:/gemrb/platforms/windows ^
 
-     -DSDL_BACKEND=SDL2 -DCMAKE_INSTALL_PREFIX=D:/Games/GemRB
+     -DSDL_BACKEND=SDL2 -DCMAKE_INSTALL_PREFIX=C:/Games/GemRB
 
    ```
 
@@ -68,7 +68,7 @@ Exact steps (fresh machine):
 
    installed `GemRB.cfg`). `build_install.bat run` also starts the game.
 
-5. `D:\Games\GemRB\GemRB.cfg`: `GameType=pst`, `GamePath=CD1=C:\Program Files (x86)\Black Isle\Torment\`.
+5. `C:\Games\GemRB\GemRB.cfg`: `GameType=pst`, `GamePath=CD1=C:\Program Files (x86)\Black Isle\Torment\`.
 
 
 

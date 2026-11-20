@@ -28,7 +28,7 @@ change, and put each new toggle's "on" line in `tools/dev_settings.ini`.
   engine reads it from each file's size, so 3× or 4× work later without engine changes.
 - **Output format:** plain RGBA PNG files in a folder tree (layout in section 3). Every finished
   file marks that piece of work as done, which is what makes the run resumable.
-- **Output location:** `D:\Games\GemRB\upscaled\`. It lives outside the repo and outside the
+- **Output location:** `C:\Games\GemRB\upscaled\`. It lives outside the repo and outside the
   game data. The engine reads the folder from `UpscalePath` (default `<GemRB exe dir>/upscaled`).
   Never write into `C:\Program Files (x86)\Black Isle\Torment\`.
 - **Engine approach:** a sprite keeps its original low-res pixels (the engine reads them for
@@ -42,7 +42,7 @@ change, and put each new toggle's "on" line in `tools/dev_settings.ini`.
 - The game is at `C:\Program Files (x86)\Black Isle\Torment\`: `CHITIN.KEY`, BIF files in the
   root plus `cd2\`, `cd3\`, `cd4\`, and an `override\` folder that beats the BIFs (Fixpack and UB
   are installed there). Resolve every resource the way the engine does: override first, then KEY/BIF.
-- Logical resolution is 1280×720 (`Width`/`Height` in `D:\Games\GemRB\GemRB.cfg`). The GL driver
+- Logical resolution is 1280×720 (`Width`/`Height` in `C:\Games\GemRB\GemRB.cfg`). The GL driver
   renders at window resolution (`GLHighResolution=1`). `renderScale` is the window size over the
   logical size, clamped to 1..4 (`GLVideoDriver::UpdatePresentRect`, `plugins/GLVideo/GLVideo.cpp`).
   Mouse-wheel zoom is on. Both are why hi-res art pays off. At a 1280×720 window, the upscaled
@@ -104,7 +104,7 @@ arguments it still runs the CLI.
 python tools/upscale/upscale.py --categories gui,areas [--scale 2] [--limit N]
        [--only RESREF[,RESREF]] [--force] [--mode continue|stale|force]
        [--status] [--hash-stale] [--dry-run] [--game "C:\...\Torment"]
-       [--out "D:\Games\GemRB\upscaled"] [--tile 512] [--fp16]
+       [--out "C:\Games\GemRB\upscaled"] [--tile 512] [--fp16]
 ```
 
 The pipeline is safe to stop and start again. Finished files are skipped.
@@ -244,7 +244,7 @@ it again neither redoes nor corrupts anything.
    UpscaledAreas=1
    UpscaledSprites=0
    ```
-   Leave `UpscalePath` unset, so the default `D:\Games\GemRB\upscaled` is used.
+   Leave `UpscalePath` unset, so the default `C:\Games\GemRB\upscaled` is used.
    `build_install.bat` must never delete or copy over `upscaled\`.
 7. **Unit test** (`Test_gemrb_core`): `HiResArt::Attach` accepts a 2× PNG, rejects a 1.5× one,
    and ignores a missing file. A write lock on the sprite clears `hiRes`.
@@ -314,5 +314,5 @@ Already covered by the hooks above. To turn it on:
 - [x] C: engine (Sprite2D twin, HiResArt, hooks, GLVideo, toggles, unit test)
 - [x] D: run gui + areas + sprites
 - [ ] E: in-game check (gui/areas dedicated pass; sprites were checked in AR0202)
-- [x] Sprites: 1871/1871 BAM, leftover 0, failed 0, model `4x-UltraSharp.safetensors` (4x then Lanczos to 2x, `--fp16`). Disk `D:\Games\GemRB\upscaled\sprites` 4.85 GB (151899 PNG, 1871 folders). `UpscaledSprites=1` already on. In-game AR0202 at render scale 2: TNO + Annah walk, no shimmer, no halo, feet stay on the upscaled floor, hover/click still hit low-res pixels. Palette twin kept (plan 7.2 a not needed). No engine change.
+- [x] Sprites: 1871/1871 BAM, leftover 0, failed 0, model `4x-UltraSharp.safetensors` (4x then Lanczos to 2x, `--fp16`). Disk `C:\Games\GemRB\upscaled\sprites` 4.85 GB (151899 PNG, 1871 folders). `UpscaledSprites=1` already on. In-game AR0202 at render scale 2: TNO + Annah walk, no shimmer, no halo, feet stay on the upscaled floor, hover/click still hit low-res pixels. Palette twin kept (plan 7.2 a not needed). No engine change.
 - [x] Live PST recolour on upscaled sprites: `index_maps.py` wrote 109196 `*.idx.png` (nearest 2x BAM indices). GL `texMode 4` shifts hi-res RGB by `(live pal[idx] - orig pal[idx])`, skips colour-key 0 and shadow 1, keeps extra ESRGAN colours. In-game AR1600: `Drawing hi-res twin ... with live palette residual`. Extra engine path, not a quantize.

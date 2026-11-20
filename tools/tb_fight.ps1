@@ -6,7 +6,7 @@ param(
 	[int]$Save = 3,
 	[string]$Ghoul = "1700ghoul2",
 	[int]$Turns = 8,
-	[string]$GameDir = "D:\Games\GemRB"
+	[string]$GameDir = "C:\Games\GemRB"
 )
 $dev = Join-Path $PSScriptRoot "dev.ps1"
 & $dev start -Save $Save | Out-Null
