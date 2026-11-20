@@ -3,6 +3,7 @@
   python tools/parity/eeconst.py CGameSprite::INVISIBILITY_MOD CGameSprite::ATTACK_DICE
   python tools/parity/eeconst.py "CGameSprite::*RANGE*"      (glob over names.txt)
   python tools/parity/eeconst.py 0xECE9BC --size 4
+  python tools/parity/eeconst.py 0xED4DA0 --strptr 10   (an array of char* : print each string, stop at NULL)
 
 Prints address, then the bytes as signed int8/int16/int32 (the width of a static is not known: take the one
 the code uses, e.g. `(unsigned __int8)CGameSprite::GRID...` or a `_WORD` read).
@@ -46,7 +47,20 @@ def main(argv):
     size = 4
     if "--size" in argv:
         i = argv.index("--size"); size = int(argv[i + 1]); del argv[i:i + 2]
+    strptr = 0
+    if "--strptr" in argv:
+        i = argv.index("--strptr"); strptr = int(argv[i + 1]); del argv[i:i + 2]
     elf = Elf(ROOT / "Torment64")
+    if strptr:
+        for a in argv:
+            base = int(a, 16) if a.lower().startswith("0x") else names().get(a)
+            for k in range(strptr):
+                ptr, = struct.unpack_from("<Q", elf.read(base + 8 * k, 8))
+                if not ptr:
+                    break
+                raw = elf.read(ptr, 256) or b""
+                print(f"[{k}] {base + 8 * k:08X} -> {ptr:08X} {raw.split(bytes(1))[0].decode('latin1')!r}")
+        return
     nm = None
     for a in argv:
         if a.lower().startswith("0x"):
