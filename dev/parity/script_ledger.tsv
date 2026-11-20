@@ -45,15 +45,15 @@ action	108	EscapeArea()	208	sprite case 57	GameScript::EscapeArea	todo
 action	150	StartStore(S:Store*,O:Target*)	192	sprite case 76	GameScript::StartStore	todo				
 action	104	MoraleDec(O:Target*,I:Morale*)	189	sprite case 54	GameScript::MoraleDec	todo				
 action	214	KillFloatMessage(O:Object*)	186	base sub_44B099	GameScript::KillFloatMessage	todo				
-action	118	GivePartyGold(I:Amount*)	180	base sub_44B099	GameScript::GivePartyGold	todo				
+action	118	GivePartyGold(I:Amount*)	180	base sub_44B099	GameScript::GivePartyGold	P	-	opus		
 action	267	StartSong(I:Song*Songs,P:Where*,I:How*SongFlag)	180	base sub_44B099	GameScript::StartSong	todo				
 action	153	ChangeEnemyAlly(O:Object*,I:Value*EA)	157	base sub_44B099	GameScript::ChangeEnemyAlly	todo				
 action	157	ChangeSpecifics(O:Object*,I:Value*Specific)	156	base sub_44B099	GameScript::ChangeSpecifics	todo				
-action	131	Kill(O:Object*)	155	base sub_44B099	GameScript::Kill	todo				
-action	222	DestroyPartyItem(S:Object*,I:All*Boolean)	147	base sub_44B099	GameScript::DestroyPartyItem	todo				
+action	131	Kill(O:Object*)	155	base sub_44B099	GameScript::Kill	P	-	opus		death p2 4 vs 0
+action	222	DestroyPartyItem(S:Object*,I:All*Boolean)	147	base sub_44B099	GameScript::DestroyPartyItem	P	-	opus		
 action	49	MoveViewPoint(P:Target*,I:ScrollSpeed*Scroll)	140	base sub_44B099	GameScript::MoveViewPoint	todo				
 action	8	Dialogue(O:Object*)	138	sprite case 5	GameScript::Dialogue	todo				
-action	116	TakePartyItem(S:Item*)	137	base sub_44B099	GameScript::TakePartyItem	todo				
+action	116	TakePartyItem(S:Item*)	137	base sub_44B099	GameScript::TakePartyItem	V	A12	opus		orig takes 1 unit of a stack; GemRB whole stack (Tail quest x4)
 action	19	JoinParty()	136	sprite case 15		S	A2/section 9: JoinGroup flag ignored	opus		round 2-5; recheck the parts marked S
 action	269	SetTeam(O:Object*,I:Value*Team)	135	base sub_44B099	GameScript::SetTeam	todo				
 action	122	EndCutSceneMode()	133	base sub_44B099	GameScript::EndCutSceneMode	todo				

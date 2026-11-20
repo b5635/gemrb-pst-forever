@@ -236,6 +236,7 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | A9 | ~~IncrementGlobalOnce creates missing variables in GemRB~~: wrong, PST's `NoNewVariables = 1` stops creation in GemRB too, and all 1,693 calls use declared variables (round 8). | P | — |
 | A10 | **PlaySequence / SetAnimState block in PST until the animation ends**; GemRB's PST path (`OneByteAnimationID`) returns before its wait, so the next action starts at once. 1,859 uses (cutscenes, dialogue mime animations). | V | 2 |
 | A11 | **StartRandomTimer rolls outside its range**: GemRB `Roll(1, max−min, max−1)` gives max … 2·max−min−1 (5-10 → 10-14 s); the original rolls min … max. 268 uses (ambient loops 1.5-2× slower). Same family: **WaitRandom** never rolls its max (sev 3, 1,398 uses). | V | 2 |
+| A12 | **TakePartyItem takes the whole stack in GemRB**; the original takes one unit. Cranium-rat `Tail` (stack 99) is sold one at a time to four NPCs (DBARKING, DKNFGHL, DPHINEAS, DRATBONE): GemRB's first buyer takes them all. Also `PsCharm`, `Embalm`, `Needle`. | V | 1 |
 
 ## 13. Voice findings, round 7 (detail in [wp_voices.md](wp_voices.md))
 

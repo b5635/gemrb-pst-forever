@@ -276,3 +276,33 @@ See finding A1: handled (creature case 57), missing in GemRB.
 - **Difference:** `PermanentStatChange(Protagonist, MAXHITPOINTS, Lower, 5)` at 50/80 HP → original 45/75, GemRB 50/75;
   Raise 3 at 50/80 → original 53/83, GemRB 50/83. LEVEL (1 use) not compared.
 - Re-check: `python tools/parity/dumps.py lines orig sub_459DD1 460 503`; `python tools/parity/actargs.py 217 --dlg`.
+
+### A-116 TakePartyItem(S:Item)
+- **Status:** V   **Severity:** 1   **Uses:** 137 (133 DLG)
+- **Original:** base case 116 → `sub_46B7E4` (`46B7E4.c:70-217`): party members in portrait order 0…n; the first slot
+  holding the item: **if it is a stack of more than 1, one unit is removed** (usage 0 − 1) and the action ends
+  (`:119-139`; the caller gets nothing); a single item is removed (message `8DC3B0`) and a copy goes to the caller.
+  Fails (−2) when nobody has it. Action 193 (range variant) also needs the member within 10 search cells.
+- **GemRB:** `Actions.cpp` `TakePartyItem` → `MoveItemCore(pc, Sender, res, …)` with count 0 →
+  `Inventory::RemoveItem(slot, 0)` (`Inventory.cpp`, `!count` → `KillSlot`): **the whole stack** moves to the caller.
+  Party is searched from the last member.
+- **Difference / Breaks:** stackable quest items (ITM stack > 1): `Tail` (stack 99, 21 uses: DBARKING, DKNFGHL,
+  DPHINEAS, DRATBONE each buy one cranium-rat tail), `PsCharm`, `Embalm`, `Needle` (stack 99). With 4 tails, the first
+  buyer takes all 4 in GemRB and the other three trades can't be done (`PartyHasItem("Tail")` false).
+- **Re-check:** `python tools/parity/dumps.py lines orig sub_46B7E4 113 141`; `sed -n 543,546p gemrb/core/Inventory.cpp`;
+  `python tools/parity/actargs.py 116 --dlg`.
+
+### A-222 DestroyPartyItem(S:Item, I:All)
+- **Status:** P   **Uses:** 147. Original base case 222 → `sub_45D71A`: party in portrait order; All = 0 → one unit of a
+  stack (or one item), then stop; All = 1 → every matching slot. GemRB `DestroyPartyItem`: count 1 / 0 through
+  `Inventory::DestroyItem` (units of a stack). Same, except search order (last member first; only matters when two
+  members carry it).
+
+### A-118 GivePartyGold(I:Amount)
+- **Status:** P   **Uses:** 180. Original base case 118 → `sub_46C5C3`: a creature caller gives min(amount, its own gold)
+  and loses it; party gold + that. GemRB `GivePartyGold`: same.
+
+### A-131 Kill(O:Object)
+- **Status:** P   **Uses:** 155. Original base case 131: target not dead → op 13 (death) with p2 = 4 ("normal"), source =
+  caller. GemRB `Kill`: op 13 with p2 = 0, no source. Death type 0 vs 4 only picks the damage type (crushing vs none);
+  the killer is only used for XP when a party member calls Kill (none found).
