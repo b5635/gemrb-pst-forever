@@ -586,3 +586,24 @@ only** for all of these (opmodes.py), so mode 1/2 differences can't show.
 | 16, 20, 38 | haste, invisibility, silence | 1, 2, 1 | not read (no PST branch in EE) | P? |
 | 110, 124, 125, 150, 159, 171, 172, 177, 209, 212 | retreat, dimension door, unlock, find traps, mirror image, spell add/remove, apply effect, hostile image, speak with dead | 1-7 each | not read | ? (track C; 171/172 are the Nameless One's SPIN abilities) |
 | 8, 9, 41, 51, 66, 139, 141, 142, 152, 174, 189, 191, 194, 197, 199, 205 | colours, sparkle, transparency, strings, icons, movie, sounds, BAMs, flash, VVC, background, viewport | presentation | not compared | presentation (out of track B) |
+
+### E-012d resolved (EE): Guardian Mantle direction, Cloak of Warding pool
+- **Status:** V   **Severity:** 2   **By:** opus
+- **Guardian Mantle (EE):** `CGameEffectDamage::ApplyEffect` :766-805: when the target has spell state 0xB6, the damage type
+  is **not** magic / magic fire / magic cold (mask 0x6400000) and the source is another creature, a copy of the effect with
+  save vs spell at **−4**, resource `NEG`, is checked against the **source** with fresh rolls; if the source **fails**,
+  resistance is set to 100 % (:851) → no damage. Same direction as GemRB (`Actor.cpp:8122` `ModifyDamage`: hitter fails
+  `GetSavingThrow(0, -4)` → damage 0). **Difference:** GemRB has no damage-type exemption, so the mantle also blocks magic,
+  magic-fire and magic-cold damage; GemRB's save adds the hitter's luck (C-15).
+- **Cloak of Warding (EE):** pool word `+7736` = caster level + 3…12 (`CGameEffectAddAttachedObject` :270,
+  `CGameEffectCloakOfWarding` :52). `CGameEffectDamage::ApplyEffect` :885-933, after resistances and difficulty, for **any
+  damage type**: damage −= pool, pool −= damage (both floored at 0). GemRB: `Actor.cpp:8145-8165` `ModifyDamage` soaks only
+  **physical** types (piercing, slashing, missile, crushing) from the effect's Parameter3 pool, and when the pool runs out
+  the overflowing hit is **absorbed whole** (stoneskin path, damage = 0).
+- **Difference:** a fireball on a warded character: EE takes the pool off the fire damage, GemRB applies it in full; the
+  hit that breaks the ward: EE lets the excess through, GemRB absorbs it.
+- **Armor pool** (`+7737`, L + 8, `CGameEffectArmor` :110): EE counts it down by the damage (:934-969) without reducing
+  effect damage, as the original. GemRB `ModifyDamage` (`spwi102` branch) ends the spell when the pool is used up. Not
+  compared further.
+- **Re-check:** `python tools/parity/dumps.py lines ee "CGameEffectDamage::ApplyEffect" 764 805` and `... 884 933`;
+  `sed -n 8120,8165p gemrb/core/Scriptable/Actor.cpp`.
