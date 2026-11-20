@@ -4,7 +4,7 @@ Done: the 54 PRO files PST:EE ships, matched by projectile number. IDs `PR-<n>`.
 Method: EE `projectl.ids` (EE id = SPL/ITM projectile field − 1) → EE `<name>.pro`; GemRB's PRO for the same field from
 `maps/projectiles.tsv` (`gemrb_pro`); header fields `0x08` type, `0x0A` speed, `0x0C` sparkle, `0x2C` extended flags,
 area part `0x200` flags, `0x204` trigger size, `0x206` explosion size, `0x210` frequency, `0x214` explosion projectile.
-Scratch script: `pro3.py` in the session scratchpad (re-runnable: ~40 lines over `pstres.ee()`/`pstres.gemrb()`).
+Tool: `python tools/parity/eepro.py` (prints EE id; projectile numbers below are SPL/ITM field values = EE id + 1).
 
 ## Scope
 - EE ships **54 PRO files** only, nearly all for spells (`SPWIxxx`, `SPINxxx`, `SPPRxxx`, `MAGICMIS`, `IMISS`, `AMISS`,
@@ -17,9 +17,9 @@ Scratch script: `pro3.py` in the session scratchpad (re-runnable: ~40 lines over
   `OfType`), 6 specific, 7 gender, 8 alignment, 9 faction/team word; the PRO's extended flag `0x2000000` inverts it,
   `0x8000000` switches to the second IDS pair.
 
-## Results (matched 31; 19 of them identical in every field above)
+## Results (28 matched; 14 identical in every field above)
 Identical: SPWI207 ice knife, SPWI108 pacify, SPWI211, SPWI405, SPWI406, SPWI213 horror, SPWI307 hold undead, SPWI305
-Elysium's tears, SPWI308, BOLT01, SPWI217, SPWI410, SPWI219, SPWI103 embalm (and SPWI305B where mapped).
+Elysium's tears, SPWI308, BOLT01, SPWI217, SPWI410, SPWI219, SPWI103 embalm.
 
 ### PR-1 `NTOKEN` (Hold Person token, projectile 190): radius 240 in EE, 64 in GemRB
 - **Status:** V      **Severity:** 2      **By:** opus
@@ -35,7 +35,7 @@ Elysium's tears, SPWI308, BOLT01, SPWI217, SPWI410, SPWI219, SPWI103 embalm (and
 - **Difference:** half the radius in EE; which side is excluded (allies or enemies) depends on how GemRB reads `0x40`
   vs `0x80` and the invert bit: check `Projectile.cpp` area flag constants before the fix.
 
-### PR-3 Bless / Curse (SPPR101 256, SPPR103 257): area filter
+### PR-3 Bless / Curse (SPPR101 field 256, SPPR103 field 257): area filter
 - **Status:** S      **Severity:** 2      **By:** opus
 - **EE:** Bless area flags `0`, Curse `0x40`; size 597; extended flags `0x8`.
 - **GemRB:** `BLESSED.pro` `0xC0`, `CURSED.pro` `0x40`; size 600.
@@ -46,8 +46,8 @@ Elysium's tears, SPWI308, BOLT01, SPWI217, SPWI410, SPWI219, SPWI103 embalm (and
 | Projectile | Difference |
 |---|---|
 | 24 chromatic orb, 279 SPWI218 | EE type 2 (BAM, no area) with flag `0x20` (PST missile), speed 0; GemRB type 3 with an area part (GemRB's extension) |
-| 205 MAGICMIS, 272 IMISS, 281 AMISS | EE extended flag `0x20` (PST missile class) |
-| 214/276/285 multi-missiles | EE extra flag `0x200000` |
-| 230 HOPAND | EE explosion projectile `0x3C`; GemRB area flag `0x2` (Howl is hardcoded: S14) |
-| 271 IGNUSFI | speed 50 (EE) vs 40 |
-| 60 GHOST, 61 STORMBLD, 290-298 SPWI001-010 | no GemRB PRO at that number (hardcoded spells, WP1 / phase 3) |
+| 206 MAGICMIS, 273 IMISS, 282 AMISS | EE extended flag `0x20` (PST missile class) |
+| 215/277/286 multi-missiles | EE extra flag `0x200000` |
+| 231 HOPAND | EE explosion projectile `0x3C`; GemRB area flag `0x2` (Howl is hardcoded: S14) |
+| 272 IGNUSFI | speed 50 (EE) vs 40 |
+| 61 GHOST, 62 STORMBLD, 291-299 SPWI001-010 | no GemRB PRO at that number (hardcoded spells, WP1 / phase 3) |
