@@ -238,6 +238,8 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | A11 | **StartRandomTimer rolls outside its range**: GemRB `Roll(1, max−min, max−1)` gives max … 2·max−min−1 (5-10 → 10-14 s); the original rolls min … max. 268 uses (ambient loops 1.5-2× slower). Same family: **WaitRandom** never rolls its max (sev 3, 1,398 uses). | V | 2 |
 | A12 | **TakePartyItem takes the whole stack in GemRB**; the original takes one unit. Cranium-rat `Tail` (stack 99) is sold one at a time to four NPCs (DBARKING, DKNFGHL, DPHINEAS, DRATBONE): GemRB's first buyer takes them all. Also `PsCharm`, `Embalm`, `Needle`. | V | 1 |
 | A13 | **Dak'kon's Karach changes on MoraleDec/Inc/Set in GemRB** (`CheckKarachUpgrade`); with no morale threshold crossed it falls to the **bad** blade. The original swaps the blade only at level-up (levels 4/7/10, variant by current morale; `sub_5E6187` → `sub_5E985F`). 48+ Dakkon morale lines. | V | 2 |
+| A14 | **Damage misreads every amount ≥ 16 and can kill.** GemRB decodes int1 as a dice code always (`Damage(Protagonist,Lower,25)` → 9, `20` → 4, `50` → 2) and routes it through `Actor::Damage` (resistances, luck, death). The original treats int1 as dice only with bits 0xF000 and edits current HP directly, clamped to ≥ 1: dialogue damage never kills. 78 uses (74 DLG). | V | 1 |
+| A15 | **ForceAttack doesn't interrupt the attacker in GemRB.** Original clears the attacker's action queue, then queues `Attack`; GemRB appends the attack behind whatever it was doing. 531 uses. | V | 2 |
 
 ## 13. Voice findings, round 7 (detail in [wp_voices.md](wp_voices.md))
 

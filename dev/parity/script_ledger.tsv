@@ -10,7 +10,7 @@ action	7	CreateCreature(S:NewObject*,P:Location*)	2385	base sub_44B099	GameScrip
 action	36	Continue()	2112	sprite case 28	GameScript::Continue	todo				
 action	17	Help()	1843	sprite case 13	GameScript::Help	P	-	opus		self may be included in orig; range vfunc unknown
 action	202	IncrementGlobalOnce(S:Name1*,S:Area1*,S:Name2*,S:Area2*,I:Val*)	1693	base sub_44B099	GameScript::IncrementGlobalOnce	P	-	opus		corrected: NoNewVariables, all vars declared
-action	210	FloatMessage(O:Object*,I:StrRef*)	1643	base sub_44B099	GameScript::DisplayStringHead	todo				
+action	210	FloatMessage(O:Object*,I:StrRef*)	1643	base sub_44B099	GameScript::DisplayStringHead	V	-	opus		only on-screen area; no sound/log; Kill uses caller as owner
 action	219	WaitRandom(I:MinTime*,I:MaxTime*)	1398	sprite case 34	GameScript::WaitRandom	V	-	opus		orig lo..hi inclusive, GemRB int0..int1-1; sev 3, wp4 A-219
 action	109	IncrementGlobal(S:Name*,S:Area*,I:Value*)	1098	base sub_44B099	GameScript::IncrementGlobal	P	-	opus		as SetGlobal
 action	218	PlaySequence(I:Anim*AnimStat)	1057	sprite case 91	GameScript::PlaySequence	V	A10	opus		orig blocks until sequence ends; GemRB PST returns before SetWait
@@ -21,8 +21,8 @@ action	127	CutSceneId(O:Object*)	715	sprite case 63	GameScript::CutSceneID	todo
 action	215	FaceObject(O:Object*)	701	sprite case 90	GameScript::FaceObject	P	-	opus		
 action	208	ReturnToSavedPlace()	593	sprite case 89	GameScript::ReturnToSavedLocation	V	-	opus		no saved facing restore; sev 3
 action	164	AddexperienceParty(I:XP*)	579	base sub_44B099	GameScript::AddExperienceParty	V	-	opus		remainder dropped in GemRB; sev 3
-action	270	ForceAttack(O:Object*,O:Target*)	531	base sub_44B099	GameScript::ForceAttack	todo				
-action	266	FloatRebus(O:Target*)	490	sprite case 104	GameScript::FloatRebus	todo				
+action	270	ForceAttack(O:Object*,O:Target*)	531	base sub_44B099	GameScript::ForceAttack	V	A15	opus		orig clears attacker queue then Attack; GemRB appends; sev 2
+action	266	FloatRebus(O:Target*)	490	sprite case 104	GameScript::FloatRebus	P	-	opus		VFX on caller (look only)
 action	140	GiveItemCreate(S:ResRef*,O:Object*,I:Usage1*,I:Usage2*,I:Usage3*)	483	base sub_44B099	GameScript::CreateItem	P	-	opus		full inventory: EE swaps a droppable item out, GemRB drops the new one (S)
 action	273	SetInternal(O:Object*,I:Index*Internal,I:Value*)	470	base sub_44B099	GameScript::SetInternal	P	-	opus		orig 16-bit, idx<10
 action	120	StartCutScene(S:CutScene*)	433	base sub_44B099	GameScript::StartCutScene	P	-	opus		
@@ -31,9 +31,9 @@ action	204	FadeToBlack()	369	base sub_44B099	GameScript::FadeToColor	P	-	opus		i
 action	205	FadeFromBlack()	364	base sub_44B099	GameScript::FadeFromColor	P	-	opus		
 action	117	TakePartyGold(I:Amount*)	363	base sub_44B099	GameScript::TakePartyGold	P	-	opus		
 action	61	StartTimer(I:ID*,I:Time*)	345	base sub_44B099	GameScript::StartTimer	P	-	opus		seconds both
-action	31	Spell(O:Target*,I:Spell*Spell)	308	sprite case 25	GameScript::Spell	todo				
+action	31	Spell(O:Target*,I:Spell*Spell)	308	sprite case 25	GameScript::Spell	P	-	opus		memorized+deplete both; SPIN101/103 exception unused
 action	312	PlaySoundNotRanged(S:Sound*)	285	base sub_44B099	GameScript::PlaySoundNotRanged	P	-	opus		
-action	251	RunningAttack(O:Target*)	284	sprite case 95	GameScript::RunningAttack	todo				
+action	251	RunningAttack(O:Target*)	284	sprite case 95	GameScript::RunningAttack	P	-	opus		Attack with run flag
 action	248	RunToPoint(P:Point*)	274	sprite case 93	GameScript::RunToPoint	P	-	opus		
 action	220	StartRandomTimer(I:ID*,I:MinTime*,I:MinTime*)	268	base sub_44B099	GameScript::StartRandomTimer	V	A11	opus		GemRB range int2..2*int2-int1-1
 action	121	StartCutSceneMode()	265	base sub_44B099	GameScript::StartCutSceneMode	P	-	opus		mode rules in A5
@@ -44,41 +44,41 @@ action	217	PermanentStatChange(O:Object*,I:StadID*Stats,I:Delta*Delta,I:Modifier
 action	108	EscapeArea()	208	sprite case 57	GameScript::EscapeArea	S	-	opus		orig walks off-screen, GemRB to nearest travel region
 action	150	StartStore(S:Store*,O:Target*)	192	sprite case 76	GameScript::StartStore	P	-	opus		
 action	104	MoraleDec(O:Target*,I:Morale*)	189	sprite case 54	GameScript::MoraleDec	V	A13	opus		GemRB swaps Karach blade on morale actions; orig only at level-up
-action	214	KillFloatMessage(O:Object*)	186	base sub_44B099	GameScript::KillFloatMessage	todo				
+action	214	KillFloatMessage(O:Object*)	186	base sub_44B099	GameScript::KillFloatMessage	V	-	opus		original kills the caller's floats, ignores object; sev 3
 action	118	GivePartyGold(I:Amount*)	180	base sub_44B099	GameScript::GivePartyGold	P	-	opus		
-action	267	StartSong(I:Song*Songs,P:Where*,I:How*SongFlag)	180	base sub_44B099	GameScript::StartSong	todo				
+action	267	StartSong(I:Song*Songs,P:Where*,I:How*SongFlag)	180	base sub_44B099	GameScript::StartSong	P	-	opus		all uses How=0
 action	153	ChangeEnemyAlly(O:Object*,I:Value*EA)	157	base sub_44B099	GameScript::ChangeEnemyAlly	P	-	opus		
 action	157	ChangeSpecifics(O:Object*,I:Value*Specific)	156	base sub_44B099	GameScript::ChangeSpecifics	P	-	opus		
 action	131	Kill(O:Object*)	155	base sub_44B099	GameScript::Kill	P	-	opus		death p2 4 vs 0
 action	222	DestroyPartyItem(S:Object*,I:All*Boolean)	147	base sub_44B099	GameScript::DestroyPartyItem	P	-	opus		
-action	49	MoveViewPoint(P:Target*,I:ScrollSpeed*Scroll)	140	base sub_44B099	GameScript::MoveViewPoint	todo				
-action	8	Dialogue(O:Object*)	138	sprite case 5	GameScript::Dialogue	todo				
+action	49	MoveViewPoint(P:Target*,I:ScrollSpeed*Scroll)	140	base sub_44B099	GameScript::MoveViewPoint	P	-	opus		instant scroll message both
+action	8	Dialogue(O:Object*)	138	sprite case 5	GameScript::Dialogue	S	-	opus		fade hold missing in GemRB (A-204); walk rules A6; sev 2
 action	116	TakePartyItem(S:Item*)	137	base sub_44B099	GameScript::TakePartyItem	V	A12	opus		orig takes 1 unit of a stack; GemRB whole stack (Tail quest x4)
 action	19	JoinParty()	136	sprite case 15		S	A2/section 9: JoinGroup flag ignored	opus		round 2-5; recheck the parts marked S
 action	269	SetTeam(O:Object*,I:Value*Team)	135	base sub_44B099	GameScript::SetTeam	P	-	opus		
 action	122	EndCutSceneMode()	133	base sub_44B099	GameScript::EndCutSceneMode	P	-	opus		mode rules in A5
 action	244	BitSet(S:Name*,S:Area*,I:Bit*Bits)	132	base sub_44B099	GameScript::GlobalBOr	P	-	opus		as SetGlobal
-action	303	TimedMoveToPoint(P:Point*,I:Time*)	128	sprite case 107	GameScript::TimedMoveToPoint	todo				
+action	303	TimedMoveToPoint(P:Point*,I:Time*)	128	sprite case 107	GameScript::TimedMoveToPoint	P	-	opus		countdown then jump both
 action	279	EnablePortalTravel(O:Object*,I:Value*)	127	base sub_44B099	GameScript::EnablePortalTravel	P	-	opus		no AM_VORTX sound in GemRB (sev 3)
 action	278	ActivatePortalCursor(O:Object*,I:Value*)	122	base sub_44B099	GameScript::ActivatePortalCursor	P	-	opus		
 action	22	MoveToObject(O:Target*)	113	sprite case 18		S	A2/section 9: timeout ignored	opus		round 2-5; recheck the parts marked S
 action	281	TeleportParty(S:Area*,P:Point*,I:Face*)	110	base sub_44B099	GameScript::TeleportParty	S	-	opus		orig queues LeaveAreaLUA, clears party queues
-action	291	SinisterPoof(S:BamResRef*,P:Location*,I:Itterations*)	107	base sub_44B099	GameScript::CreateVisualEffect	todo				
-action	143	OpenDoor(O:Object*)	105	base sub_44B099	GameScript::OpenDoor	todo				
+action	291	SinisterPoof(S:BamResRef*,P:Location*,I:Itterations*)	107	base sub_44B099	GameScript::CreateVisualEffect	P	-	opus		VFX, instant
+action	143	OpenDoor(O:Object*)	105	base sub_44B099	GameScript::OpenDoor	P	-	opus		instant toggle; non-creature callers can open locked doors in GemRB (S)
 action	313	EscapeAreaRunning()	103	sprite case 57		V	A1	opus		round 2-5; recheck the parts marked S
-action	166	SetNumTimesTalkedTo(I:Num*)	101	sprite case 78	GameScript::SetNumTimesTalkedTo	todo				
-action	181	ReallyForceSpell(O:Target*,I:Spell*Spell)	92	base sub_44B099	GameScript::ReallyForceSpell	todo				
-action	246	ForceAIScript(S:ScriptFile*,O:Target*,I:Level*Scrlev)	89	base sub_44B099	GameScript::ForceAIScript	todo				
-action	62	SendTrigger(O:Target*,I:TriggerNum*)	86	base sub_44B099	GameScript::SendTrigger	todo				
+action	166	SetNumTimesTalkedTo(I:Num*)	101	sprite case 78	GameScript::SetNumTimesTalkedTo	P	-	opus		caller talk count
+action	181	ReallyForceSpell(O:Target*,I:Spell*Spell)	92	base sub_44B099	GameScript::ReallyForceSpell	S	-	opus		casting path to track B
+action	246	ForceAIScript(S:ScriptFile*,O:Target*,I:Level*Scrlev)	89	base sub_44B099	GameScript::ForceAIScript	P	-	opus		SetScript on target, queue kept
+action	62	SendTrigger(O:Target*,I:TriggerNum*)	86	base sub_44B099	GameScript::SendTrigger	P	-	opus		GemRB skips dead targets
 action	125	Deactivate(O:Object*)	82	base sub_44B099		V	A6	opus		round 2-5; recheck the parts marked S
-action	15	GiveItem(S:Object*,O:Target*)	78	sprite case 12	GameScript::GiveItem	todo				
-action	48	JumpToPoint(P:Target*)	78	sprite case 33	GameScript::JumpToPoint	todo				
-action	115	SetGlobalTimer(S:Name*,S:Area*,I:Time*GTimes)	78	base sub_44B099	GameScript::SetGlobalTimer	todo				
-action	259	Damage(O:Target*,I:Delta*Delta,I:Modifier*)	78	base sub_44B099	GameScript::Damage	todo				
+action	15	GiveItem(S:Object*,O:Target*)	78	sprite case 12	GameScript::GiveItem	P	-	opus		whole slot both
+action	48	JumpToPoint(P:Target*)	78	sprite case 33	GameScript::JumpToPoint	P	-	opus		instant both
+action	115	SetGlobalTimer(S:Name*,S:Area*,I:Time*GTimes)	78	base sub_44B099	GameScript::SetGlobalTimer	P	-	opus		15*sec + game time both
+action	259	Damage(O:Target*,I:Delta*Delta,I:Modifier*)	78	base sub_44B099	GameScript::Damage	V	A14	opus		Damage: int1>=16 misread as dice; can kill (orig floors HP at 1); sev 1
 action	262	ChangeColor(I:Range*ClownRge,I:Color*ClownClr)	75	sprite case 101	GameScript::ChangeColor	todo				
 action	103	MoraleInc(O:Target*,I:Morale*)	73	sprite case 53	GameScript::MoraleInc	V	A13	opus		Karach swap
 action	276	SetDoorLocked(O:Object*,I:Locked*Boolean)	72	base sub_44B099	GameScript::SetDoorLocked	todo				
-action	292	StickySinisterPoof(S:BamResRef*,O:Object*,I:Itterations*)	72	base sub_44B099	GameScript::CreateVisualEffectObjectSticky	todo				
+action	292	StickySinisterPoof(S:BamResRef*,O:Object*,I:Itterations*)	72	base sub_44B099	GameScript::CreateVisualEffectObjectSticky	P	-	opus		VFX, instant
 action	263	PlaySequenceTimed(I:Anim*AnimStat,I:Seconds*)	70	sprite case 102	GameScript::PlaySequenceTimed	todo				
 action	85	RandomWalk()	69	sprite case 37	GameScript::RandomWalk	todo				
 action	126	Activate(O:Object*)	61	base sub_44B099	GameScript::Activate	todo				
@@ -86,13 +86,13 @@ action	287	DebugOutput(S:Message*)	58	base sub_44B099	GameScript::Debug	todo
 action	171	CreatePartyGold(I:Amount*)	57	base sub_44B099	GameScript::CreatePartyGold	todo				
 action	26	PlaySound(S:Sound*)	56	base sub_44B099	GameScript::PlaySound	todo				
 action	83	SmallWait(I:Time*)	54	base sub_44B099	GameScript::SmallWait	P	-	opus		int0 ticks both
-action	50	MoveViewObject(O:Target*,I:ScrollSpeed*Scroll)	53	base sub_44B099	GameScript::MoveViewObject	todo				
+action	50	MoveViewObject(O:Target*,I:ScrollSpeed*Scroll)	53	base sub_44B099	GameScript::MoveViewObject	P	-	opus		see A-49
 action	167	StartMovie(S:ResRef*)	50	base sub_44B099	GameScript::StartMovie	todo				
 action	224	TransformPartyItem(S:OldObject*,S:NewObject*,I:Charge1*,I:Charge2*,I:Charge3*)	48	base sub_44B099	GameScript::TransformPartyItem	todo				
 action	253	RunToObject(O:Target*)	48	sprite case 96	GameScript::RunToObject	todo				
 action	216	FullHeal(O:Object*)	47	base sub_44B099	GameScript::FullHeal	todo				
-action	144	CloseDoor(O:Object*)	43	base sub_44B099	GameScript::CloseDoor	todo				
-action	212	FloatMessageRnd(O:Object*,S:Pool*)	43	base sub_44B099	GameScript::FloatMessageRnd	todo				
+action	144	CloseDoor(O:Object*)	43	base sub_44B099	GameScript::CloseDoor	P	-	opus		see A-143
+action	212	FloatMessageRnd(O:Object*,S:Pool*)	43	base sub_44B099	GameScript::FloatMessageRnd	V	-	opus		see A-210; GemRB logs to console
 action	277	IncrementExtraProficiency(O:Target*,I:Modifier*)	43	base sub_44B099	GameScript::IncrementExtraProficiency	todo				
 action	82	CreateItem(S:ResRef*,I:Usage1*,I:Usage2*,I:Usage3*)	41	base sub_44B099	GameScript::CreateItem	todo				
 action	265	IncrementProficiency(O:Target*,I:SlotNum*WProf,I:Modifier*)	41	base sub_44B099	GameScript::IncrementProficiency	todo				
@@ -134,7 +134,7 @@ action	290	SetNamelessDisguise(I:DisguiseNum*Disguise)	5	base sub_44B099	GameScr
 action	0	NoAction()	4	sprite case 0	GameScript::NoAction	todo				
 action	233	GlobalSetGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	4	base sub_44B099	GameScript::GlobalSetGlobal	todo				
 action	151	DisplayString(O:Object*,I:StrRef*)	3	base sub_44B099	GameScript::DisplayString	todo				
-action	211	FloatMessageFixed(P:Location*,I:StrRef*)	3	base sub_44B099	GameScript::FloatMessageFixed	todo				
+action	211	FloatMessageFixed(P:Location*,I:StrRef*)	3	base sub_44B099	GameScript::FloatMessageFixed	V	-	opus		see A-210
 action	305	FullHealEx(O:Object*)	3	base sub_44B099	GameScript::FullHeal	?	A-305 (check Heal(0))	opus		round 2-5; recheck the parts marked S
 action	302	SetNoOneOnTrigger(O:Trigger*)	2	base sub_44B099	GameScript::SetNoOneOnTrigger	todo				
 action	310	StartCutSceneEx(S:CutScene*,I:Value*)	2	base sub_44B099	GameScript::StartCutScene	S	A8	opus		round 2-5; recheck the parts marked S

@@ -53,7 +53,7 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
   Kill, ChangeEnemyAlly/Specifics/SetTeam, TeleportParty (S), EscapeArea (S), MoraleDec/Inc/Set, StartStore,
   SetCorpseEnabled, portal travel/cursor, StartCutScene, cutscene mode on/off.
 - **New sev 1: A12** TakePartyItem takes the whole stack in GemRB (original: one unit). Breaks the cranium-rat `Tail`
-  trades (4 buyers, one stack). **Fix candidate before more investigation** (AGENT_GUIDE 7.8).
+  trades (4 buyers, one stack). Top fix candidate (sev-1 findings don't stop the investigation).
 - **New sev 2: A13** GemRB swaps Dak'kon's Karach on every MoraleDec/Inc/Set (falls to the bad blade); the original
   only at level-up.
 - Left `todo` on purpose for A5: Continue (36), CutSceneId (127). FloatMessage (210) needs the creature vtable slot +104.

@@ -377,3 +377,146 @@ See finding A1: handled (creature case 57), missing in GemRB.
   vfunc +152 (A8 in findings, open). Cases 121/122 send message `8DC2E8` with 1/0 (cutscene mode on/off). GemRB
   `StartCutScene` → `EvaluateAllBlocks(false)` follows the same rule; `StartCutSceneMode`/`EndCutSceneMode` toggle the
   mode. Who runs scripts in cutscene mode is A5.
+
+## Round 9: the rest of A1 (by use count)
+
+Original vtables are read straight from the exe now: `python tools/parity/exevt.py slots <VA> [N]` /
+`exevt.py refs <addr>` (no IDA). Creature (sprite) vtable starts at `8F07BC` (ExecuteAction `sub_76A7EA` at +140,
+trigger handler +148); the base AI-object vtable at `8DC1B0` (`sub_44B099` at +140). Message vtables: slot 6 is Run.
+
+### A-210 FloatMessage, A-211 FloatMessageFixed, A-212 FloatMessageRnd, A-214 KillFloatMessage
+- **Status:** V (sev 3)   **Uses:** 1,643 / 3 / 43 / 186
+- **Original:** base cases 210-213 call the caller's vfunc +104, 214 vfunc +108. Creature: `sub_7B32EF`; other objects
+  `sub_46E6D8`; both kill: `sub_46E9F5`. Nothing happens unless the **caller is in the area on screen**. 212/213 pick a
+  random strref from the `.SRC` named by the string (`sub_58EC85`/`sub_58EB50`). 210/212 float over the object
+  (missing → over the caller, creature version); 211/213 at the action point. Text only: the strref is fetched with its
+  sound into a local (`sub_826200`) but no play call follows, and nothing goes to the message log. Done at once.
+  KillFloatMessage removes the floating texts whose owner is the **caller** (`this[21]`); its object is not read.
+- **EE:** `CGameAIBase::FloatMessage`/`KillFloatMessage` same (owner check against `this` id).
+- **GemRB:** `DisplayStringHead` (DS_HEAD|DS_SPEECH: plays the strref's sound as speech), `FloatMessageRnd`
+  (DS_CONSOLE|DS_HEAD: also logs to the message window), `FloatMessageFixed`, `KillFloatMessage` (clears the **object's**
+  overhead text, missing → caller). Runs in any area.
+- **Difference:** GemRB plays voiced strrefs and logs FloatMessageRnd lines; floats from off-screen areas; KillFloatMessage
+  on another object (7 of 183 BCS uses: `"Fhjull"`, two object ids) clears that object's text, the original the caller's.
+  Re-check: `python tools/parity/exevt.py slots 8F07BC 30`; `python tools/parity/dumps.py show orig sub_7B32EF --all`;
+  `grep -n "void GameScript::KillFloatMessage" -A8 gemrb/core/GameScript/Actions.cpp`.
+
+### A-270 ForceAttack(O:Attacker, O:Target) (finding A15)
+- **Status:** V   **Severity:** 2   **Uses:** 531
+- **Original:** base case 270: attacker = first object, creatures only; sends it message `8DC378` (Run `sub_5302D9` →
+  object vfunc +100 = **clear its action queue**), then `8DB938` (add action) with a new `Attack` (3) on the second
+  object. Done at once.
+- **GemRB:** `Actions.cpp` `ForceAttack`: `AddAction(NIDSpecial3)` (doors/containers: `BashDoor`): **appended** to the
+  attacker's queue, nothing cleared.
+- **Difference:** a creature with queued actions (walking, waiting, a dialogue staging) finishes them first in GemRB; in
+  the original it drops them and attacks now. Re-check: `python tools/parity/dumps.py case orig sub_44B099 270`;
+  `python tools/parity/exevt.py slots 8DC378 7`; `python tools/parity/dumps.py show orig sub_5302D9 --all`.
+
+### A-266 FloatRebus(O:Target)
+- **Status:** P (sev 3)   **Uses:** 490 (all DLG). Original creature case 104 → `sub_7B32CC`: visual-effect helper
+  `sub_748A99(this, 4, 0, 45)` on the **caller**, done. GemRB `FloatRebus`: DABUS1-5 VVC over the target (DLG uses are
+  `FloatRebus(Myself)`-style on the speaking Dabus). Look only.
+
+### A-251 RunningAttack(O:Target)
+- **Status:** P   **Uses:** 284. Original creature case 95: `sub_77EEE0` (Attack, A-3) with the run flag; a party member
+  whose target is missing re-resolves it once. GemRB `RunningAttack` → `AttackCore(AC_RUNNING)`.
+
+### A-31 Spell(O:Target, I:Spell)
+- **Status:** P (script level; casting rules are track B)   **Uses:** 308 (all BCS, wizard/priest numbers)
+- **Original:** creature case 25 → `sub_787F90`: no target → fail; a creature target that is dead fails unless the spell
+  is `SPPR502` (`sub_461378`); not facing → turn first; out of range → walk (`sub_785E47`). Then the spell must be
+  **memorized and ready** in the level list for its type (wizard 1-9, priest 1-7, innate 1): the first ready copy is
+  depleted (bit 1 cleared); none → fail (−2). `SPIN101`/`SPIN103` skip the memory check. Spell failure roll, fizzle
+  `SE10FIZZ`.
+- **GemRB:** `Spell` → `SpellCore(SC_DEPLETE…)` → `HandleCastingStance`: not memorized → stop; deplete one.
+  Same rule; the SPIN101/103 exception is never hit (no `Spell()` of an innate in the data).
+
+### A-267 StartSong(I:Song, P:Where, I:How)
+- **Status:** P   **Uses:** 180 (all How = 0, point [0.0]). Original base case 267 → `sub_850957`: stores song, point and
+  How in the mixer (only when music is on); the mixer switches later. GemRB `StartSong`: How = 1 forces, else
+  scheduled. Same for the data.
+
+### A-49 MoveViewPoint(P:Target, I:Speed), A-50 MoveViewObject(O:Target, I:Speed)
+- **Status:** P   **Uses:** 140 / 53. Original base case 49 → `sub_464AC4` → `sub_464914`: centers the viewport on the point
+  through a scroll message with the speed byte; **done at once** (does not wait for the scroll). GemRB `MoveViewPoint`:
+  `SetMoveViewPort(point, speed×2)`, flag 0 (instant), cancels actor-centering. Scroll speed scale not compared
+  (presentation).
+
+### A-303 TimedMoveToPoint(P:Point, I:Time)
+- **Status:** P   **Uses:** 128. Original creature case 107 → `sub_786E84` (A-23): int0 counted down per update, jump at
+  0. GemRB `TimedMoveToPoint`: walk, int0 − 1 per tick, jump at ≤ 0; a walk that stops early ends the action without
+  the jump (original: retry logic of A-23). Same in practice.
+
+### A-8 Dialogue(O:Object)
+- **Status:** S (A6)   **Severity:** 2   **Uses:** 138
+- **Original:** creature case 5: holds (returns 0, retry) while the area fades (A-204); done when the caller is already in
+  a dialogue (`sub_498F4F`); a creature caller clears flag +4164 of the game; target resolved through the area's
+  object list (`sub_5A4864`); missing → fail; else `sub_7A2868` (walk up and talk).
+- **GemRB:** `Dialogue` (AF_BLOCKING|AF_DIALOG) → `BeginDialog`. No fade hold.
+- **Open (A6):** the walk/range rules inside `sub_7A2868`.
+
+### A-259 Damage(O:Target, I:Delta, I:Modifier) (finding A14)
+- **Status:** V   **Severity:** 1   **Uses:** 78 (4 BCS, 74 DLG)
+- **Original:** base case 259 (`44B099.c`, case 259): amount = int1; **only when int1 has bits 0xF000** is it a dice code
+  (`sub_4352A8`: (int1>>12) dice of size (int1>>4)&0xFF, + int1&0xF). Delta int0: 1 LOWER → negated, 3 SET → absolute,
+  else added. A creature's **current HP word +1264 is changed directly** (`sub_461F80`): clamped to **1 … 65535**; a door
+  (type 33) gets the same on its HP. No damage effect, no resistances, no death, no hit reaction. Other objects → fail.
+- **GemRB:** `Actions.cpp` `Damage`: **always** decodes int1 as a dice code (`(int1>>12)&15` dice, `(int1>>4)&255` size,
+  `int1&15` add), rolled through `LuckyRoll` (luck of the caller minus the target's, minimum 1) when the caller is
+  another actor; then `Actor::Damage(dmg, type 0, …)`: resistances, can reach 0 HP and **kill**.
+- **Difference:** 1) every plain amount ≥ 16 is misread: `Damage(Protagonist,Lower,25)` (14 DLG uses) → 9 damage (0x19 →
+  size 1, +9), `20` (3) → 4, `50` (1 BCS) → 2. Only 1-15 come out right. 2) The original never takes a creature below
+  1 HP; GemRB can kill the Nameless One (or an NPC) from dialogue. 3) Luck changes the amount in GemRB.
+- **Data:** 18 distinct DLG forms, amounts 1, 3, 4, 5, 10, 15, 20, 25 (`actargs.py 259 --dlg`); BCS SET 1 / 5 / 50.
+- **Breaks:** dialogue self-harm options (Lower 25 ×14) do a third of the damage; a low-HP Nameless One can die
+  mid-dialogue in GemRB (he never can in the original).
+- **Re-check:** `python tools/parity/dumps.py case orig sub_44B099 259`; `python tools/parity/dumps.py show orig sub_461F80 --all`;
+  `python tools/parity/dumps.py show orig sub_4352A8 --all`; `grep -n "void GameScript::Damage" -A40 gemrb/core/GameScript/Actions.cpp`.
+
+### A-143 OpenDoor(O:Object), A-144 CloseDoor(O:Object)
+- **Status:** P / S (locked doors opened by non-creatures)   **Uses:** 105 / 43
+- **Original:** base cases 143/144 → `sub_46D882` / `sub_46DA20`: object must be a door (type 33); already open (closed)
+  → done; else toggle `sub_4A17F7` at once, no walking. The toggle on a **locked** door (flag +1278 bit 2) only opens
+  when the caller is a creature and the key at +1394 is in its reach (`sub_763140`), else prints the locked text 19309
+  and leaves it.
+- **GemRB:** `OpenDoor`/`CloseDoor`: actor callers need `TryUnlock` (key); **non-actor callers (area/trigger scripts) open
+  locked doors**. Instant in both.
+- **Open:** whether any area script opens a locked door (not counted).
+
+### A-166 SetNumTimesTalkedTo(I:Num)
+- **Status:** P   **Uses:** 101. Original creature case 78: message `8F0AE4` (Run `sub_53E0A3`) writes int0 to the caller's
+  talk counter +6902. GemRB `SetNumTimesTalkedTo`: `TalkCount = int0` on the caller. Same.
+
+### A-181 ReallyForceSpell(O:Target, I:Spell)
+- **Status:** S (casting path, track B)   **Uses:** 92. Original base case 181 → `sub_46692D` (687 lines; no target → fail;
+  int1 ≠ 0 moves the spell number to int0 first). GemRB `SpellCore(SC_NOINTERRUPT|SC_SETLEVEL|SC_INSTANT)`. The cast itself
+  (level, instant, projectile cases 1-5) not compared.
+
+### A-246 ForceAIScript(S:Script, O:Target, I:Level)
+- **Status:** P   **Uses:** 89. Original base case 246 → `sub_465737`: target = caller → ChangeAIScript (A-60); missing → fail;
+  else the target's vfunc +156 (SetScript) with level int0; queue untouched. GemRB `ForceAIScript`: actors only,
+  `SetScript(level)`, queue untouched. Same for creature targets (all data).
+
+### A-62 SendTrigger(O:Target, I:TriggerNum)
+- **Status:** P   **Uses:** 86. Original base case 62 → `sub_465BEB`: object missing → fail; sends trigger 0x24 (`Trigger`)
+  with int0 to it (any object, dead creatures too). GemRB `SendTrigger`: `trigger_trigger` with int0, `GA_NO_DEAD`
+  (a dead creature gets nothing: no data case found).
+
+### A-15 GiveItem(S:Item, O:Target)
+- **Status:** P   **Uses:** 78. Original creature case 12 → `sub_7A8820`: first slot of the caller with the item
+  (`sub_763140`), missing → fail; the **whole slot** is removed; a creature target gets it (party target: feedback 3),
+  any other target: the item is lost. GemRB `GiveItem` → `MoveItemCore(count 0)`: whole slot. Same.
+
+### A-48 JumpToPoint(P:Target)
+- **Status:** P   **Uses:** 78. Original creature case 33 → `sub_78FAB3` → `sub_78FAE7(x, y, 1)`. GemRB `JumpToPoint`:
+  `SetPosition(point, true)` (free spot) + familiars follow the protagonist. Instant both.
+
+### A-115 SetGlobalTimer(S:Name, S:Area, I:Time)
+- **Status:** P   **Uses:** 78. Original base case 115 → `sub_46A41E`: existing variable only (`sub_463F03`, no creation);
+  value = **15 × int0 + game time** (`+3748`), synced by message `8DC518`. GemRB: `int0 × defaultTicksPerSec (15) +
+  GameTime`, no creation (`NoNewVariables`). Same units.
+
+### A-291 SinisterPoof(S:Bam, P:Location, I:Iterations), A-292 StickySinisterPoof(S:Bam, O:Object, I:Iterations)
+- **Status:** P (look only)   **Uses:** 107 / 72. Original base cases 291/292 → `sub_46EAA3`: a VEF/BAM effect at the
+  point (291) or attached to the object (292, missing → fail); negative iterations = loop |n| times with a flag; done at
+  once. GemRB `CreateVisualEffect` / `CreateVisualEffectObjectSticky`: same, instant.

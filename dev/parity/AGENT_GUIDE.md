@@ -414,8 +414,9 @@ Every entry uses this template:
    answer (e.g. `triggers.tsv` "always false" for events): fix the tool, not just your notes. Re-reading
    the same file region twice in one session is the warning sign: write down what you needed from it.
 8. **Ask the person** (stop and say so) when: the workspace is missing, a tool is broken in a way you'd need to
-   rewrite more than ~50 lines to fix, a check needs engine code (A7's harness), or you find a sev-1 issue you
-   think should be fixed before the investigation continues.
+   rewrite more than ~50 lines to fix, or a check needs engine code (A7's harness). A sev-1 finding is **not** a
+   reason to stop: record it (findings.md, HANDOFF "Top fix candidates") and keep going until a natural stopping
+   point (a package done, or the context runs out).
 
 ---
 
