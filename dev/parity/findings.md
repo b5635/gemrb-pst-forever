@@ -297,4 +297,5 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | ID | Finding | Status | Sev |
 |---|---|---|---|
 | O-range | **Visual range is (Nameless One's fighter level + 14) × 32 px** for every creature in EE and the original, recomputed on stat change; GemRB fixes it at the level-3 value (544 px). Every `See` and range-limited object (NearestEnemyOf 2,325 uses): enemies notice and engage from the wrong distance once he levels as a fighter. | V | 2 |
+| O-mostdamaged | **MostDamagedOf can pick a dead party member in GemRB** (EE skips the dead and returns nobody when no one is hurt): Grace's party AI (`PCGRACE`, 11 blocks) casts cures at a corpse. | V | 2 |
 | O-self | GroupOf, Nearest and LastHitter have no case in EE or the original: they resolve to the caller. GemRB computes a real nearest (Nearest: 4 uses, unread). | S | 3 |

@@ -14,6 +14,13 @@ ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 MAPS = os.path.join(ROOT, "dev", "parity", "maps")
 OUT = os.path.join(ROOT, "dev", "parity", "script_ledger.tsv")
 BAF = os.path.join(ROOT, "gemrb", "unhardcoded", "pst", "source", "baldur.baf")
+OBJECTS = [("1", "Myself", 10016), ("name", "by script name", 2632), ("12", "NearestEnemyOf", 2325),
+	("10", "LastAttackerOf", 1377), ("16", "LastHelp", 606), ("27", "Protagonist", 5587),
+	("21", "Player1", 79), ("22", "Player2", 26), ("23", "Player3", 26), ("24", "Player4", 24), ("25", "Player5", 24),
+	("26", "Player6", 22), ("6", "MostDamagedOf", 11), ("14", "Nearest", 4), ("17", "LastTrigger", 3),
+	("ea", "IDS field ea", 3336), ("specific", "IDS field specific", 618), ("team", "IDS field team", 361),
+	("gender", "IDS field gender", 189), ("race", "IDS field race", 159), ("align", "IDS field align", 153),
+	("general", "IDS field general", 66), ("faction", "IDS field faction", 17), ("pc", "[PC] in DLG text", 49)]
 COLS = ["kind", "id", "name", "uses", "orig_handler", "gemrb", "status", "finding", "by", "audited", "note"]
 KEEP = ["status", "finding", "by", "audited", "note"]
 
@@ -65,11 +72,15 @@ def main():
 			first = " ".join(l.strip() for l in block.splitlines()[1:4])
 			rows.append({"kind": "baldur", "id": "block%02d" % i, "name": first[:120], "uses": "1",
 				"orig_handler": "hardcoded? find it", "gemrb": "unhardcoded/pst/source/baldur.baf"})
+	# object selectors and IDS fields PST uses (counts: bcs.py --objects, BCS + DLG text; wp5_objects.md)
+	for oid, name, uses in OBJECTS:
+		rows.append({"kind": "object", "id": oid, "name": name, "uses": str(uses),
+			"orig_handler": "sub_40F77C / EE CAIObjectType::Decode", "gemrb": "GameScript/Objects.cpp, Matching.cpp"})
 	for r in rows:
 		o = old.get((r["kind"], r["id"]), {})
 		for k in KEEP:
 			r[k] = o.get(k, "todo" if k == "status" else "")
-	order = {"action": 0, "trigger": 1, "event": 2, "baldur": 3}
+	order = {"action": 0, "trigger": 1, "event": 2, "baldur": 3, "object": 4}
 	rows.sort(key=lambda r: (order[r["kind"]], -int(r["uses"] or 0)))
 	with open(OUT, "w", encoding="utf-8", newline="") as f:
 		f.write("# Script coverage ledger (tools/parity/script_ledger.py). Fill status/finding/by/note by hand; rerun keeps them.\n")

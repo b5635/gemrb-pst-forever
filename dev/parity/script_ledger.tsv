@@ -310,3 +310,27 @@ baldur	block60	"Global(""Fortress_Ignus"", ""GLOBAL"", 0) Global(""Current_Area"
 baldur	block61	"Global(""Fortress_Ignus"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Ignus"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	V	B7	opus		orig counts at Fort_Port exit, no SkScrap check, companions leave; GemRB at AR0202 after Pharod_Quest 2
 baldur	block62	"Global(""Fortress_Vhailor"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Vhailor"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	V	B7	opus		orig counts at Fort_Port exit, no SkScrap check, companions leave; GemRB at AR0202 after Pharod_Quest 2
 baldur	block63	"Global(""Fortress_Vhailor"", ""GLOBAL"", 0) Global(""Current_Area"",""GLOBAL"",202) InParty(""Vhailor"")"	1	hardcoded? find it	unhardcoded/pst/source/baldur.baf	V	B7	opus		orig counts at Fort_Port exit, no SkScrap check, companions leave; GemRB at AR0202 after Pharod_Quest 2
+object	1	Myself	10016	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	-	opus		caller itself, both engines
+object	27	Protagonist	5587	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	-	opus		EE GetProtagonist / orig party slot 0; GemRB GetPC(0)
+object	ea	IDS field ea	3336	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	O-ids	opus		0 any, 30/31/199/200 cut-offs, else exact; GemRB ID_Allegiance same
+object	name	by script name	2632	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	O-name	opus		area table, global table, party by name; GemRB GetActor then FindPC/FindNPC
+object	12	NearestEnemyOf	2325	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	V	O-range	opus		EA rule, nearest in visual range + LOS, invisible skipped: same; range frozen at TNO fighter level 3 in GemRB
+object	10	LastAttackerOf	1377	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	-	opus		stored object re-resolved; GemRB needs the attacker in the caller's area (sev 3 edge)
+object	specific	IDS field specific	618	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	O-ids	opus		0 any else exact
+object	16	LastHelp	606	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	-	opus		stored object re-resolved; GemRB area-local lookup (sev 3 edge)
+object	team	IDS field team	361	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	O-ids	opus		PST byte +12; GemRB ID_Team exact
+object	gender	IDS field gender	189	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	O-ids	opus		0 any else exact
+object	race	IDS field race	159	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	O-ids	opus		0 any else exact
+object	align	IDS field align	153	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	O-ids	opus		exact or nibble masks; GemRB ID_Alignment same
+object	21	Player1	79	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	-	opus		EE game+10362 array (join order); GemRB PCs[0]
+object	general	IDS field general	66	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	O-ids	opus		0 any else exact
+object	pc	[PC] in DLG text	49	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	O-ids	opus		named objects skip field checks in both engines
+object	22	Player2	26	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	-	opus		as Player1
+object	23	Player3	26	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	-	opus		as Player1
+object	24	Player4	24	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	-	opus		as Player1
+object	25	Player5	24	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	-	opus		as Player1
+object	26	Player6	22	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	-	opus		as Player1
+object	faction	IDS field faction	17	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	O-ids	opus		PST byte +11; GemRB ID_Faction exact
+object	6	MostDamagedOf	11	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	V	O-mostdamaged	opus		EE skips dead, none if nobody hurt, no area check; GemRB can pick a dead PC (PCGRACE heals corpses)
+object	14	Nearest	4	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	S	O-self	opus		EE/orig: no case, resolves to the caller; GemRB real nearest
+object	17	LastTrigger	3	sub_40F77C / EE CAIObjectType::Decode	GameScript/Objects.cpp, Matching.cpp	P	-	opus		stored trigger object (See etc.) both engines

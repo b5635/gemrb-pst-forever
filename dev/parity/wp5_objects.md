@@ -101,3 +101,20 @@ those 4 scripts before calling it a finding.
   name (or global id).
 - GemRB `ID_Allegiance` (`Objects.cpp`): same cut-offs (plus EA_NOTNEUTRAL, unused by PST); `ID_Alignment`:
   masks per nibble, same. Faction/team: not compared yet.
+
+## Round 12, part 2: remaining functions (A4 done, ledger `kind=object` 24/24)
+
+- **Player1-6, LeaderOf (P):** EE reads the game's character array (`+10362…`, join order), not the portrait array
+  (`+10368…`, used for the visual range). GemRB `PlayerX` → `Game::GetPC(slot)` = join order. Protagonist: EE
+  `CInfGame::GetProtagonist`, GemRB `GetPC(0)`: P.
+- **LastAttackerOf, LastHelp, LastTrigger (P):** an object stored on the caller and re-resolved by global id in
+  both. GemRB looks the id up in the caller's area only (`GetActorByGlobalID` on the area): an attacker that left
+  the area resolves to nothing in GemRB, to the creature in EE (sev 3 edge).
+- **O-mostdamaged MostDamagedOf (V, sev 2):** EE `CInfGame::GetCharacterCriteria` case 3: party members, dead
+  (state 0x800) skipped, the one with the largest max HP − current HP **strictly above 0**; nobody hurt → nothing;
+  no area check. GemRB `MostDamagedOf` (`Objects.cpp`): first party member in the caller's area even at full HP,
+  **dead members included** (a corpse has the largest damage). PCGRACE (Fall-from-Grace's party AI, 11 uses) then
+  casts its cure spells at a dead companion: `HPPercentLT(MostDamagedOf(Myself),90)` is true for a corpse.
+  LeastDamagedOf (case 4) has the same dead skip (unused by PST).
+- **IDS fields, team, faction (P):** GemRB `MatchActor` skips IDS fields when the object has a name (same as the
+  original `sub_40F297`), then `ID_*` per field; `ID_Team`/`ID_Faction` exact, 0 = any.
