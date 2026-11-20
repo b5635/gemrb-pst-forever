@@ -307,3 +307,11 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | SE-1 | **Script evaluation rate:** EE every 16 ticks per creature (staggered), a busy creature only on a new trigger or after ~16 s; GemRB every tick when idle or on screen. Ambient `RandomNum` blocks fire up to 16× as often, on-screen busy creatures get interrupted by other blocks at once. | V | 2 |
 | SE-2 | **Cutscene mode doesn't stop scripts in PST** (EE skips that check for PST only); GemRB freezes every script during cutscenes. | V | 2 |
 | SE-3 | Response weights: EE gives the first response one extra chance and the last one fewer (a last weight-1 response never runs: 16 sets in AR0600); GemRB exact. Recommend leaving GemRB. | V | 3 |
+
+## 18. Dialogue findings, round 12 (detail in [wp_dialog.md](wp_dialog.md))
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| D-8 | **EE rewrote the dialogue data**: 2,602 strings differ in content (quest fixes such as DADMINAS, DAETHEL, D0202P, DAGRIL; EE-only action names; `ClearActions` before cutscenes). GemRB runs the original files. Owner decision: port the content fixes as an optional pack (phase 7). | V | 2 |
+| D-4 | Which of several true text-less links wins: GemRB the highest index; EE's order depends on how `sub_B35BC0` stores replies (unread). | S | 2 |
+| D-5/6/7 | Whitespace, statement splitting (0 differences on every string, `dlgsplit.py`), names and IDS symbols: parity. | P | - |
