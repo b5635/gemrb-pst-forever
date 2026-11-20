@@ -368,3 +368,25 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | E-073 | Op 73 **sets** the damage mod in PST:EE (last one wins); GemRB adds. EE: differs from the round-3 original reading. | V | 3 |
 | E-208, E-129, S41 | EE re-checks: Iron Fist to-hit is right in GemRB; Aid 8 × p1 (EE same); Acid Storm delay is ticks in both. | - | - |
 | P-1, P-2, P-4, P-5 | Feature-block fields, shared rolls, level range, timing modes and units. | P | - |
+
+## 23. Track C findings, round 15 (detail in [wp6_rules.md](wp6_rules.md), [wp7_tables.md](wp7_tables.md), [wp_items_stores.md](wp_items_stores.md), [wp_projectiles.md](wp_projectiles.md), [wp8_branches.md](wp8_branches.md), [wp9_ee_data.md](wp9_ee_data.md), [wp2_opcodes.md](wp2_opcodes.md) "Round 15")
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| R-7 | **The `Death` counter never goes up in GemRB.** EE adds 1 to GLOBAL `Death` at every protagonist death; DTRANS, DSERE, DAWAIT, DNORDOM, D0202P, DSKSCRAP and AR1201's Fortress shadows read it. | V | 1 |
+| TB-1 | **Random loot:** 884 CRE slots carry `RNDTRE01-05`; GemRB rolls the original BIF's BG-style `RNDTREAS` (44 of 60 items don't exist in PST), EE a PST loot table (trinkets, charms, scrolls, gold). | V | 2 |
+| ST-1 | Selling an item the store stocks infinitely: EE pays at most 20 %, GemRB the full 80 % (275 entries in 34 stores). | V | 2 |
+| ST-4 | Failed store theft: EE (PST only) sends `ATTACKEDBY` to the owner; GemRB only `StealFailed` (`StealIsAttack = 0`). | V | 2 |
+| IT-1 | Anarchist faction's "unusable" bit `0x200` is 0 in GemRB's `factions.2da`: 12 items an Anarchist can't use in EE. | V | 2 |
+| E-025 | Poison mode 3 (1 HP every p1 seconds) runs every 5 × p1 s in GemRB (`× round_sec`): VTEETH, WIDMKR, JESTER, TPUNCH, SPWI002. | V | 2 |
+| R-13 | Rest in the 9 "permission" areas (orig flags 6): EE allows it once no living non-party creature is in the area; GemRB never. AR0402: EE data allows rest. | V | 2 |
+| R-14 | Hiding: EE = Stealth vs d100, −20 at night in dark spots, no armour/luck; GemRB scales by light level (≈ half the chance by day). | V | 2 |
+| R-16 | Caster-level spell durations: GemRB's `spldurat.2da` matches EE except **Litany of Curses** (EE 10 × L uncapped, GemRB 5 × L max 30) and small cases (Friends, Blur, Tasha's, Blacksphere, Zerthimon op 301, SPWI602). | V | 2 |
+| R-11 | Mage-to-12 after another specialisation (`Specialist` 9): EE INT +2, GemRB +1; a 6→12 jump gives both bonuses in EE. | V | 2 |
+| R-12 | Vhailor's second weapon point at fighter 13 in GemRB, 14 in EE (EE itself never applies Vhailor's points: Beamdog typo, owner decision). | V | 2 |
+| R-8 | `partyarea`/`partypoint` (AR1800): GemRB dismisses the party on area load, EE uses the keys only on death. Corrects B8. | V | 2 |
+| TB-2 | Mage non-proficiency penalty: EE −5, GemRB −4 (`CLSWPBON`). | V | 2 |
+| PR-1, PR-2 | `NTOKEN` hold area radius 240 (EE) vs 64; fear aura `SPIN106` 360 vs 720. | V | 2 |
+| TB-3, TB-4, PR-3 | Proficiency 4 damage +5 vs +4; thief start points 0 vs 40; Bless area filter. | S | 2 |
+| R-9, R-10, R-15, ST-2, ST-3 | Revival animation for state 35, revival voice lines, Grace/Morte item quips, charisma × vs + on prices, charged-item pricing. | V | 3 |
+| WP8, WP9 | GemRB's 110 PST branches triaged (most judged in A/B); EE's 734 changed SPL/ITM: 593 colour-only, ~30 renumbered, 5 per-level spells, ~5 real changes. | - | - |

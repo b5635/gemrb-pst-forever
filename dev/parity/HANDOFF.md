@@ -1,4 +1,4 @@
-# Handoff: where the parity investigation stands (2026-11-19, round 14: track B complete)
+# Handoff: where the parity investigation stands (2026-11-19, round 15: track C complete, investigation done)
 
 Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the work packages) and `findings.md` (all findings, by round).
 
@@ -151,18 +151,39 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
   branch (all used ones covered). Open S/?: C-8 NTOKEN animation ids, C-11 Vhailor crits, C-21 derived +100 flag, op 25
   poison periods, op 26 p2 1, op 32, ops 93/94/97, 110/124/125/150/159/171/172/177/209/212 (track C).
 
+## Round 15 (2026-11-19): track C complete, PST:EE only — **all investigation tracks are done**
+- **WP6 rules** (`wp6_rules.md`, R-7…R-16): **R-7 (sev 1)** GLOBAL `Death` (protagonist death count, read by the
+  Transcendent One, Deionarra, the Fortress) is never incremented in GemRB; R-8 AR1800 `partypoint` used at load
+  (corrects B8); R-11 mage specialisation 9; R-12 Vhailor proficiency (EE typo: owner decision); R-13 rest in the 9
+  "permission" areas; R-14 hiding formula; R-16 caster-level durations (GemRB's `spldurat.2da` already ports most:
+  Litany differs). Casting path read: only A-290 (disguise) and R-16 matter.
+- **WP7 tables** (`wp7_tables.md`): 95/124 shared tables identical (THAC0, saves, XP, HP, STR/DEX…). **TB-1** random
+  loot table is BG junk in GemRB (884 CRE slots); TB-2 mage non-proficiency −5; TB-3/TB-4 S.
+- **Items/stores** (`wp_items_stores.md`): ST-1 infinite-stock resale 20 %; ST-4 theft → `AttackedBy`; IT-1 Anarchist
+  usability bit; ST-2/ST-3 sev 3.
+- **Projectiles** (`wp_projectiles.md`, `tools/parity/eepro.py`): EE ships 54 PROs; PR-1 NTOKEN radius, PR-2 fear aura,
+  PR-3 S. Arrows/bolts etc. have no EE PRO (built in `CProjectile::DecodeProjectile`): **not compared (?)**.
+- **WP8** (`wp8_branches.md`): 110 GemRB PST branches triaged; S list (Nameless HP CON column, antimagic, Friends/Blur
+  stacking, dialogue range +160).
+- **WP9** (`wp9_ee_data.md`): 734 changed SPL/ITM → ~5 real gameplay changes; phase 7 is small.
+- Round-14 leftovers: **E-025** poison mode 3 5× slow; ops 26/32/93/94/97 P; 110…212 P? (no PST branch in EE).
+
 ## Next, in order (detail in AGENT_GUIDE section 4)
 1. **Track A:** ~~A1 actions~~ (round 9), ~~A2 triggers~~ (round 10), ~~A3 event triggers~~, ~~A8 BALDUR.bcs~~ (round 11),
    ~~A4~~, ~~A5~~, ~~A6~~, ~~A7~~, ~~A9~~, ~~A10~~, ~~A11~~ (round 13). **Track A is complete.** Leftover S items to settle
    with a staged test when fixing: D-4, SP-2, SE-4, O-self.
 2. ~~**Track B, combat**~~ (round 14): `wp10_combat.md`, `wp11_effect_pipeline.md`, `wp2_opcodes.md` "Round 14".
    Round 5's open items settled (E-012d, byte +6 = C-14).
-3. **Track C:** WP6 rules, WP7 tables, items, stores, plain projectiles, WP8 GemRB PST branches, WP9 EE data.
-4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **C-1 attack roll ≥ (one line)**, **C-14 save-for-half (one line)**, C-15 no luck on saves, P-3 separate MR roll, C-3, C-4, C-18/C-19 morale, E-134, **T16 NullDialog (sev 1)**, O-mostdamaged, A11-7 (one line), SE-1, SE-2, **B2 Game_Over 7 (sev 1)**, **A14 Damage amount/death (sev 1)**, T11 TimerExpired, T14 pickpocket→AttackedBy, T12 event lifetime, B7 Fortress count, (A12, A18 fixed round 10), A19 SavePlace, A20 GlobalSetGlobal, A17 LeaveParty scripts, A16 PlaySequenceTimed, A15 ForceAttack, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
+3. ~~**Track C**~~ (round 15). **Investigation is complete.** Open on purpose: plain projectiles without an EE PRO
+   (`DecodeProjectile`), the S items listed in each `wp*` file.
+4. **Next: fixes** (phases 2, 4, 5, 6), phase 3 (spell ports) last, phase 7 optional. Top fix candidates so far:
+   **R-7 Death counter (sev 1, small)**, **TB-1 loot table (data)**, IT-1 (one table cell), E-025 (one line), ST-1, ST-4,
+   R-16 Litany row, TB-2, **C-1 attack roll ≥ (one line)**, **C-14 save-for-half (one line)**, C-15 no luck on saves, P-3 separate MR roll, C-3, C-4, C-18/C-19 morale, E-134, **T16 NullDialog (sev 1)**, O-mostdamaged, A11-7 (one line), SE-1, SE-2, **B2 Game_Over 7 (sev 1)**, **A14 Damage amount/death (sev 1)**, T11 TimerExpired, T14 pickpocket→AttackedBy, T12 event lifetime, B7 Fortress count, (A12, A18 fixed round 10), A19 SavePlace, A20 GlobalSetGlobal, A17 LeaveParty scripts, A16 PlaySequenceTimed, A15 ForceAttack, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
    Nameless death rules, A5 RunAwayFrom attacks, S14 Howl, S15 Globe, S16/S17 Power Words, E7 Curse saves, S4 attack
    rolls, E17 scroll caster level, E18 TransferHP, E19 Ball Lightning / Adder's Kiss.
 
 ## For audit (Opus spot-checks these; newest first)
+- Round 15: R-7 (sev 1) first, then TB-1, ST-1, E-025, IT-1, R-13, R-14, R-16.
 - Round 14: C-1, C-14, C-15, P-3 first, then C-3, C-4, C-18, E-134, E-012d.
 - Round 13: O-mostdamaged, SE-1, SE-2, SE-4, D-8.
 - Round 12: O-range.
@@ -170,6 +191,8 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
 - (none yet; rounds 7-9 were written by Opus). If a Sonnet session re-checks: A18, A14 first (Re-check lines in `wp4_actions.md`).
 
 ## Tool changes (newest first; use these)
+- 2026-11-19 (round 15): `eeconst.py <addr|name> --strptr N` prints an array of `char*` (name tables like
+  `0xED4DA0`); `eepro.py` compares PST:EE's `.pro` files with GemRB's by projectile number.
 - 2026-11-19 (round 14): `eeconst.py NAME|GLOB|0xADDR [--size N]` reads EE static constants straight from the ELF
   (`"CGameSprite::*RANGE*"`); `opmodes.py <ops> [--files]` counts p2/timing/p1 per opcode over **all** SPL/ITM feature
   blocks (casting effects included, unlike `opuses.py`).
