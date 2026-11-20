@@ -5,7 +5,7 @@ Judged against PST:EE `Torment64` (`.re/ee/dump/dec_all_named`). `CChitin::ENGIN
 every `ENGINE_MODE != 3` branch below is **off** in PST:EE. Static constants read with `tools/parity/eeconst.py`.
 
 Done: attack roll, critical hits/misses, weapon damage, saving throw roll, magic resistance roll, death threshold,
-save-for-half. Next: attacks per round, morale, spell disruption, XP per kill (section "Round 14, part 2").
+save-for-half, morale, attacks per round, spell disruption, XP (C-1 to C-23). Track B1 done.
 
 ## How EE resolves a weapon attack (reference)
 `CGameSprite::Swing` (9D7DB0) → `CGameSprite::Hit` (9A8270, the roll) → `CGameSprite::Damage` (9A96D0, builds the
@@ -206,3 +206,57 @@ damage) → an **op 12 damage effect** applied to the target (`CGameEffectDamage
   → death effect; party members' HP is set to 0 when it is ≥ −19. PST death type: E-012h (always normal death).
 - **GemRB:** `Actor::Damage` (`Actor.cpp:4392`) → `Die` at HP ≤ 0, `IE_MINHITPOINTS`. Same rule. The Nameless One's
   death/revival and game-over rules are R2 / track A.
+
+## Round 14, part 2: morale, attacks per round, disruption, XP
+
+### C-18 Morale recovers 15 times too fast in GemRB
+- **Status:** V   **Severity:** 2   **Uses:** 1,082 of 1,095 PST CREs have recovery time 60 (CRE v1.2 word 0x242)   **By:** opus
+- **EE:** `CGameSprite::CheckMorale` (A1C2C0) :46-79: when the creature's AI tick counter (`this+232`, counted up in
+  `CGameSprite::ProcessAI`) is a multiple of **15 × recovery time**, morale moves one step toward 10. Recovery 0 →
+  morale is held at 10. Morale is clamped to 0…20.
+- **GemRB:** `Actor.cpp:3090-3101` `RefreshPCStats`: `GameTime % mrec`, i.e. every **mrec ticks**; `CREImporter.cpp`
+  reads the value unscaled for PST (only IWD2 multiplies by 60).
+- **Difference:** recovery 60 = one step per 60 s in EE, per 4 s in GemRB. An enemy whose morale fell to its break
+  value (5) recovers in ~4-20 s instead of 1-5 min, so panicked enemies come back far sooner.
+- **Re-check:** `python tools/parity/dumps.py show ee "CGameSprite::CheckMorale" --all | sed -n 55,80p`;
+  `sed -n 3088,3102p gemrb/core/Scriptable/Actor.cpp`.
+
+### C-19 Morale failure outcome: EE 10 % panic / 80 % run / 10 % berserk, GemRB a third each
+- **Status:** V   **Severity:** 2   **By:** opus
+- **EE:** `CGameSprite::DoMoraleFailure` (A6C830) :20-79: roll 0-99 (`ACTION_CHOICE_PROBABILITY` 100); < 10
+  (`ACTION_CHOICE_PANIC_CUTOFF`) → PANIC, ≥ 90 (`ACTION_CHOICE_RUNAWAY_CUTOFF`) → BERSERK, else
+  `RunAwayFromNoInterruptNoLeaveArea`. Plays the morale sound.
+- **GemRB:** `Actor.cpp:858-860` `pcf_morale`: `RAND(1, 3)` → berserk, run away or random walk, equally likely (the
+  comment there notes IWD2's 80/10/10).
+- **Difference:** in EE a broken enemy almost always flees (80 %); in GemRB a third go berserk and a third wander.
+- **Re-check:** `python tools/parity/eeconst.py "CGameSprite::ACTION_CHOICE*" --size 1`; `sed -n 855,861p gemrb/core/Scriptable/Actor.cpp`.
+
+### C-20 Party members never break morale in PST
+- **Status:** P   **By:** opus
+- **EE:** `CheckMorale` :26: `ENGINE_MODE == 3` and EA_PC → no check. **GemRB:** `Actor.cpp:12266`
+  `ShouldModifyMorale` (PST: EA ≠ PC). Same.
+
+### C-21 The Nameless One's THAC0 and extra attacks use his best/fighter levels
+- **Status:** S   **Severity:** 2   **By:** opus
+- **EE:** `CRuleTables::GetTHAC0` (7F21B0) :33-40: when derived dword +100 is 1, THAC0 = **min** of the fighter, mage
+  and thief THAC0 at the creature's level in each (`FindTHAC0`, table at `this+2312`), then the class THAC0 bonus,
+  floored at 0. `CRuleTables::GetClassAPRBonus` (7EF870) :120-126: the same flag forces the **fighter** row and the
+  fighter level for the proficiency extra-attack table (`GETS_PROF_APR`, level capped at 20).
+- **GemRB:** THAC0: `GUIREC.py:1060-1064` / `:1137-1142` keep the best THAC0 seen at each level-up (`IE_TOHIT`), which
+  equals EE's minimum as long as levels only go up. Extra attacks: `Actor.cpp:3029-3055` `GetStyleExtraAPR` checks
+  `GETS_PROF_APR` for the **active** class and uses `GetHighestLevel()`.
+- **Open:** what sets derived +100 (no direct writer found: `dumps.py grep ee "a2 \+ 1043\)"`); if it is the Nameless
+  One's marker, a mage/thief Nameless One keeps his fighter extra attacks in EE and loses them in GemRB (needs
+  `clswpbon.2da` MAGE/THIEF `GETS_PROF_APR` = 0 to matter).
+
+### C-22 Spell disruption: any damage interrupts
+- **Status:** P   **By:** opus
+- **EE:** `CGameSprite::Spell` :860/:1017 and `SpellPoint` :796/:955: the cast fails if the caster was damaged
+  (`this+4593`, set by op 12 `CGameEffectDamage::ApplyEffect` :1161) and `ConcentrationFailed` returns 1; it returns 1
+  whenever the concentration mode (`CONCENTRATION_SETTINGS` table, `CRuleTables::CRuleTables` :3495-3502) is 0, and
+  PST:EE ships no such table (`pstres.ee().res("concentr","2da")` → none) → always disrupted.
+- **GemRB:** `Actor.cpp:4239` `CheckSpellDisruption`: PST has `SimplifiedDisruption = 0`, `HasEEEffects = 0`, not 3E →
+  returns true. Same.
+
+### C-23 XP per kill
+- Covered by track A10: SE-5 (party XP remainder and difficulty, `wp_script_engine.md`). Nothing new here.
