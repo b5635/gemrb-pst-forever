@@ -332,3 +332,39 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 |---|---|---|---|
 | A11-7 | **Lower Ward area comment never plays:** GemRB `pst/comment.2da` uses flag 0x2, PST's AR0500 has 0x8 (EE `HandleAmbiance`). | V | 3 |
 | A11-6 | Battle cries fire at the same moment in both; GemRB lacks the original's shared timer and 90-tick cooldown (monsters only). | V | 3 |
+
+# Round 14 (2026-11-19): track B, combat rules against PST:EE
+
+## 21. Combat findings (detail in [wp10_combat.md](wp10_combat.md))
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| C-1 | **Attack roll one point too hard:** EE hits when roll + AC + bonuses ≥ THAC0, GemRB needs > (5 % fewer hits for everyone). | V | 2 |
+| C-14 | **Saved damage is halved, not negated, in EE** unless the resource is `NEG`; GemRB halves only with a non-empty resource: 27 op-12 entries (SPWI502/505/802/905, Celestial Fire weapons…) negate on a save in GemRB. | V | 2 |
+| C-15 | Saving throws: EE adds **no luck**, uses the best flagged save once, can't save on a save value of 20, improved invisibility +4; GemRB adds luck and rolls each type. | V | 2 |
+| C-3 | Auto-hit only on helpless (sleep/hold/web) in EE, with no critical miss; GemRB also auto-hits stunned/frozen/petrified and lets a natural 1 miss a sleeper. | V | 2 |
+| C-4 | GemRB's +4 for meleeing a ranged-weapon user is off in PST:EE (`ENGINE_MODE != 3`). | V | 2 |
+| C-5 | Ranged range modifiers missing in GemRB: −8 within 4 cells, −2/−5 at long range. | V | 2 |
+| C-7 | Dead_Truce +4: EE only hostile undead vs PCs at value 1; GemRB also penalises Morte/Vhailor's own attacks. | V | 2 |
+| C-13 | Weapon hits are op 12 effects in EE, so E-012f (max HP ≤ 13 can't be one-shot), pools and Pain Mirror apply to them; GemRB lacks the low-HP rule. | V | 2 |
+| C-18 | Morale recovers one step per 15 × recovery ticks (60 s) in EE, per recovery ticks (4 s) in GemRB. | V | 2 |
+| C-19 | Morale failure: EE 80 % run / 10 % panic / 10 % berserk, GemRB a third each. | V | 2 |
+| C-21 | The Nameless One's extra attacks use his fighter level in EE whatever his class (flag at derived +100, writer not found). | S | 2 |
+| C-2 | Luck: GemRB caps a lucky roll at 19 and uses it for criticals; EE clamps at 20 and uses the raw roll for criticals. | V | 3 |
+| C-6 | Invisible attacker +4 to hit missing in GemRB. | V | 3 |
+| C-10 | Berserk +2 to hit / +2 damage missing in GemRB. | V | 3 |
+| C-8, C-11 | NTOKEN shadow test (animation ids vs races), Vhailor critical aversion. | S | 3 |
+| C-9, C-12, C-16, C-17, C-20, C-22 | Iron Fist to-hit (corrects E-208), weapon damage, MR roll, death threshold, PCs immune to morale, spell disruption. | P | - |
+
+## 22. Effect pipeline and opcode findings (detail in [wp11_effect_pipeline.md](wp11_effect_pipeline.md), [wp2_opcodes.md](wp2_opcodes.md) "Round 14")
+
+| ID | Finding | Status | Sev |
+|---|---|---|---|
+| P-3 | GemRB uses **one roll for probability and magic resistance**; EE rolls them separately (a 0-25 % effect never lands on an MR-30 target in GemRB). | V | 2 |
+| E-012d | Guardian Mantle: same direction in EE (source fails save −4 → no damage) but EE exempts magic damage. Cloak of Warding: EE soaks any damage type point for point and lets the excess through; GemRB soaks physical only and absorbs the breaking hit whole. | V | 2 |
+| E-134 | Petrification in PST:EE keeps the victim in the party and sends no death notice; GemRB removes the companion from the party. | V | 2 |
+| E-104 | Op 104 XP (8 tattoos): EE adds the protagonist's WIS bonus and uses the current class's XP pool; GemRB adds to `IE_XP` plainly. | V | 2 |
+| E-130 | Bless also gives +p1 damage and non-PC morale in EE; GemRB neither. | V | 3 |
+| E-073 | Op 73 **sets** the damage mod in PST:EE (last one wins); GemRB adds. EE: differs from the round-3 original reading. | V | 3 |
+| E-208, E-129, S41 | EE re-checks: Iron Fist to-hit is right in GemRB; Aid 8 × p1 (EE same); Acid Storm delay is ticks in both. | - | - |
+| P-1, P-2, P-4, P-5 | Feature-block fields, shared rolls, level range, timing modes and units. | P | - |

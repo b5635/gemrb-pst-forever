@@ -1,4 +1,4 @@
-# Handoff: where the parity investigation stands (2026-11-19, round 13: track A complete)
+# Handoff: where the parity investigation stands (2026-11-19, round 14: track B complete)
 
 Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the work packages) and `findings.md` (all findings, by round).
 
@@ -135,25 +135,44 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
   SE-5 party XP remainder/difficulty (V3).
 - **A11 done**: A11-7 Lower Ward comment flag (V3, one-line `comment.2da` fix), A11-6 battle-cry cooldowns (V3).
 
+## Round 14 (2026-11-19): track B (combat) complete, PST:EE only
+- **B1 combat rules** (`wp10_combat.md`, C-1…C-23): how EE resolves a swing (`Swing` → `Hit` → `Damage` → an op 12 effect).
+  Top: **C-1** GemRB needs roll + AC + bonuses **>** THAC0, EE **≥** (5 % fewer hits for everyone); **C-14** saved damage is
+  halved in EE unless the resource is `NEG` (GemRB negates 27 op-12 entries with an empty resource); **C-15** EE adds no
+  luck to saves; C-3 auto-hit states; C-4 GemRB's +4 vs ranged users is off in PST; C-5 range modifiers; C-7 Dead_Truce;
+  C-13 weapon hits are op 12 in EE (E-012f low-HP rule applies); C-18 morale recovery 15× too fast; C-19 morale outcome mix.
+- **B2 effect pipeline** (`wp11_effect_pipeline.md`): **P-3** GemRB shares one roll between probability and MR; timing
+  units match (PST delays are ticks in both).
+- **B3 WP2 rest** (`wp2_opcodes.md` "Round 14"): every used opcode has a verdict (families, P?/? for a few non-combat
+  ones); new E-134 petrification keeps PST companions in the party, E-104 tattoo XP (WIS bonus, class pool), E-130 Bless,
+  E-073 sets in EE; **E-012d resolved** (Guardian Mantle direction same; EE exempts magic damage; Cloak of Warding soaks any
+  type point for point).
+- `ENGINE_MODE == 3` is PST in EE: `dumps.py grep ee "ENGINE_MODE" --in ApplyEffect` lists the 41 handlers with a PST
+  branch (all used ones covered). Open S/?: C-8 NTOKEN animation ids, C-11 Vhailor crits, C-21 derived +100 flag, op 25
+  poison periods, op 26 p2 1, op 32, ops 93/94/97, 110/124/125/150/159/171/172/177/209/212 (track C).
+
 ## Next, in order (detail in AGENT_GUIDE section 4)
 1. **Track A:** ~~A1 actions~~ (round 9), ~~A2 triggers~~ (round 10), ~~A3 event triggers~~, ~~A8 BALDUR.bcs~~ (round 11),
    ~~A4~~, ~~A5~~, ~~A6~~, ~~A7~~, ~~A9~~, ~~A10~~, ~~A11~~ (round 13). **Track A is complete.** Leftover S items to settle
    with a staged test when fixing: D-4, SP-2, SE-4, O-self.
-2. **Track B, combat:** combat rules (`wp10_combat.md`), effect pipeline (`wp11_effect_pipeline.md`), WP2 rest (77
-   used opcodes, batched by family). Open from round 5: Guardian Mantle save direction (E-012d), GemRB's Cloak of
-   Warding / Guardian Mantle vs effect damage, effect byte +6.
+2. ~~**Track B, combat**~~ (round 14): `wp10_combat.md`, `wp11_effect_pipeline.md`, `wp2_opcodes.md` "Round 14".
+   Round 5's open items settled (E-012d, byte +6 = C-14).
 3. **Track C:** WP6 rules, WP7 tables, items, stores, plain projectiles, WP8 GemRB PST branches, WP9 EE data.
-4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **T16 NullDialog (sev 1)**, O-mostdamaged, A11-7 (one line), SE-1, SE-2, **B2 Game_Over 7 (sev 1)**, **A14 Damage amount/death (sev 1)**, T11 TimerExpired, T14 pickpocket→AttackedBy, T12 event lifetime, B7 Fortress count, (A12, A18 fixed round 10), A19 SavePlace, A20 GlobalSetGlobal, A17 LeaveParty scripts, A16 PlaySequenceTimed, A15 ForceAttack, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
+4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **C-1 attack roll ≥ (one line)**, **C-14 save-for-half (one line)**, C-15 no luck on saves, P-3 separate MR roll, C-3, C-4, C-18/C-19 morale, E-134, **T16 NullDialog (sev 1)**, O-mostdamaged, A11-7 (one line), SE-1, SE-2, **B2 Game_Over 7 (sev 1)**, **A14 Damage amount/death (sev 1)**, T11 TimerExpired, T14 pickpocket→AttackedBy, T12 event lifetime, B7 Fortress count, (A12, A18 fixed round 10), A19 SavePlace, A20 GlobalSetGlobal, A17 LeaveParty scripts, A16 PlaySequenceTimed, A15 ForceAttack, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
    Nameless death rules, A5 RunAwayFrom attacks, S14 Howl, S15 Globe, S16/S17 Power Words, E7 Curse saves, S4 attack
    rolls, E17 scroll caster level, E18 TransferHP, E19 Ball Lightning / Adder's Kiss.
 
 ## For audit (Opus spot-checks these; newest first)
+- Round 14: C-1, C-14, C-15, P-3 first, then C-3, C-4, C-18, E-134, E-012d.
 - Round 13: O-mostdamaged, SE-1, SE-2, SE-4, D-8.
 - Round 12: O-range.
 - Round 11: T16, B2 (sev 1) first, then T11, T14, T12, B7.
 - (none yet; rounds 7-9 were written by Opus). If a Sonnet session re-checks: A18, A14 first (Re-check lines in `wp4_actions.md`).
 
 ## Tool changes (newest first; use these)
+- 2026-11-19 (round 14): `eeconst.py NAME|GLOB|0xADDR [--size N]` reads EE static constants straight from the ELF
+  (`"CGameSprite::*RANGE*"`); `opmodes.py <ops> [--files]` counts p2/timing/p1 per opcode over **all** SPL/ITM feature
+  blocks (casting effects included, unlike `opuses.py`).
 - 2026-11-19 (round 11): `bcs.py <script> [--gemrb]` decompiles a BCS to text; `bcs.py --grep REGEX` prints every
   matching block of every script on one line (the fastest way to find users of a trigger/action/variable);
   `bcs.py --objects` counts object functions and IDS fields. `dumps.py grep ... --max N` raises the 60-hit cap.
