@@ -41,28 +41,28 @@ action	306	GiveExperience(O:Object*,I:Amount*)	246	base sub_44B099	GameScript::A
 action	111	DestroySelf()	245	sprite case 59	GameScript::DestroySelf	S	-	opus		GemRB PST hack ends cutscene if runner dies; orig? (A5)
 action	286	SetCorpseEnabled(S:Name*,I:State*)	238	base sub_44B099	GameScript::AmbientActivate	todo				
 action	217	PermanentStatChange(O:Object*,I:StadID*Stats,I:Delta*Delta,I:Modifier*)	230	base sub_44B099	GameScript::PermanentStatChange	V	-	opus		MaxHP change also moves current HP in orig; LEVEL case not read (S)
-action	108	EscapeArea()	208	sprite case 57	GameScript::EscapeArea	todo				
+action	108	EscapeArea()	208	sprite case 57	GameScript::EscapeArea	S	-	opus		orig walks off-screen, GemRB to nearest travel region
 action	150	StartStore(S:Store*,O:Target*)	192	sprite case 76	GameScript::StartStore	todo				
 action	104	MoraleDec(O:Target*,I:Morale*)	189	sprite case 54	GameScript::MoraleDec	todo				
 action	214	KillFloatMessage(O:Object*)	186	base sub_44B099	GameScript::KillFloatMessage	todo				
 action	118	GivePartyGold(I:Amount*)	180	base sub_44B099	GameScript::GivePartyGold	P	-	opus		
 action	267	StartSong(I:Song*Songs,P:Where*,I:How*SongFlag)	180	base sub_44B099	GameScript::StartSong	todo				
-action	153	ChangeEnemyAlly(O:Object*,I:Value*EA)	157	base sub_44B099	GameScript::ChangeEnemyAlly	todo				
-action	157	ChangeSpecifics(O:Object*,I:Value*Specific)	156	base sub_44B099	GameScript::ChangeSpecifics	todo				
+action	153	ChangeEnemyAlly(O:Object*,I:Value*EA)	157	base sub_44B099	GameScript::ChangeEnemyAlly	P	-	opus		
+action	157	ChangeSpecifics(O:Object*,I:Value*Specific)	156	base sub_44B099	GameScript::ChangeSpecifics	P	-	opus		
 action	131	Kill(O:Object*)	155	base sub_44B099	GameScript::Kill	P	-	opus		death p2 4 vs 0
 action	222	DestroyPartyItem(S:Object*,I:All*Boolean)	147	base sub_44B099	GameScript::DestroyPartyItem	P	-	opus		
 action	49	MoveViewPoint(P:Target*,I:ScrollSpeed*Scroll)	140	base sub_44B099	GameScript::MoveViewPoint	todo				
 action	8	Dialogue(O:Object*)	138	sprite case 5	GameScript::Dialogue	todo				
 action	116	TakePartyItem(S:Item*)	137	base sub_44B099	GameScript::TakePartyItem	V	A12	opus		orig takes 1 unit of a stack; GemRB whole stack (Tail quest x4)
 action	19	JoinParty()	136	sprite case 15		S	A2/section 9: JoinGroup flag ignored	opus		round 2-5; recheck the parts marked S
-action	269	SetTeam(O:Object*,I:Value*Team)	135	base sub_44B099	GameScript::SetTeam	todo				
+action	269	SetTeam(O:Object*,I:Value*Team)	135	base sub_44B099	GameScript::SetTeam	P	-	opus		
 action	122	EndCutSceneMode()	133	base sub_44B099	GameScript::EndCutSceneMode	todo				
 action	244	BitSet(S:Name*,S:Area*,I:Bit*Bits)	132	base sub_44B099	GameScript::GlobalBOr	P	-	opus		as SetGlobal
 action	303	TimedMoveToPoint(P:Point*,I:Time*)	128	sprite case 107	GameScript::TimedMoveToPoint	todo				
 action	279	EnablePortalTravel(O:Object*,I:Value*)	127	base sub_44B099	GameScript::EnablePortalTravel	todo				
 action	278	ActivatePortalCursor(O:Object*,I:Value*)	122	base sub_44B099	GameScript::ActivatePortalCursor	todo				
 action	22	MoveToObject(O:Target*)	113	sprite case 18		S	A2/section 9: timeout ignored	opus		round 2-5; recheck the parts marked S
-action	281	TeleportParty(S:Area*,P:Point*,I:Face*)	110	base sub_44B099	GameScript::TeleportParty	todo				
+action	281	TeleportParty(S:Area*,P:Point*,I:Face*)	110	base sub_44B099	GameScript::TeleportParty	S	-	opus		orig queues LeaveAreaLUA, clears party queues
 action	291	SinisterPoof(S:BamResRef*,P:Location*,I:Itterations*)	107	base sub_44B099	GameScript::CreateVisualEffect	todo				
 action	143	OpenDoor(O:Object*)	105	base sub_44B099	GameScript::OpenDoor	todo				
 action	313	EscapeAreaRunning()	103	sprite case 57		V	A1	opus		round 2-5; recheck the parts marked S

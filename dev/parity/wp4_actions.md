@@ -306,3 +306,28 @@ See finding A1: handled (creature case 57), missing in GemRB.
 - **Status:** P   **Uses:** 155. Original base case 131: target not dead → op 13 (death) with p2 = 4 ("normal"), source =
   caller. GemRB `Kill`: op 13 with p2 = 0, no source. Death type 0 vs 4 only picks the damage type (crushing vs none);
   the killer is only used for XP when a party member calls Kill (none found).
+
+### A-153 ChangeEnemyAlly, A-157 ChangeSpecifics, A-269 SetTeam
+- **Status:** P   **Uses:** 157 / 156 / 135. Original base cases 153/157: object missing → nothing; the new value is
+  written to all three object-type copies (live, base `+9792`, and the third) through vfunc +192, then a sync
+  message. SetTeam (269) resolves with `sub_45E93F`, sets the team on any object (vfunc +80) and, for creatures,
+  both base copies. GemRB: `SetBase(IE_EA / IE_SPECIFIC / IE_TEAM)` on actors. Only difference: a charmed creature's
+  live EA in the original is overwritten too (GemRB keeps the charm's EA until it ends); not seen in PST data.
+
+### A-281 TeleportParty(S:Area, P:Point, I:Face)
+- **Status:** S   **Severity:** 2   **Uses:** 110
+- **Original:** base case 281 → `sub_46E134`: copies the action as **LeaveAreaLUA (110)** and hands it to `sub_5B6821`:
+  every party member's action queue is cleared (vfunc +100), flag `+956` = 1, `+9656` = 75, and the first member
+  gets the area change through the message `8DB938` (`sub_5B6BDF`). The move happens as a queued action.
+- **GemRB:** `Actions.cpp` `TeleportParty` → `Game::MovePCs` + `MoveFamiliars`, immediately; party queues kept.
+- **Open:** whether keeping the party's queued actions across the jump changes anything (e.g. a member still
+  walking); what `+9656 = 75` is. Re-check: `python tools/parity/dumps.py show orig sub_5B6821 --all`.
+
+### A-108 EscapeArea()
+- **Status:** S   **Severity:** 3   **Uses:** 208
+- **Original:** creature case 57 → `sub_7AD135`: no travel-region search; a creature already **outside the viewport
+  rectangle** is removed at once; otherwise it walks to the nearest viewport edge (`sub_472853` free-spot probes along
+  the edges) and is removed when it leaves the rectangle. A party member also runs `sub_7A12F0`.
+- **GemRB:** `EscapeArea` → `FindEscapePosition`: nearest **travel region** first (`AdjustNearestTravel`), the
+  viewport edge only when none is found.
+- **Difference:** where leaving NPCs walk (exit vs. off-screen); outcome (removal) the same. Not fully followed.
