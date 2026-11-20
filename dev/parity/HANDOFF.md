@@ -1,4 +1,4 @@
-# Handoff: where the parity investigation stands (2026-11-19, round 12)
+# Handoff: where the parity investigation stands (2026-11-19, round 13: track A complete)
 
 Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the work packages) and `findings.md` (all findings, by round).
 
@@ -116,19 +116,39 @@ Read this first in a new conversation, then `AGENT_GUIDE.md` (rules, tools, the 
 - Left in A4: Player1-6/Protagonist slot order in GemRB, LastAttackerOf/LastHelp/LastTrigger storage, MostDamagedOf,
   faction/team fields in GemRB, ledger rows `kind=object` (`script_ledger.py` source).
 
+## Round 13 (2026-11-19): track A complete, PST:EE only
+- **The original exe workspace (`.re/orig/`) is gone; treat it as unavailable.** Work from PST:EE (`.re/ee/`) only.
+  Tools that read `.re/orig` (`case.py`, `facts.py`, `dumps.py ... orig`, `exevt.py`, `ida.py ... orig`) no longer work;
+  old findings keep their original-exe citations as history.
+- **A4 done** (ledger `kind=object` 24/24, `script_ledger.py` builds them): O-range (V2), **O-mostdamaged (V2: Grace's
+  party AI heals corpses)**, O-self (S3).
+- **A5** (`wp_script_engine.md`): **SE-1** evaluation rate (EE every 16 ticks, busy creatures only on a new trigger;
+  GemRB every tick idle/on screen), **SE-2** cutscene mode doesn't stop scripts in PST (GemRB freezes all),
+  SE-3 response weights (recommend leaving GemRB). Continue chains across slots in EE (GemRB too).
+- **A6/A7** (`wp_dialog.md`): start state, talk count, reply actions P; D-4 continue-link order (S);
+  `dlgsplit.py`: GemRB's statement splitter matches EE's rewritten strings on every DLG string (0 split
+  differences); whitespace handling identical. **D-8: EE rewrote 2,602 dialogue strings, many quest fixes**: owner
+  decision whether to port them as an optional data pack (phase 7).
+- **A9** (`wp_spawns.md`): ignored keys are ignored by EE too (crowd check is a stub, EE spells it
+  `check_by_view_port`); SP-1 first timed spawn early (V3); SP-2 `create_qty` vs `spec_qty` (S2).
+- **A10**: SE-4 death counters (EE has no creature-type counter, 929 CREs use it: keep GemRB's for now, S2),
+  SE-5 party XP remainder/difficulty (V3).
+- **A11 done**: A11-7 Lower Ward comment flag (V3, one-line `comment.2da` fix), A11-6 battle-cry cooldowns (V3).
+
 ## Next, in order (detail in AGENT_GUIDE section 4)
 1. **Track A:** ~~A1 actions~~ (round 9), ~~A2 triggers~~ (round 10), ~~A3 event triggers~~, ~~A8 BALDUR.bcs~~ (round 11),
-   A4 object selectors (decoder done round 12; remaining functions, faction/team, ledger rows), A5 script engine, A6 dialogue engine, A7 parser, A9 INI spawns,
-   A10 indirect state (death variables, XP, rest), A11 voice lines and sound slots (never investigated).
+   ~~A4~~, ~~A5~~, ~~A6~~, ~~A7~~, ~~A9~~, ~~A10~~, ~~A11~~ (round 13). **Track A is complete.** Leftover S items to settle
+   with a staged test when fixing: D-4, SP-2, SE-4, O-self.
 2. **Track B, combat:** combat rules (`wp10_combat.md`), effect pipeline (`wp11_effect_pipeline.md`), WP2 rest (77
    used opcodes, batched by family). Open from round 5: Guardian Mantle save direction (E-012d), GemRB's Cloak of
    Warding / Guardian Mantle vs effect damage, effect byte +6.
 3. **Track C:** WP6 rules, WP7 tables, items, stores, plain projectiles, WP8 GemRB PST branches, WP9 EE data.
-4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **T16 NullDialog (sev 1)**, **B2 Game_Over 7 (sev 1)**, **A14 Damage amount/death (sev 1)**, T11 TimerExpired, T14 pickpocket→AttackedBy, T12 event lifetime, B7 Fortress count, (A12, A18 fixed round 10), A19 SavePlace, A20 GlobalSetGlobal, A17 LeaveParty scripts, A16 PlaySequenceTimed, A15 ForceAttack, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
+4. Then fixes (phases 2, 4, 5, 6), phase 3 (spell ports) last. Top fix candidates so far: **T16 NullDialog (sev 1)**, O-mostdamaged, A11-7 (one line), SE-1, SE-2, **B2 Game_Over 7 (sev 1)**, **A14 Damage amount/death (sev 1)**, T11 TimerExpired, T14 pickpocket→AttackedBy, T12 event lifetime, B7 Fortress count, (A12, A18 fixed round 10), A19 SavePlace, A20 GlobalSetGlobal, A17 LeaveParty scripts, A16 PlaySequenceTimed, A15 ForceAttack, A13 Karach, A10 PlaySequence blocking, A11 StartRandomTimer, A1 EscapeAreaRunning, R2
    Nameless death rules, A5 RunAwayFrom attacks, S14 Howl, S15 Globe, S16/S17 Power Words, E7 Curse saves, S4 attack
    rolls, E17 scroll caster level, E18 TransferHP, E19 Ball Lightning / Adder's Kiss.
 
 ## For audit (Opus spot-checks these; newest first)
+- Round 13: O-mostdamaged, SE-1, SE-2, SE-4, D-8.
 - Round 12: O-range.
 - Round 11: T16, B2 (sev 1) first, then T11, T14, T12, B7.
 - (none yet; rounds 7-9 were written by Opus). If a Sonnet session re-checks: A18, A14 first (Re-check lines in `wp4_actions.md`).

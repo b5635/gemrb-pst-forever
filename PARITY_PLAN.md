@@ -10,8 +10,7 @@ Method and tools: [dev/parity/README.md](dev/parity/README.md).
 ## 1. Ground rules
 
 - **PST:EE is the reference (decided 2026-11-19).** Its symbol-rich binary is easier to read and its behaviour,
-  Beamdog's fixes included, is the target. Read the original Torment.exe only when EE is unclear or lacks the
-  feature; when the two differ, follow EE and note the original's behaviour in the finding. Findings from
+  Beamdog's fixes included, is the target. The original Torment.exe workspace is no longer available (round 13); EE alone decides; when the two differ, follow EE and note the original's behaviour in the finding. Findings from
   rounds 1-11 were checked against the original and stay valid unless EE differs (re-check when fixing).
 - **Never commit decompiled code.** Port behaviour, not text: write GemRB code in GemRB's style from our
   description of what the original does.
@@ -98,3 +97,4 @@ data pack, off by default (Fixpack and UB already cover part of them).
 | 2026-11-18 | WP2/WP4 partial: PST opcodes and Ex actions vs original, findings E7–E16, A5–A9 (Curse improves saves, RunAwayFrom never attacks, RestParty heals TNO fully, Heal % mode). Handoff: `dev/parity/HANDOFF.md`. |
 | 2026-11-19 | Track A round 11: A3 event triggers 24/24 (T11-T16) and A8 BALDUR.bcs 64/64 (B1-B8); ledger 310/310. Top: NullDialog always true in GemRB (AR0403 thugs attack at once), `Game_Over` 7 ignored (AR0500 game over), TimerExpired eaten by the first block. A4 objects started (`wp5_objects.md`). |
 | 2026-11-19 | Round 12: PST:EE made the source of truth (docs updated). A4 decoder read in EE and the original: O-range (visual range grows with the Nameless One's fighter level, GemRB fixed at level 3), NearestEnemyOf and name lookup P. |
+| 2026-11-19 | Round 13: **track A complete** (A4-A7, A9-A11 judged against PST:EE; original exe workspace no longer available). Top new: Grace's AI heals corpses (O-mostdamaged), script evaluation rate (SE-1), PST cutscenes don't stop scripts (SE-2), EE's 2,602 rewritten dialogue strings (D-8, owner decision), Lower Ward comment flag (A11-7). |

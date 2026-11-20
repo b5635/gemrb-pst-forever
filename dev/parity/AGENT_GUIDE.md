@@ -33,7 +33,8 @@ known: don't re-report it, extend it) and `README.md` (tools, file layout).
 3. **PST:EE is the truth (owner's decision, 2026-11-19).** Ranking, highest first:
    1. PST:EE `Torment64` (`.re/ee/`, `dec_all_named`): real C++ names, easiest to read. What EE does is the
       target behaviour, Beamdog's fixes and changes included. A difference read in EE and GemRB is **V**.
-   2. Original `Torment.exe` 1.1 + Fixpack 4.13 + UB 4.12 (`.re/orig/`): read it only when EE is unclear,
+   2. Original `Torment.exe` 1.1 + Fixpack 4.13 + UB 4.12: **no longer available** (`.re/orig/` removed 2026-11-19);
+      older findings cite it as history. Previously: read it only when EE is unclear,
       missing the feature, or a finding needs a tie-break. When the two differ, follow EE and note the
       original's behaviour in one line ("orig: …") so the difference stays on record.
    3. IESDP (`tools/parity/iesdp.py`): hints, often wrong for PST (e.g. op 186 "0 = clear": the original clears
