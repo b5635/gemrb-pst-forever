@@ -244,6 +244,7 @@ Tears, Spiritual Hammer); Vampiric Touch's roll is EE only (the original builds 
 | A17 | **LeaveParty keeps the companion's party scripts in GemRB.** The original sets script slots AREA, SPECIFICS, CLASS, RACE and GENERAL to empty and sends `Leaves` to each party member; GemRB resets scripts only under `HasDPLAYER` (off for PST). 36 uses (companions leaving). | V | 2 |
 | A18 | **DestroyItem takes the item from the wrong creature.** All 20 PST uses are dialogue lines `DestroyItem("X", Protagonist, n)`; the original removes from the named object, GemRB from the caller (the dialogue NPC), ignoring the object and All. Nothing is removed: FalseCon (Copper, Mortai), loandoc (Deran), Cheese/Pcheese (Mantuok, 11 lines), Sohmien, Legclub (Ulthera). | V | 1 |
 | A19 | **SavePlace does nothing in GemRB.** Bound to `SaveLocation` (a point variable named by a string it doesn't have); the creature's saved position/facing is never set, so `ReturnToSavedPlace` goes to the old spot. 15 uses (`0600AELN`, `0600NEME`, `0602FTDP`…). | V | 2 |
+| A20 | **GlobalSetGlobal copies the wrong way.** Original: Name1 ← Name2 (`Previous_Area` takes `Current_Area`); GemRB: Name2 ← Name1. 4 uses (AR0201-0203 area scripts). Same batch: **FollowCreature** is a no-op in PST but blocks the queue forever in GemRB (1 use, `0600THUG`). | V | 2 |
 
 ## 13. Voice findings, round 7 (detail in [wp_voices.md](wp_voices.md))
 

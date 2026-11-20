@@ -121,32 +121,32 @@ action	123	ClearAllActions()	18	base sub_44B099	GameScript::ClearAllActions	P	-	
 action	207	SavePlace()	15	sprite case 88	GameScript::SaveLocation	V	A19	opus		bound to SaveLocation (variable) - saved x/y/face never set
 action	226	GenerateModronMaze()	15	base sub_44B099	GameScript::GenerateMaze	S	-	opus		generator not compared (track C)
 action	133	ClearActions()	13	base sub_44B099	GameScript::ClearActions	P	-	opus		queue clear
-action	65	Explore()	10	base sub_44B099	GameScript::Explore	todo				
-action	271	ForceFacing(O:Object*,I:Dir*)	10	base sub_44B099	GameScript::ForceFacing	todo				
+action	65	Explore()	10	base sub_44B099	GameScript::Explore	P	-	opus		explore all
+action	271	ForceFacing(O:Object*,I:Dir*)	10	base sub_44B099	GameScript::ForceFacing	V	-	opus		orig clears target queue + Face; GemRB just turns; sev 3
 action	102	MoraleSet(O:Target*,I:Morale*)	8	sprite case 52	GameScript::MoraleSet	V	A13	opus		Karach swap
-action	137	StartDialog(S:DialogFile*,O:Target*)	8	sprite case 67	GameScript::StartDialogue	todo				
-action	87	ProtectObject(O:Target*,I:Range*)	7	sprite case 39	GameScript::ProtectObject	todo				
-action	311	GeneratePartyMember(P:Location*,I:Value*Specific)	7	base sub_44B099	GameScript::GeneratePartyMember	todo				
-action	86	SetInterrupt(I:State*Boolean)	6	sprite case 38	GameScript::SetInterrupt	todo				
-action	256	RunToSavedLocation()	6	sprite case 98	GameScript::RunToSavedLocation	todo				
-action	268	SetFaction(O:Object*,I:Value*Faction)	5	base sub_44B099	GameScript::SetFaction	todo				
-action	290	SetNamelessDisguise(I:DisguiseNum*Disguise)	5	base sub_44B099	GameScript::SetNamelessDisguise	todo				
-action	0	NoAction()	4	sprite case 0	GameScript::NoAction	todo				
-action	233	GlobalSetGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	4	base sub_44B099	GameScript::GlobalSetGlobal	todo				
-action	151	DisplayString(O:Object*,I:StrRef*)	3	base sub_44B099	GameScript::DisplayString	todo				
+action	137	StartDialog(S:DialogFile*,O:Target*)	8	sprite case 67	GameScript::StartDialogue	S	-	opus		A6 dialogue
+action	87	ProtectObject(O:Target*,I:Range*)	7	sprite case 39	GameScript::ProtectObject	S	-	opus		not read (track B)
+action	311	GeneratePartyMember(P:Location*,I:Value*Specific)	7	base sub_44B099	GameScript::GeneratePartyMember	S	-	opus		orig loads layout.ini CRE snapshot; GemRB moves+kills live NPC; sev 2
+action	86	SetInterrupt(I:State*Boolean)	6	sprite case 38	GameScript::SetInterrupt	P	-	opus		interrupt flag
+action	256	RunToSavedLocation()	6	sprite case 98	GameScript::RunToSavedLocation	P	-	opus		see A-208/A-207
+action	268	SetFaction(O:Object*,I:Value*Faction)	5	base sub_44B099	GameScript::SetFaction	P	-	opus		faction set
+action	290	SetNamelessDisguise(I:DisguiseNum*Disguise)	5	base sub_44B099	GameScript::SetNamelessDisguise	S	-	opus		GemRB uses GLOBAL APPEARANCE not in VAR.VAR (NoNewVariables): run-time check needed
+action	0	NoAction()	4	sprite case 0	GameScript::NoAction	P	-	opus		no-op
+action	233	GlobalSetGlobal(S:Name1*,S:Area1*,S:Name2*,S:Area2*)	4	base sub_44B099	GameScript::GlobalSetGlobal	V	A20	opus		orig Name1 = Name2; GemRB Name2 = Name1 (reversed)
+action	151	DisplayString(O:Object*,I:StrRef*)	3	base sub_44B099	GameScript::DisplayString	P	-	opus		message log
 action	211	FloatMessageFixed(P:Location*,I:StrRef*)	3	base sub_44B099	GameScript::FloatMessageFixed	V	-	opus		see A-210
 action	305	FullHealEx(O:Object*)	3	base sub_44B099	GameScript::FullHeal	?	A-305 (check Heal(0))	opus		round 2-5; recheck the parts marked S
-action	302	SetNoOneOnTrigger(O:Trigger*)	2	base sub_44B099	GameScript::SetNoOneOnTrigger	todo				
+action	302	SetNoOneOnTrigger(O:Trigger*)	2	base sub_44B099	GameScript::SetNoOneOnTrigger	P	-	opus		region cleared
 action	310	StartCutSceneEx(S:CutScene*,I:Value*)	2	base sub_44B099	GameScript::StartCutScene	S	A8	opus		round 2-5; recheck the parts marked S
-action	34	UseItem(S:Object*,O:Target*)	1	sprite case 27	GameScript::UseItem	todo				
-action	39	Recoil()	1	sprite case 30	GameScript::Recoil	todo				
-action	40	PlayDead(I:Time*)	1	sprite case 31	GameScript::PlayDead	todo				
-action	95	SpellPoint(P:Target*,I:Spell*Spell)	1	sprite case 46	GameScript::SpellPoint	todo				
-action	110	LeaveAreaLUA(S:Area*,P:Point*,I:Face*)	1	sprite case 58	GameScript::LeaveAreaLUA	todo				
-action	149	EquipMostDamagingMelee()	1	sprite case 75	GameScript::EquipMostDamagingMelee	todo				
-action	225	FollowCreature(O:Target*)	1	sprite case 92	GameScript::FollowCreature	todo				
-action	285	FixEngineRoom()	1	base sub_44B099	GameScript::FixEngineRoom	todo				
-action	297	ResetFogOfWar()	1	base sub_44B099	GameScript::UndoExplore	todo				
+action	34	UseItem(S:Object*,O:Target*)	1	sprite case 27	GameScript::UseItem	S	-	opus		single use, not read
+action	39	Recoil()	1	sprite case 30	GameScript::Recoil	P	-	opus		presentation
+action	40	PlayDead(I:Time*)	1	sprite case 31	GameScript::PlayDead	P	-	opus		per-update countdown both
+action	95	SpellPoint(P:Target*,I:Spell*Spell)	1	sprite case 46	GameScript::SpellPoint	S	-	opus		single use, casting (track B)
+action	110	LeaveAreaLUA(S:Area*,P:Point*,I:Face*)	1	sprite case 58	GameScript::LeaveAreaLUA	S	-	opus		single use, area travel (A9)
+action	149	EquipMostDamagingMelee()	1	sprite case 75	GameScript::EquipMostDamagingMelee	P	-	opus		single use
+action	225	FollowCreature(O:Target*)	1	sprite case 92	GameScript::FollowCreature	V	-	opus		orig no-op; GemRB blocks forever following; sev 2
+action	285	FixEngineRoom()	1	base sub_44B099	GameScript::FixEngineRoom	S	-	opus		maze (track C)
+action	297	ResetFogOfWar()	1	base sub_44B099	GameScript::UndoExplore	P	-	opus		unexplore all
 trigger	0x400F	Global(S:Name*,S:Area*,I:Value*)	17093	453258	GameScript::Global	todo				
 trigger	0x4093	NearbyDialog(S:DialogFile*)	4761	453258	GameScript::NearbyDialog	todo				
 trigger	0x4034	GlobalGT(S:Name*,S:Area*,I:Value*)	2415	453258	GameScript::GlobalGT	todo				

@@ -718,3 +718,91 @@ trigger handler +148); the base AI-object vtable at `8DC1B0` (`sub_44B099` at +1
 - **Status:** S (generator not compared)   **Uses:** 15. Original base case 226 → `sub_46FB37`: reads the
   `MazeDifficulty` variable and calls the generator `sub_548AB0(difficulty)`. GemRB: `EF_CREATEMAZE` →
   `GUIScripts/pst/Maze.py`. The maze generator itself is a track C item.
+
+### A-233 GlobalSetGlobal(S:Name1, S:Area1, S:Name2, S:Area2) (finding A20)
+- **Status:** V   **Severity:** 2   **Uses:** 4 (area scripts `AR0201`, `AR0202` ×2, `AR0203`:
+  `GlobalSetGlobal("Previous_Area","GLOBAL","Current_Area","GLOBAL")`)
+- **Original:** base case 233: both variables must exist (`sub_463E49` on string0 `+1144` and string1 `+1148`); then
+  **Name1 ← value of Name2** (`*(v789+40) = *(v794+40)`): Previous_Area takes Current_Area's value.
+- **GemRB:** `Actions.cpp` `GlobalSetGlobal`: `value = CheckVariable(string0)`, `SetVariable(string1, value)`:
+  **Name2 ← Name1**, the reverse.
+- **Difference:** in the Smoldering Corpse Bar / Alley areas (AR0201-0203) GemRB copies Previous_Area into Current_Area
+  instead of remembering the current area as the previous one. What reads the two variables was not traced.
+- **Re-check:** `python tools/parity/dumps.py case orig sub_44B099 233`; `grep -n "void GameScript::GlobalSetGlobal" -A5
+  gemrb/core/GameScript/Actions.cpp`; `python tools/parity/actargs.py 233 --where`.
+
+### A-225 FollowCreature(O:Target)
+- **Status:** V   **Severity:** 2   **Uses:** 1 (`0600THUG`)
+- **Original:** creature case 92: **done at once, nothing else** (`v171 = -1`).
+- **GemRB:** `FollowCreature` (AF_BLOCKING): walks after the target and **never releases on success**: the action
+  occupies the queue for good (only a missing target or a non-actor ends it).
+- **Difference:** the `0600THUG` creature that runs it does nothing in the original; in GemRB it follows its target
+  forever and nothing after it in its queue runs.
+
+### A-271 ForceFacing(O:Object, I:Dir)
+- **Status:** V   **Severity:** 3   **Uses:** 10 (`1501CS1`/`CUT1` Hargrim, `0600TOD1/2` Sarhava, `0405CUT9`, `0600ACT1`)
+- **Original:** base case 271: creature object → its queue is cleared (`8DC378`) and `Face(int0)` (84) queued (`8DB938`).
+- **GemRB:** `ForceFacing`: sets the orientation at once, queue untouched. A target that is walking turns back to its
+  path in GemRB; in the original it stops and faces.
+
+### A-311 GeneratePartyMember(P:Location, I:Specific)
+- **Status:** S   **Severity:** 2   **Uses:** 7 (all `AR1204`, Specific 3-9 = Vhailor, Nordom, Ignus, Grace, Dak'kon, Annah,
+  Morte)
+- **Original:** base case 311: section = GLOBAL `FORT_DESCRIPTOR` (as a number) of `.\layout.ini`, key `VHAILEG.CRE` …
+  `MORTEEG.CRE` by Specific; value `XXXXXXXX` → done, nothing created. Else the named CRE **file** (a snapshot written
+  by the area-transition code `sub_799362`, the only other user of `layout.ini`) is loaded and placed at the nearest free
+  spot to the point, script name registered.
+- **GemRB:** `GeneratePartyMember`: bios.2da row int0 → the live NPC (`FindNPC`), moved to the point and **killed**
+  (`Die`, `STATE_DEAD`).
+- **Open:** what the snapshot holds and when `sub_799362` writes it (alive state, items); whether an NPC never recruited
+  is skipped in GemRB (FindNPC may find one that was never in the party).
+
+### A-290 SetNamelessDisguise(I:Disguise)
+- **Status:** S   **Severity:** 2   **Uses:** 5 (DLG `SetNamelessDisguise(ZOMBIE)`)
+- **Original:** base case 290 → `sub_5D0DA1(int0, 1)`: the protagonist's animation is switched (animation vfunc +240);
+  disguise 0 (and > 2) also re-applies the equipped armour's look. Engine state, no variable. The Spell action drops the
+  disguise when he casts (`787F90.c:366-373`).
+- **GemRB:** `SetNamelessDisguise`: `SetVariable("APPEARANCE", int0, "GLOBAL")` + `EF_UPDATEANIM`. `APPEARANCE` is not in
+  the original `VAR.VAR`, and PST runs with `NoNewVariables`, so `SetVariable` (`UpdateOrCreate(…, NoCreate)`) may never
+  create it (same for `GemRB.SetGlobal` in `InventoryCommon.py`). **Needs a run-time check:** does `APPEARANCE` exist
+  after `SetNamelessDisguise(ZOMBIE)` in a new game?
+
+### A-137 StartDialog(S:Dialog, O:Target)
+- **Status:** S (A6)   **Uses:** 8 (Grace `DGRACE` in AR0100-0400 ×6, Vlask `3006CUT1`). Original creature case 67 →
+  `sub_7A5627` (214 lines, not read). GemRB `StartDialogue` (blocking, sets the dialog file). Dialogue engine package.
+
+### A-87 ProtectObject(O:Target, I:Range)
+- **Status:** S   **Uses:** 7 (`0000MDRN`, `0000SUMN` summons, range 60). Original creature case 39 → `sub_795883` (254
+  lines, not read). GemRB `ProtectObject` (non-blocking). Combat AI detail (track B).
+
+### A-86 SetInterrupt(I:State), A-0 NoAction()
+- **Status:** P   **Uses:** 6 / 4. SetInterrupt: creature case 38 clears/sets bit 31 of +1272 (interruptible flag).
+  GemRB `SetInterrupt` (IF_NOINT). NoAction: creature case 0 counts +9936, done. GemRB `NoAction`.
+
+### A-256 RunToSavedLocation()
+- **Status:** P (see A-208, A-207)   **Uses:** 6. Original creature case 98 → `sub_77ED40` with running. GemRB
+  `RunToSavedLocation`. Inherits A-208 (no facing) and A-207 (SavePlace never sets the spot).
+
+### A-268 SetFaction(O:Object, I:Faction)
+- **Status:** P   **Uses:** 5. Original base case 268: faction written to the object's type (vfunc +80) and, for creatures,
+  both base copies. GemRB `SetFaction` (`IE_FACTION`).
+
+### A-151 DisplayString(O:Object, I:StrRef)
+- **Status:** P   **Uses:** 3 (DLG `DisplayString(Protagonist,37078)`). Original base case 151 → `sub_46CB3E`: text to the
+  message log in the object's colour, its sound when the object is a party member. GemRB `DisplayString` (DS_CONSOLE).
+
+### A-302 SetNoOneOnTrigger(O:Trigger), A-65 Explore(), A-297 ResetFogOfWar()
+- **Status:** P   **Uses:** 2 / 10 / 1. 302: region → `sub_4F0F4C` (clears who stands in it); GemRB `SetNoOneOnTrigger`.
+  65: `sub_5982CE` explores the whole map; 297: `sub_598321` clears it. GemRB `Explore` / `UndoExplore`.
+
+### A-40 PlayDead(I:Time), A-39 Recoil(), A-149 EquipMostDamagingMelee()
+- **Status:** P   **Uses:** 1 each (`0301DEAD` PlayDead(2000000000), DLG Recoil, `SPIN101`). PlayDead: creature case 31 →
+  `sub_78DD17`: die sequence, int0 − 1 per update, then get up; GemRB same per tick. Recoil `sub_78D354`, Equip
+  `sub_7B1EE7`: presentation / equipment, single uses.
+
+### A-34 UseItem(S:Item, O:Target), A-95 SpellPoint(P:Target, I:Spell), A-110 LeaveAreaLUA(S:Area, P:Point, I:Face), A-285 FixEngineRoom()
+- **Status:** S (single uses, not read)   **Uses:** 1 each (DLG `UseItem("M_Gaze",Protagonist)`, `0209NECR` SpellPoint
+  2213, `1700TELE` LeaveAreaLUA AR1800, DLG FixEngineRoom). Original handlers `sub_790CE5` (659 lines), `sub_78A96D`
+  (1,152), `sub_7972FE` (868; int2 = 1234567 is a special "no transition while flag +10222" form), `sub_54B150` (maze,
+  102). GemRB `UseItem`, `SpellPoint`, `LeaveAreaLUA`, `FixEngineRoom` (`EnginInMaze` + `Maze.CustomizeArea`). Left for
+  the packages that own them (casting: track B; area travel: A9; maze: track C).
